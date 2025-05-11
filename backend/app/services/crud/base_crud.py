@@ -69,7 +69,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             db: Database session
             
         Returns:
-            Total count
+            Total countbackend/app/services/crud
         """
         return db.query(self.model).count()
     
