@@ -12,9 +12,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=app
-      - SQL_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/app
-      - RESET_DB=true 
-      - AUTO_MIGRATE=true 
+      - SQL_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5437/app
     volumes:
       - ./:/app/
     depends_on:
@@ -30,7 +28,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=app
     ports:
-      - "5432:5432"
+      - "5437:5432"
 
 volumes:
   postgres_data:
