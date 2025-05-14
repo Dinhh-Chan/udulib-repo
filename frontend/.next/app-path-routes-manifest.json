@@ -17,6 +17,6 @@
   "/profile/page": "/profile",
   "/register/page": "/register",
   "/search/page": "/search",
-  "/settings/page": "/settings",
-  "/upload/page": "/upload"
+  "/upload/page": "/upload",
+  "/settings/page": "/settings"
 }

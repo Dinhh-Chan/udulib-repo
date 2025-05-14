@@ -17,6 +17,6 @@
   "/profile/page": "app/profile/page.js",
   "/register/page": "app/register/page.js",
   "/search/page": "app/search/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/upload/page": "app/upload/page.js"
+  "/upload/page": "app/upload/page.js",
+  "/settings/page": "app/settings/page.js"
 }
