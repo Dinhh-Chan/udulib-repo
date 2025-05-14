@@ -1,11 +1,12 @@
-import { Link } from "react-router-dom"
-import { Button } from "../components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
-import { Input } from "../components/ui/input"
-import { Badge } from "../components/ui/badge"
+
+import Link from "next/link"
+import { Button } from "../../components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
+import { Input } from "../../components/ui/input"
+import { Badge } from "../../components/ui/badge"
 import { ChevronRight, Search, MessageSquare, Eye, ThumbsUp, Clock, User, Plus } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 
 export default function ForumPage() {
   return (
@@ -13,7 +14,7 @@ export default function ForumPage() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <Link to="/" className="hover:underline">
+            <Link href="/" className="hover:underline">
               Trang chủ
             </Link>
             <ChevronRight className="h-4 w-4" />
@@ -25,7 +26,7 @@ export default function ForumPage() {
               <p className="text-muted-foreground">Thảo luận, hỏi đáp và chia sẻ kinh nghiệm học tập</p>
             </div>
             <Button asChild>
-              <Link to="/forum/new">
+              <Link href="/forum/new">
                 <Plus className="h-4 w-4 mr-2" />
                 Tạo bài viết mới
               </Link>
@@ -41,19 +42,19 @@ export default function ForumPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button variant="ghost" className="w-full justify-start" asChild>
-                  <Link to="/forum">Tất cả bài viết</Link>
+                  <Link href="/forum">Tất cả bài viết</Link>
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" asChild>
-                  <Link to="/forum?category=questions">Câu hỏi</Link>
+                  <Link href="/forum?category=questions">Câu hỏi</Link>
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" asChild>
-                  <Link to="/forum?category=discussions">Thảo luận</Link>
+                  <Link href="/forum?category=discussions">Thảo luận</Link>
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" asChild>
-                  <Link to="/forum?category=resources">Tài nguyên</Link>
+                  <Link href="/forum?category=resources">Tài nguyên</Link>
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" asChild>
-                  <Link to="/forum?category=announcements">Thông báo</Link>
+                  <Link href="/forum?category=announcements">Thông báo</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -65,7 +66,7 @@ export default function ForumPage() {
               <CardContent className="space-y-2">
                 {departments.map((dept) => (
                   <Button key={dept.id} variant="ghost" className="w-full justify-start" asChild>
-                    <Link to={`/forum?department=${dept.slug}`}>{dept.name}</Link>
+                    <Link href={`/forum?department=${dept.slug}`}>{dept.name}</Link>
                   </Button>
                 ))}
               </CardContent>
@@ -167,7 +168,7 @@ function ForumPostCard({ post }: { post: ForumPost }) {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">
-              <Link to={`/forum/${post.id}`} className="hover:underline">
+              <Link href={`/forum/${post.id}`} className="hover:underline">
                 {post.title}
               </Link>
             </CardTitle>
@@ -182,7 +183,7 @@ function ForumPostCard({ post }: { post: ForumPost }) {
                       : "Thông báo"}
               </Badge>
               <Link
-                to={`/departments/${post.departmentSlug}`}
+                href={`/departments/${post.departmentSlug}`}
                 className="text-sm text-muted-foreground hover:underline"
               >
                 {post.department}
@@ -191,7 +192,7 @@ function ForumPostCard({ post }: { post: ForumPost }) {
                 <>
                   <span className="text-sm text-muted-foreground">•</span>
                   <Link
-                    to={`/departments/${post.departmentSlug}/courses/${post.courseSlug}`}
+                    href={`/departments/${post.departmentSlug}/courses/${post.courseSlug}`}
                     className="text-sm text-muted-foreground hover:underline"
                   >
                     {post.course}

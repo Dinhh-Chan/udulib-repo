@@ -1,6 +1,7 @@
-import { Link } from "react-router-dom"
-import { Button } from "../components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card"
+
+import Link from "next/link"
+import { Button } from "../../components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../components/ui/card"
 import { BookOpen, FileText, Upload, Users, Search } from "lucide-react"
 
 export default function HomePage() {
@@ -17,10 +18,10 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
             <Button size="lg" asChild>
-              <Link to="/departments">Khám phá tài liệu</Link>
+              <Link href="/departments">Khám phá tài liệu</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link to="/login">Đăng nhập để tải lên</Link>
+              <Link href="/login">Đăng nhập để tải lên</Link>
             </Button>
           </div>
         </div>
@@ -43,7 +44,7 @@ export default function HomePage() {
             </CardContent>
             <CardFooter>
               <Button variant="ghost" asChild className="w-full">
-                <Link to="/departments">Xem các ngành học</Link>
+                <Link href="/departments">Xem các ngành học</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -61,7 +62,7 @@ export default function HomePage() {
             </CardContent>
             <CardFooter>
               <Button variant="ghost" asChild className="w-full">
-                <Link to="/upload">Tải lên tài liệu</Link>
+                <Link href="/upload">Tải lên tài liệu</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -79,7 +80,7 @@ export default function HomePage() {
             </CardContent>
             <CardFooter>
               <Button variant="ghost" asChild className="w-full">
-                <Link to="/search">Tìm kiếm tài liệu</Link>
+                <Link href="/search">Tìm kiếm tài liệu</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -97,7 +98,7 @@ export default function HomePage() {
             </CardContent>
             <CardFooter>
               <Button variant="ghost" asChild className="w-full">
-                <Link to="/register">Tham gia ngay</Link>
+                <Link href="/register">Tham gia ngay</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -110,7 +111,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Tài liệu mới nhất</h2>
             <Button variant="outline" asChild>
-              <Link to="/documents/recent">Xem tất cả</Link>
+              <Link href="/documents/recent">Xem tất cả</Link>
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -135,7 +136,7 @@ export default function HomePage() {
                 </CardContent>
                 <CardFooter className="pt-0">
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link to={`/documents/${doc.id}`}>Xem tài liệu</Link>
+                    <Link href={`/documents/${doc.id}`}>Xem tài liệu</Link>
                   </Button>
                 </CardFooter>
               </Card>
@@ -150,13 +151,13 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Ngành học phổ biến</h2>
             <Button variant="outline" asChild>
-              <Link to="/departments">Xem tất cả</Link>
+              <Link href="/departments">Xem tất cả</Link>
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {popularDepartments.map((dept) => (
               <Card key={dept.id} className="overflow-hidden">
-                <Link to={`/departments/${dept.slug}`}>
+                <Link href={`/departments/${dept.slug}`}>
                   <div className="h-40 bg-muted flex items-center justify-center">
                     <dept.icon className="h-16 w-16 text-muted-foreground/50" />
                   </div>
@@ -186,10 +187,10 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
             <Button size="lg" asChild>
-              <Link to="/register">Đăng ký ngay</Link>
+              <Link href="/register">Đăng ký ngay</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link to="/guide">Xem hướng dẫn</Link>
+              <Link href="/guide">Xem hướng dẫn</Link>
             </Button>
           </div>
         </div>

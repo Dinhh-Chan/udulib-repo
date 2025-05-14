@@ -1,11 +1,13 @@
+
 "use client"
 
-import { Link, useParams } from "react-router-dom"
-import { Button } from "../components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "../components/ui/card"
-import { Badge } from "../components/ui/badge"
-import { Textarea } from "../components/ui/textarea"
-import { Separator } from "../components/ui/separator"
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { Button } from "../../components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader } from "../../components/ui/card"
+import { Badge } from "../../components/ui/badge"
+import { Textarea } from "../../components/ui/textarea"
+import { Separator } from "../../components/ui/separator"
 import {
   ChevronRight,
   MessageSquare,
@@ -19,11 +21,12 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar"
-import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert"
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
+import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert"
 
 export default function ForumPostPage() {
-  const { id } = useParams<{ id: string }>()
+  const params = useParams<{ id: string }>()
+  const id = params?.id
 
   // Trong thực tế, bạn sẽ lấy dữ liệu từ API dựa trên id
   const post = forumPosts.find((p) => p.id === id) || forumPosts[0]
@@ -33,11 +36,11 @@ export default function ForumPostPage() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <Link to="/" className="hover:underline">
+            <Link href="/" className="hover:underline">
               Trang chủ
             </Link>
             <ChevronRight className="h-4 w-4" />
-            <Link to="/forum" className="hover:underline">
+            <Link href="/forum" className="hover:underline">
               Diễn đàn
             </Link>
             <ChevronRight className="h-4 w-4" />
@@ -54,14 +57,14 @@ export default function ForumPostPage() {
                     ? "Tài nguyên"
                     : "Thông báo"}
             </Badge>
-            <Link to={`/departments/${post.departmentSlug}`} className="text-sm text-muted-foreground hover:underline">
+            <Link href={`/departments/${post.departmentSlug}`} className="text-sm text-muted-foreground hover:underline">
               {post.department}
             </Link>
             {post.course && (
               <>
                 <span className="text-sm text-muted-foreground">•</span>
                 <Link
-                  to={`/departments/${post.departmentSlug}/courses/${post.courseSlug}`}
+                  href={`/departments/${post.departmentSlug}/courses/${post.courseSlug}`}
                   className="text-sm text-muted-foreground hover:underline"
                 >
                   {post.course}
@@ -330,7 +333,7 @@ delete[] arr;
                   {relatedPosts.map((relatedPost) => (
                     <div key={relatedPost.id} className="flex flex-col gap-1">
                       <Link
-                        to={`/forum/${relatedPost.id}`}
+                        href={`/forum/${relatedPost.id}`}
                         className="text-sm font-medium hover:underline line-clamp-2"
                       >
                         {relatedPost.title}

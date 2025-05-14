@@ -1,0 +1,22 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/admin/page": "/admin",
+  "/departments/[slug]/courses/[courseSlug]/page": "/departments/[slug]/courses/[courseSlug]",
+  "/departments/[slug]/page": "/departments/[slug]",
+  "/departments/page": "/departments",
+  "/documents/[id]/page": "/documents/[id]",
+  "/forum/[id]/edit/page": "/forum/[id]/edit",
+  "/forum/[id]/page": "/forum/[id]",
+  "/forum/[id]/reply/page": "/forum/[id]/reply",
+  "/forum/categories/page": "/forum/categories",
+  "/forum/new/page": "/forum/new",
+  "/forum/page": "/forum",
+  "/forum/popular/page": "/forum/popular",
+  "/login/page": "/login",
+  "/page": "/",
+  "/profile/page": "/profile",
+  "/register/page": "/register",
+  "/search/page": "/search",
+  "/settings/page": "/settings",
+  "/upload/page": "/upload"
+}
