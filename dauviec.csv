@@ -1,0 +1,82 @@
+STT,Đầu việc,Mô tả,Module,Bảng DB liên quan,Vai trò phụ trách,Độ ưu tiên,Thời gian dự kiến,Trạng thái
+2.1.1,Thiết kế API quản lý ngành học,Tạo API GET/POST/PUT/DELETE cho `majors` (danh sách, thêm, sửa, xóa ngành học, admin only).,Majors,majors,Backend Developer,Cao,2 ngày,Chưa thực hiện
+2.1.2,Thiết kế API quản lý năm học,Tạo API GET/POST/PUT/DELETE cho `academic_years` (danh sách, thêm, sửa, xóa năm học).,Academic Years,academic_years,Backend Developer,Cao,1 ngày,Chưa thực hiện
+2.1.3,Thiết kế API quản lý môn học,Tạo API GET/POST/PUT/DELETE cho `subjects`, hỗ trợ lọc theo `major_id`, `year_id`.,Subjects,subjects; majors; academic_years,Backend Developer,Cao,2 ngày,Chưa thực hiện
+2.1.4,Thiết kế API quản lý tài liệu,Tạo API GET/POST/PUT/DELETE cho `documents`, hỗ trợ tải lên file, xem, tải xuống, tìm kiếm theo `title`, `file_type`, `subject_id`.,Documents,documents; subjects; users,Backend Developer,Cao,3 ngày,Chưa thực hiện
+2.1.5,Thiết kế API quản lý thẻ tag,Tạo API GET/POST cho `tags` và POST/DELETE cho `document_tags` (thêm/gán/xóa tag).,Tags,tags; document_tags; documents,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+2.1.6,Thiết kế API quản lý người dùng,Tạo API POST `/register`, `/login`, `/google-login`, GET/PUT/DELETE `/users/{id}` (đăng ký, đăng nhập, quản lý người dùng).,Users,users,Backend Developer,Cao,3 ngày,Chưa thực hiện
+2.1.7,Thiết kế API bình luận,Tạo API GET/POST/DELETE cho `comments` (lấy danh sách, thêm, xóa bình luận).,Comments,comments; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+2.1.8,Thiết kế API đánh giá,Tạo API GET/POST/PUT/DELETE cho `ratings` (lấy, thêm, sửa, xóa đánh giá).,Ratings,ratings; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+2.1.9,Thiết kế API lịch sử truy cập,Tạo API GET/POST cho `document_history` (lấy lịch sử, ghi hành động view/download).,Document History,document_history; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+2.1.10,Thiết kế API chia sẻ liên kết,Tạo API POST `/shared-links`, GET `/shared-links/{token}` (tạo, truy cập liên kết).,Shared Links,shared_links; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+2.1.11,Thiết kế API diễn đàn,Tạo API GET/POST/DELETE cho `forums`, `forum_posts`, `forum_replies` (quản lý diễn đàn, bài viết, phản hồi).,Forums,forums; forum_posts; forum_replies; subjects; users,Backend Developer,Trung bình,2 ngày,Chưa thực hiện
+2.1.12,Thiết kế API cấu hình hệ thống,Tạo API GET/POST cho `system_config` (lấy, thêm/cập nhật cấu hình như kiểm duyệt, dung lượng).,System Config,system_config,Backend Developer,Thấp,1 ngày,Chưa thực hiện
+2.1.13,Thiết kế API thông báo,Tạo API GET/POST/PUT cho `notifications` (lấy, gửi, đánh dấu đã đọc thông báo).,Notifications,notifications; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+2.1.14,Tài liệu hóa API,Tạo tài liệu API bằng Swagger/Postman, bao gồm mô tả endpoint, tham số, response.,All,All,Backend Developer,Cao,2 ngày,Chưa thực hiện
+2.2.1,Thiết kế wireframe trang chủ,Thiết kế giao diện hiển thị danh sách `majors`, thanh tìm kiếm (`documents.title`, `tags.tag_name`).,Trang chủ,majors; documents; tags,UI/UX Designer,Cao,2 ngày,Chưa thực hiện
+2.2.2,Thiết kế wireframe trang danh mục,Thiết kế điều hướng `majors` → `academic_years` → `subjects` → `documents`.,Danh mục,majors; academic_years; subjects; documents,UI/UX Designer,Cao,2 ngày,Chưa thực hiện
+2.2.3,Thiết kế wireframe trang chi tiết tài liệu,Hiển thị `documents.title`, `description`, `file_type`, `comments`, `ratings`, nút chia sẻ (`shared_links`).,Chi tiết tài liệu,documents; comments; ratings; shared_links,UI/UX Designer,Cao,2 ngày,Chưa thực hiện
+2.2.4,Thiết kế wireframe trang đăng nhập/đăng ký,Form cho `users.email`, `password_hash`, nút Google OAuth (`users.google_id`).,Đăng nhập/Đăng ký,users,UI/UX Designer,Cao,1 ngày,Chưa thực hiện
+2.2.5,Thiết kế wireframe trang tải lên tài liệu,Form chọn `majors`, `subjects`, `tags`, upload file (`documents.file_path`).,Tải lên tài liệu,documents; majors; subjects; tags,UI/UX Designer,Cao,2 ngày,Chưa thực hiện
+2.2.6,Thiết kế wireframe trang diễn đàn,Hiển thị `forums`, `forum_posts`, form tạo bài, phản hồi (`forum_replies`).,Diễn đàn,forums; forum_posts; forum_replies,UI/UX Designer,Trung bình,2 ngày,Chưa thực hiện
+2.2.7,Thiết kế wireframe trang lịch sử truy cập,Hiển thị `document_history` của người dùng.,Lịch sử truy cập,document_history,UI/UX Designer,Trung bình,1 ngày,Chưa thực hiện
+2.2.8,Thiết kế wireframe trang admin,Bảng điều khiển: thống kê (`documents.view_count`, `download_count`), quản lý `majors`, `subjects`, `documents`, `users`, `system_config`.,Admin,All,UI/UX Designer,Cao,3 ngày,Chưa thực hiện
+2.2.9,Thiết kế responsive,Đảm bảo giao diện tương thích PC, điện thoại, tablet.,All,None,UI/UX Designer,Cao,2 ngày,Chưa thực hiện
+2.2.10,Tích hợp đa ngôn ngữ,Thiết kế giao diện hỗ trợ tiếng Việt, tiếng Anh.,All,None,UI/UX Designer,Trung bình,2 ngày,Chưa thực hiện
+2.2.11,Tạo mockup giao diện,Tạo mockup chi tiết bằng Figma/Adobe XD.,All,None,UI/UX Designer,Cao,3 ngày,Chưa thực hiện
+3.1.1,Cài đặt môi trường ReactJS,Cài đặt dự án ReactJS, cấu hình thư viện cần thiết.,All,None,Frontend Developer,Cao,1 ngày,Chưa thực hiện
+3.1.2,Xây dựng giao diện trang chủ,Hiển thị danh sách `majors`, thanh tìm kiếm (`documents.title`, `tags.tag_name`).,Trang chủ,majors; documents; tags,Frontend Developer,Cao,3 ngày,Chưa thực hiện
+3.1.3,Xây dựng giao diện danh mục,Điều hướng `majors` → `academic_years` → `subjects` → `documents`.,Danh mục,majors; academic_years; subjects; documents,Frontend Developer,Cao,3 ngày,Chưa thực hiện
+3.1.4,Xây dựng giao diện chi tiết tài liệu,Hiển thị `documents`, `comments`, `ratings`, nút tải, chia sẻ (`shared_links`).,Chi tiết tài liệu,documents; comments; ratings; shared_links,Frontend Developer,Cao,3 ngày,Chưa thực hiện
+3.1.5,Xây dựng giao diện đăng nhập/đăng ký,Form đăng nhập/đăng ký, tích hợp Google OAuth (`users.google_id`).,Đăng nhập/Đăng ký,users,Frontend Developer,Cao,2 ngày,Chưa thực hiện
+3.1.6,Xây dựng giao diện tải lên tài liệu,Form chọn `majors`, `subjects`, `tags`, upload file.,Tải lên tài liệu,documents; majors; subjects; tags,Frontend Developer,Cao,3 ngày,Chưa thực hiện
+3.1.7,Xây dựng giao diện diễn đàn,Hiển thị `forums`, `forum_posts`, form tạo bài, phản hồi.,Diễn đàn,forums; forum_posts; forum_replies,Frontend Developer,Trung bình,3 ngày,Chưa thực hiện
+3.1.8,Xây dựng giao diện lịch sử truy cập,Hiển thị `document_history`.,Lịch sử truy cập,document_history,Frontend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.1.9,Xây dựng giao diện admin,Bảng điều khiển: thống kê, quản lý `majors`, `subjects`, `documents`, `users`, `system_config`.,Admin,All,Frontend Developer,Cao,4 ngày,Chưa thực hiện
+3.1.10,Tích hợp tìm kiếm và lọc,Tìm kiếm theo `documents.title`, `tags.tag_name`; lọc theo `file_type`, `created_at`.,All,documents; tags,Frontend Developer,Cao,2 ngày,Chưa thực hiện
+3.1.11,Tích hợp đa ngôn ngữ,Hỗ trợ giao diện tiếng Việt, tiếng Anh.,All,None,Frontend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.1.12,Tích hợp responsive,Đảm bảo giao diện tương thích mọi thiết bị.,All,None,Frontend Developer,Cao,2 ngày,Chưa thực hiện
+3.2.1,Cài đặt môi trường backend,Cài đặt Node.js/Django/Laravel, cấu hình thư viện.,All,None,Backend Developer,Cao,1 ngày,Chưa thực hiện
+3.2.2,Xây dựng API quản lý ngành học,Triển khai API GET/POST/PUT/DELETE cho `majors`.,Majors,majors,Backend Developer,Cao,2 ngày,Chưa thực hiện
+3.2.3,Xây dựng API quản lý năm học,Triển khai API GET/POST/PUT/DELETE cho `academic_years`.,Academic Years,academic_years,Backend Developer,Cao,1 ngày,Chưa thực hiện
+3.2.4,Xây dựng API quản lý môn học,Triển khai API GET/POST/PUT/DELETE cho `subjects`.,Subjects,subjects; majors; academic_years,Backend Developer,Cao,2 ngày,Chưa thực hiện
+3.2.5,Xây dựng API quản lý tài liệu,Triển khai API GET/POST/PUT/DELETE cho `documents`, xử lý tải lên/tải xuống file.,Documents,documents; subjects; users,Backend Developer,Cao,4 ngày,Chưa thực hiện
+3.2.6,Xây dựng API quản lý thẻ tag,Triển khai API GET/POST cho `tags`, POST/DELETE cho `document_tags`.,Tags,tags; document_tags; documents,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+3.2.7,Xây dựng API quản lý người dùng,Triển khai API đăng ký, đăng nhập, quản lý `users`.,Users,users,Backend Developer,Cao,3 ngày,Chưa thực hiện
+3.2.8,Xây dựng API bình luận,Triển khai API GET/POST/DELETE cho `comments`.,Comments,comments; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+3.2.9,Xây dựng API đánh giá,Triển khai API GET/POST/PUT/DELETE cho `ratings`.,Ratings,ratings; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+3.2.10,Xây dựng API lịch sử truy cập,Triển khai API GET/POST cho `document_history`.,Document History,document_history; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+3.2.11,Xây dựng API chia sẻ liên kết,Triển khai API POST `/shared-links`, GET `/shared-links/{token}`.,Shared Links,shared_links; documents; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+3.2.12,Xây dựng API diễn đàn,Triển khai API GET/POST/DELETE cho `forums`, `forum_posts`, `forum_replies`.,Forums,forums; forum_posts; forum_replies; subjects; users,Backend Developer,Trung bình,3 ngày,Chưa thực hiện
+3.2.13,Xây dựng API cấu hình hệ thống,Triển khai API GET/POST cho `system_config`.,System Config,system_config,Backend Developer,Thấp,1 ngày,Chưa thực hiện
+3.2.14,Xây dựng API thông báo,Triển khai API GET/POST/PUT cho `notifications`.,Notifications,notifications; users,Backend Developer,Trung bình,1 ngày,Chưa thực hiện
+3.2.15,Tích hợp lưu trữ file,Tích hợp AWS S3/Google Drive cho `documents.file_path`, kiểm tra `file_size`, `file_type`.,Documents,documents,Backend Developer,Cao,2 ngày,Chưa thực hiện
+3.2.16,Tích hợp bảo mật,Mã hóa `users.password_hash`, tích hợp Google OAuth (`users.google_id`), xác thực `users.university_id`.,Users,users,Backend Developer,Cao,3 ngày,Chưa thực hiện
+3.2.17,Tích hợp kiểm duyệt,Kiểm duyệt `documents.status`, `comments.status`, `forum_posts.status`, `forum_replies.status` dựa trên `system_config`.,All,documents; comments; forum_posts; forum_replies; system_config,Backend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.2.18,Tích hợp thông báo,Gửi email và thông báo trên web (`notifications`) khi có sự kiện mới.,Notifications,notifications; users,Backend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.3.1,Cài đặt MySQL/PostgreSQL,Cài đặt cơ sở dữ liệu, áp dụng schema đã cung cấp.,All,All,Database Developer,Cao,1 ngày,Chưa thực hiện
+3.3.2,Tạo index,Tạo index cho `users.email`, `majors.major_code`, `subjects.subject_code`, `documents.title`, `tags.tag_name`.,All,All,Database Developer,Cao,1 ngày,Chưa thực hiện
+3.3.3,Nhập dữ liệu mẫu,Nhập dữ liệu mẫu cho `majors`, `academic_years`, `subjects`, `users`, `documents`, `tags`.,All,All,Database Developer,Cao,2 ngày,Chưa thực hiện
+3.3.4,Tối ưu hóa truy vấn,Sử dụng index, caching (Redis) cho các truy vấn `documents`, `subjects`.,All,All,Database Developer,Trung bình,2 ngày,Chưa thực hiện
+3.4.1,Tích hợp thẻ tag,Cho phép thêm/gán `tags.tag_name` khi tải lên tài liệu, tìm kiếm/lọc theo tag.,Tags,tags; document_tags; documents,Backend/Frontend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.4.2,Tích hợp lịch sử truy cập,Ghi và hiển thị `document_history` khi xem/tải tài liệu.,Document History,document_history; documents; users,Backend/Frontend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.4.3,Tích hợp chia sẻ liên kết,Tạo và xử lý `shared_links.share_token`, hỗ trợ truy cập không cần đăng nhập.,Shared Links,shared_links; documents; users,Backend/Frontend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.4.4,Tích hợp thống kê,Tính toán và hiển thị `documents.view_count`, `download_count` cho admin/người tải lên.,Documents,documents,Backend/Frontend Developer,Trung bình,2 ngày,Chưa thực hiện
+3.4.5,Tích hợp diễn đàn,Xây dựng chức năng tạo bài viết, phản hồi trong `forums`, `forum_posts`, `forum_replies`.,Forums,forums; forum_posts; forum_replies; subjects; users,Backend/Frontend Developer,Trung bình,3 ngày,Chưa thực hiện
+4.1,Kiểm thử đơn vị,Kiểm tra từng API (`majors`, `subjects`, `documents`, `users`, v.v.) và giao diện (form, danh sách).,All,All,QA Engineer,Cao,3 ngày,Chưa thực hiện
+4.2,Kiểm thử tích hợp,Kiểm tra luồng người dùng (xem/tải tài liệu, diễn đàn), tích hợp Google OAuth, lưu trữ file.,All,All,QA Engineer,Cao,3 ngày,Chưa thực hiện
+4.3,Kiểm thử hiệu suất,Kiểm tra tốc độ tải trang, tìm kiếm, tải lên/tải xuống, xử lý nhiều người dùng đồng thời.,All,All,QA Engineer,Trung bình,2 ngày,Chưa thực hiện
+4.4,Kiểm thử bảo mật,Kiểm tra phân quyền (`users.role`), bảo mật `password_hash`, OAuth, chống tấn công (SQL injection, XSS).,Users,users,QA Engineer,Cao,2 ngày,Chưa thực hiện
+4.5,Kiểm thử giao diện,Kiểm tra responsive trên PC, điện thoại, tablet; kiểm tra đa ngôn ngữ.,All,None,QA Engineer,Cao,2 ngày,Chưa thực hiện
+4.6,Kiểm thử người dùng,Mời sinh viên, giảng viên, admin thử nghiệm và thu thập phản hồi.,All,All,QA Engineer,Cao,3 ngày,Chưa thực hiện
+5.1,Cài đặt máy chủ,Cài đặt web server, database server, cấu hình HTTPS, SSL.,All,All,DevOps Engineer,Cao,2 ngày,Chưa thực hiện
+5.2,Cấu hình lưu trữ file,Tích hợp AWS S3/Google Drive cho `documents.file_path`.,Documents,documents,DevOps Engineer,Cao,1 ngày,Chưa thực hiện
+5.3,Nhập dữ liệu ban đầu,Nhập `majors`, `academic_years`, `subjects`, `users`, `documents` mẫu.,All,All,Database Developer,Cao,2 ngày,Chưa thực hiện
+5.4,Đào tạo người dùng,Hướng dẫn admin quản lý hệ thống, sinh viên/giảng viên sử dụng.,All,All,Project Manager,Cao,2 ngày,Chưa thực hiện
+5.5,Giám sát và bảo trì,Theo dõi hiệu suất, sao lưu cơ sở dữ liệu, cập nhật bảo mật.,All,All,DevOps Engineer,Trung bình,Liên tục,Chưa thực hiện
+6.1,Phân công nhiệm vụ,Gán đầu việc cho frontend, backend, QA, DevOps, UI/UX.,All,None,Project Manager,Cao,1 ngày,Chưa thực hiện
+6.2,Theo dõi tiến độ,Sử dụng Trello/Jira, họp định kỳ để báo cáo.,All,None,Project Manager,Cao,Liên tục,Chưa thực hiện
+6.3,Quản lý rủi ro,Xác định rủi ro (chậm tiến độ, lỗi tích hợp), lập kế hoạch dự phòng.,All,None,Project Manager,Cao,Liên tục,Chưa thực hiện
+7.1,Viết tài liệu kỹ thuật,Mô tả schema, tài liệu API, hướng dẫn cài đặt/triển khai.,All,All,Backend Developer,Cao,3 ngày,Chưa thực hiện
+7.2,Viết tài liệu người dùng,Hướng dẫn sử dụng cho sinh viên/giảng viên, quản trị cho admin.,All,All,Technical Writer,Cao,2 ngày,Chưa thực hiện
+7.3,Báo cáo dự án,Tổng kết tiến độ, kết quả, đề xuất cải tiến.,All,None,Project Manager,Cao,2 ngày,Chưa thực hiện
