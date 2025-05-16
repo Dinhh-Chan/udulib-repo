@@ -15,7 +15,22 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     
     def get_by_google_id(self, db: Session, *, google_id: str) -> Optional[User]:
         return db.query(User).filter(User.google_id == google_id).first()
-    
+    def update (self, db:Session, *, db_obj: User, obj_in: UserUpdate) -> User:
+        if obj_in.password:
+            db_obj.password_hash = get_password_hash(obj_in.password)
+        if obj_in.email:
+            db_obj.email = obj_in.email
+        if obj_in.username:
+            db_obj.username = obj_in.username
+        if obj_in.full_name:
+            db_obj.full_name = obj_in.full_name
+        if obj_in.role:
+            db_obj.role = obj_in.role
+        if obj_in.university_id:
+            db_obj.university_id = obj_in.university_id
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
         db_obj = User(
             email=obj_in.email,
