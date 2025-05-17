@@ -1,9 +1,33 @@
+# Database
+*.db
+*.sqlite3
+dbeaver-ce_latest_amd64.deb
+
+# Docker
+docker-compose.yml
+docker-compose.override.yml
+
+# Alembic
+alembic.ini
+alembic/versions/*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -15,18 +39,21 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.env
-.venv
+
+# Virtual Environment
 venv/
-.idea/
-.vscode/
-*.swp
-*.swo
-.coverage
-htmlcov/
-.pytest_cache/
+ENV/
+env/
+.venv/
+
+# Logs
+*.log
 logs/
-.DS_Store
+alembic.ini
+docker-compose.yml
+app/core/config.py
+dbeaver-ce_latest_amd64.deb

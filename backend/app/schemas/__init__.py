@@ -12,3 +12,4 @@ from app.schemas.notification import *
 from app.schemas.system_config import *
 from app.schemas.document_history import *
 from app.schemas.shared_link import *
+from app.schemas.department import *
