@@ -33,6 +33,32 @@ CREATE TABLE majors (
 -- Create index for major_code
 CREATE INDEX idx_major_code ON majors(major_code);
 
+-- 3. Create departments table
+CREATE TABLE departments (
+    department_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for departments
+CREATE INDEX idx_department_slug ON departments(slug);
+
+-- 4. Create subject_departments table (many-to-many relationship)
+CREATE TABLE subject_departments (
+    id SERIAL PRIMARY KEY,
+    subject_id INTEGER NOT NULL REFERENCES subjects(subject_id) ON DELETE CASCADE,
+    department_id INTEGER NOT NULL REFERENCES departments(department_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uix_subject_department UNIQUE (subject_id, department_id)
+);
+
+-- Create index for subject_departments
+CREATE INDEX idx_subject_departments_subject ON subject_departments(subject_id);
+CREATE INDEX idx_subject_departments_department ON subject_departments(department_id);
+
 -- 3. Create users table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,

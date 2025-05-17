@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.db.base_class import Base
 from app.models.user import User
+from app.models.department import Department
 # Thêm tất cả các models khác ở đây
 
 target_metadata = Base.metadata
