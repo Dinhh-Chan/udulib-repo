@@ -15,6 +15,11 @@ class Subject(Base):
     created_at = Column(String)  
     updated_at = Column(String)  
 
+    # Relationships
+    major = relationship("Major", back_populates="subjects")
+    academic_year = relationship("AcademicYear", back_populates="subjects")
+    departments = relationship("Department", secondary="subject_departments", back_populates="subjects")
+
     # Unique constraint
     __table_args__ = (
         UniqueConstraint('major_id', 'subject_code', name='uix_major_subject_code'),

@@ -1,8 +1,9 @@
 from pydantic import BaseModel, constr
-from typing import Optional
+from typing import Optional, List
 from app.schemas.common import TimeStampBase
 from app.schemas.major import Major
 from app.schemas.academic_year import AcademicYear
+from app.schemas.relationships import DepartmentSubject
 
 class SubjectBase(BaseModel):
     subject_name: constr(max_length=100)
@@ -12,7 +13,7 @@ class SubjectBase(BaseModel):
     year_id: int
 
 class SubjectCreate(SubjectBase):
-    pass
+    department_ids: List[int]
 
 class SubjectUpdate(BaseModel):
     subject_name: Optional[constr(max_length=100)] = None
@@ -20,11 +21,16 @@ class SubjectUpdate(BaseModel):
     description: Optional[str] = None
     major_id: Optional[int] = None
     year_id: Optional[int] = None
+    department_ids: Optional[List[int]] = None
 
 class Subject(SubjectBase, TimeStampBase):
     subject_id: int
     major: Optional[Major] = None
     academic_year: Optional[AcademicYear] = None
+    departments: Optional[List[DepartmentSubject]] = []
     
     class Config:
         from_attributes = True
+
+# Resolve forward references
+Subject.model_rebuild()
