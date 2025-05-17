@@ -21,14 +21,14 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
         to_encode, 
-        settings.SECRET_KEY,  # Using SECRET_KEY from .env
-        algorithm=settings.ALGORITHM  # Using ALGORITHM from .env
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.ALGORITHM 
     )
     return encoded_jwt
 
 router = APIRouter()
 
-@router.post("/login")
+@router.post("/login", response_model=LoginResponse)
 def login(username: str, password: str, db: Session = Depends(get_db)):
     """Login with username/email or password"""
     # No await needed since methods are now synchronous
@@ -56,10 +56,29 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
             detail="User account is not active"
         )
     
+    # Update last login timestamp
     user_crud.update_last_login(db=db, user_id=user.user_id)
     
+    # Create access token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.user_id)},
+        expires_delta=access_token_expires
+    )
     
-    return {"login successfull"}
+    # Return the token and user information
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "user_id": user.user_id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "status": user.status
+        }
+    }
 @router.post("/register")
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
     # Kiểm tra email đã tồn tại
