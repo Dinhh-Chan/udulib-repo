@@ -18,7 +18,6 @@ class Subject(Base):
     # Relationships
     major = relationship("Major", back_populates="subjects")
     academic_year = relationship("AcademicYear", back_populates="subjects")
-    departments = relationship("Department", secondary="subject_departments", back_populates="subjects")
 
     # Unique constraint
     __table_args__ = (

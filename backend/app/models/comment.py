@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Enum
 from sqlalchemy.orm import relationship
-
+from datetime import datetime
+from sqlalchemy.types import DateTime
 from app.models.base import Base
 
 class Comment(Base):
@@ -11,6 +12,7 @@ class Comment(Base):
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     content = Column(Text, nullable=False)
     status = Column(Enum("approved", "pending", "rejected"), default="approved")
-    created_at = Column(String)
-    updated_at = Column(String)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
+  
