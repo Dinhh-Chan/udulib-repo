@@ -1,5 +1,6 @@
-from sqlalchemy import Boolean, Column, Integer, String, Enum, Text, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Enum, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from app.models.base import Base
 
@@ -15,6 +16,16 @@ class User(Base):
     status = Column(Enum("active", "banned", "pending"), default="active", nullable=False)
     google_id = Column(String(100))
     university_id = Column(String(50))
-    created_at = Column(String)  
-    updated_at = Column(String)  
-    last_login = Column(String, nullable=True)  
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+
+    # Relationships
+    documents = relationship("Document", back_populates="user")
+    comments = relationship("Comment", back_populates="user")
+    ratings = relationship("Rating", back_populates="user")
+    document_histories = relationship("DocumentHistory", back_populates="user")
+    shared_links = relationship("SharedLink", back_populates="user")
+    forum_posts = relationship("ForumPost", back_populates="user")
+    forum_replies = relationship("ForumReply", back_populates="user")
+    notifications = relationship("Notification", back_populates="user")
