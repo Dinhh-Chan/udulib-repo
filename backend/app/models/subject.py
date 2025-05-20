@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from app.models.base import Base
 
@@ -12,8 +13,8 @@ class Subject(Base):
     description = Column(Text)
     major_id = Column(Integer, ForeignKey("majors.major_id"), nullable=False)
     year_id = Column(Integer, ForeignKey("academic_years.year_id"), nullable=False)
-    created_at = Column(String)  
-    updated_at = Column(String)  
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     major = relationship("Major", back_populates="subjects")
@@ -23,3 +24,4 @@ class Subject(Base):
     __table_args__ = (
         UniqueConstraint('major_id', 'subject_code', name='uix_major_subject_code'),
     )
+    

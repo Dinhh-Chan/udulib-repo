@@ -1,36 +1,35 @@
-from pydantic import BaseModel, constr
-from typing import Optional, List
-from app.schemas.common import TimeStampBase
-from app.schemas.major import Major
-from app.schemas.academic_year import AcademicYear
-from app.schemas.relationships import DepartmentSubject
+from typing import Optional
+from pydantic import BaseModel
+from datetime import datetime
 
+# Shared properties
 class SubjectBase(BaseModel):
-    subject_name: constr(max_length=100)
-    subject_code: constr(max_length=20)
+    subject_name: str
+    subject_code: str
     description: Optional[str] = None
     major_id: int
     year_id: int
 
+# Properties to receive on subject creation
 class SubjectCreate(SubjectBase):
-    department_ids: List[int]
+    pass
 
-class SubjectUpdate(BaseModel):
-    subject_name: Optional[constr(max_length=100)] = None
-    subject_code: Optional[constr(max_length=20)] = None
-    description: Optional[str] = None
+# Properties to receive on subject update
+class SubjectUpdate(SubjectBase):
+    subject_name: Optional[str] = None
+    subject_code: Optional[str] = None
     major_id: Optional[int] = None
     year_id: Optional[int] = None
-    department_ids: Optional[List[int]] = None
 
-class Subject(SubjectBase, TimeStampBase):
+# Properties shared by models stored in DB
+class SubjectInDBBase(SubjectBase):
     subject_id: int
-    major: Optional[Major] = None
-    academic_year: Optional[AcademicYear] = None
-    departments: Optional[List[DepartmentSubject]] = []
-    
-    class Config:
-        from_attributes = True
+    created_at: datetime
+    updated_at: datetime
 
-# Resolve forward references
-Subject.model_rebuild()
+    class Config:
+        orm_mode = True
+
+# Properties to return to client
+class Subject(SubjectInDBBase):
+    pass

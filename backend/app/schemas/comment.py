@@ -1,22 +1,34 @@
+from typing import Optional, List
 from pydantic import BaseModel
-from typing import Optional
+from datetime import datetime
 from app.schemas.common import ForumStatus, TimeStampBase
 from app.schemas.user import User
 
+# Shared properties
 class CommentBase(BaseModel):
     content: str
-    
-class CommentCreate(CommentBase):
     document_id: int
 
+# Properties to receive on comment creation
+class CommentCreate(CommentBase):
+    pass
+
+# Properties to receive on comment update
 class CommentUpdate(BaseModel):
     content: Optional[str] = None
-    status: Optional[ForumStatus] = None
 
-class Comment(CommentBase, TimeStampBase):
+# Properties shared by models stored in DB
+class CommentInDBBase(CommentBase):
     comment_id: int
-    document_id: int
     user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# Properties to return to client
+class Comment(CommentInDBBase, TimeStampBase):
     status: ForumStatus
     user: Optional[User] = None
     
