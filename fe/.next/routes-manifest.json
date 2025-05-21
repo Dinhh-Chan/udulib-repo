@@ -1,0 +1,189 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "dynamicRoutes": [
+    {
+      "page": "/departments/[slug]",
+      "regex": "^/departments/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/departments/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/departments/[slug]/courses/[courseSlug]",
+      "regex": "^/departments/([^/]+?)/courses/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPcourseSlug": "nxtPcourseSlug"
+      },
+      "namedRegex": "^/departments/(?<nxtPslug>[^/]+?)/courses/(?<nxtPcourseSlug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/documents/[id]",
+      "regex": "^/documents/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/documents/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/forum/[id]",
+      "regex": "^/forum/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/forum/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/forum/[id]/edit",
+      "regex": "^/forum/([^/]+?)/edit(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/forum/(?<nxtPid>[^/]+?)/edit(?:/)?$"
+    },
+    {
+      "page": "/forum/[id]/reply",
+      "regex": "^/forum/([^/]+?)/reply(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/forum/(?<nxtPid>[^/]+?)/reply(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/ForumPage",
+      "regex": "^/ForumPage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ForumPage(?:/)?$"
+    },
+    {
+      "page": "/ForumPostPage",
+      "regex": "^/ForumPostPage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ForumPostPage(?:/)?$"
+    },
+    {
+      "page": "/HomePage",
+      "regex": "^/HomePage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/HomePage(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/departments",
+      "regex": "^/departments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/departments(?:/)?$"
+    },
+    {
+      "page": "/forum",
+      "regex": "^/forum(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forum(?:/)?$"
+    },
+    {
+      "page": "/forum/categories",
+      "regex": "^/forum/categories(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forum/categories(?:/)?$"
+    },
+    {
+      "page": "/forum/new",
+      "regex": "^/forum/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forum/new(?:/)?$"
+    },
+    {
+      "page": "/forum/popular",
+      "regex": "^/forum/popular(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forum/popular(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/profile",
+      "regex": "^/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/profile(?:/)?$"
+    },
+    {
+      "page": "/register",
+      "regex": "^/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/register(?:/)?$"
+    },
+    {
+      "page": "/search",
+      "regex": "^/search(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/search(?:/)?$"
+    },
+    {
+      "page": "/settings",
+      "regex": "^/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings(?:/)?$"
+    },
+    {
+      "page": "/upload",
+      "regex": "^/upload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/upload(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "RSC",
+    "varyHeader": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch",
+    "prefetchHeader": "Next-Router-Prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "Next-Router-Segment-Prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  },
+  "rewrites": []
+}
