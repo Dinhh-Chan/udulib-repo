@@ -60,6 +60,25 @@ async def get_documents(
     """
     return await document.get_filtered_documents(db, filter_request=filter_request)
 
+@router.get("/academic-year/{academic_year_id}", response_model=DocumentListResponse)
+async def get_documents_by_academic_year(
+    *,
+    db: Session = Depends(get_db),
+    academic_year_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    # current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy danh sách tài liệu theo năm học.
+    """
+    filter_request = DocumentFilterRequest(
+        academic_year_id=academic_year_id,
+        skip=skip,
+        limit=limit
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
 @router.get("/{id}", response_model=Document)
 async def get_document(
     *,
