@@ -1,16 +1,23 @@
 from typing import List, Optional, Any, Dict, Union
 from fastapi.encoders import jsonable_encoder
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from sqlalchemy import asc
+from sqlalchemy import asc, select
 from sqlalchemy import func
 from app.models.subject import Subject
 from app.models.academic_year import AcademicYear
 from app.schemas.academic_year import AcademicYearCreate, AcademicYearUpdate
 from app.services.crud.base_crud import CRUDBase
+import logging
 
+logger = logging.getLogger(__name__)
 
-class CRUDAcademicYear(CRUDBase[AcademicYear, AcademicYearCreate, AcademicYearUpdate]):
-    async def create(self, db: Session, *, obj_in: AcademicYearCreate) -> AcademicYear:
+class AcademicYearCRUD(CRUDBase[AcademicYear, AcademicYearCreate, AcademicYearUpdate]):
+    def __init__(self, db: AsyncSession):
+        super().__init__(AcademicYear)
+        self.db = db
+
+    async def create(self, db: AsyncSession, *, obj_in: AcademicYearCreate) -> AcademicYear:
         """
         Create a new academic year.
         """
@@ -42,7 +49,7 @@ class CRUDAcademicYear(CRUDBase[AcademicYear, AcademicYearCreate, AcademicYearUp
         db.refresh(db_obj)
         return db_obj
     
-    async def get_by_name(self, db: Session, *, year_name: str) -> Optional[AcademicYear]:
+    async def get_by_name(self, db: AsyncSession, *, year_name: str) -> Optional[AcademicYear]:
         """
         Get an academic year by name.
         """
@@ -116,4 +123,178 @@ class CRUDAcademicYear(CRUDBase[AcademicYear, AcademicYearCreate, AcademicYearUp
             
         return await self.delete(db, id=id)
 
-academic_year = CRUDAcademicYear(AcademicYear)
+    async def get_all(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+        try:
+            query = select(self.model).offset(skip).limit(limit)
+            result = await self.db.execute(query)
+            years = result.scalars().all()
+            logger.info(f"Found {len(years)} academic years")
+
+            result_list = [
+                {
+                    "year_id": year.year_id,
+                    "year_name": year.year_name,
+                    "year_order": year.year_order,
+                    "created_at": year.created_at,
+                    "updated_at": year.updated_at
+                }
+                for year in years
+            ]
+            return result_list
+        except Exception as e:
+            logger.error(f"Error in get all academic years: {str(e)}")
+            raise
+
+    async def get_by_id(self, id: int) -> Optional[Dict[str, Any]]:
+        try:
+            query = select(self.model).where(self.model.year_id == id)
+            result = await self.db.execute(query)
+            year = result.scalar_one_or_none()
+
+            if year:
+                return {
+                    "year_id": year.year_id,
+                    "year_name": year.year_name,
+                    "year_order": year.year_order,
+                    "created_at": year.created_at,
+                    "updated_at": year.updated_at
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error in get academic year: {str(e)}")
+            raise
+
+    async def get_by_name(self, year_name: str) -> Optional[Dict[str, Any]]:
+        try:
+            query = select(self.model).where(self.model.year_name == year_name)
+            result = await self.db.execute(query)
+            year = result.scalar_one_or_none()
+
+            if year:
+                return {
+                    "year_id": year.year_id,
+                    "year_name": year.year_name,
+                    "year_order": year.year_order,
+                    "created_at": year.created_at,
+                    "updated_at": year.updated_at
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error in get academic year by name: {str(e)}")
+            raise
+
+    async def create(self, obj_in: AcademicYearCreate) -> Dict[str, Any]:
+        try:
+            year = AcademicYear(**obj_in.dict())
+            self.db.add(year)
+            await self.db.commit()
+            await self.db.refresh(year)
+
+            return {
+                "year_id": year.year_id,
+                "year_name": year.year_name,
+                "year_order": year.year_order,
+                "created_at": year.created_at,
+                "updated_at": year.updated_at
+            }
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Error in create academic year: {str(e)}")
+            raise
+
+    async def update(self, id: int, obj_in: AcademicYearUpdate) -> Optional[Dict[str, Any]]:
+        try:
+            query = select(self.model).where(self.model.year_id == id)
+            result = await self.db.execute(query)
+            year = result.scalar_one_or_none()
+
+            if not year:
+                return None
+
+            update_data = obj_in.dict(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(year, field, value)
+
+            await self.db.commit()
+            await self.db.refresh(year)
+
+            return {
+                "year_id": year.year_id,
+                "year_name": year.year_name,
+                "year_order": year.year_order,
+                "created_at": year.created_at,
+                "updated_at": year.updated_at
+            }
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Error in update academic year: {str(e)}")
+            raise
+
+    async def delete(self, id: int) -> bool:
+        try:
+            query = select(self.model).where(self.model.year_id == id)
+            result = await self.db.execute(query)
+            year = result.scalar_one_or_none()
+
+            if not year:
+                return False
+
+            await self.db.delete(year)
+            await self.db.commit()
+            return True
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Error in delete academic year: {str(e)}")
+            raise
+
+    async def get_latest_year(self) -> Optional[Dict[str, Any]]:
+        try:
+            query = select(self.model).order_by(self.model.year_order.desc())
+            result = await self.db.execute(query)
+            year = result.scalar_one_or_none()
+
+            if year:
+                return {
+                    "year_id": year.year_id,
+                    "year_name": year.year_name,
+                    "year_order": year.year_order,
+                    "created_at": year.created_at,
+                    "updated_at": year.updated_at
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error in get latest academic year: {str(e)}")
+            raise
+
+    async def get_with_subjects_count(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+        try:
+            query = (
+                select(
+                    self.model,
+                    func.count(Subject.subject_id).label("subjects_count")
+                )
+                .outerjoin(Subject, Subject.year_id == self.model.year_id)
+                .group_by(self.model.year_id)
+                .order_by(self.model.year_order)
+                .offset(skip)
+                .limit(limit)
+            )
+            result = await self.db.execute(query)
+            years_with_count = result.all()
+
+            return [
+                {
+                    "year_id": year.year_id,
+                    "year_name": year.year_name,
+                    "year_order": year.year_order,
+                    "created_at": year.created_at,
+                    "updated_at": year.updated_at,
+                    "subjects_count": count
+                }
+                for year, count in years_with_count
+            ]
+        except Exception as e:
+            logger.error(f"Error in get years with subjects count: {str(e)}")
+            raise
+
+academic_year = AcademicYearCRUD(AsyncSession)

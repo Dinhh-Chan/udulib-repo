@@ -3,6 +3,8 @@ from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
 
 from app.core.config import settings
 
@@ -19,7 +21,7 @@ if "sqlite" in db_url:
 else:
     # PostgreSQL async
     engine = create_async_engine(
-        db_url,
+        "postgresql+asyncpg://postgres:postgres@localhost:5437/postgres",
         pool_pre_ping=True,
         echo=settings.DB_ECHO_LOG,
         pool_size=settings.DB_POOL_SIZE,
@@ -35,6 +37,11 @@ AsyncSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
+# Create SQLAlchemy engine and session
+engine = create_engine("postgresql://postgres:postgres@localhost:5437/postgres", pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """

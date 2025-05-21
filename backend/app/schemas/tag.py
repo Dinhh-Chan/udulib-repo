@@ -1,16 +1,19 @@
-from pydantic import BaseModel, constr
 from typing import Optional
 from datetime import datetime
+from pydantic import BaseModel
 
 class TagBase(BaseModel):
-    tag_name: constr(max_length=50)
+    tag_name: str
 
 class TagCreate(TagBase):
     pass
 
+class TagUpdate(TagBase):
+    tag_name: Optional[str] = None
+
 class Tag(TagBase):
     tag_id: int
-    created_at: Optional[datetime] = None
-    
+    created_at: datetime
+
     class Config:
         from_attributes = True
