@@ -12,7 +12,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=app
-      - SQL_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5437/app
+      - SQL_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/app
     volumes:
       - ./:/app/
     depends_on:
