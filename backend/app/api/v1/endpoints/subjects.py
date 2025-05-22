@@ -104,4 +104,24 @@ async def delete_subject(
             detail="Subject not found"
         )
     await crud.delete(id=subject_id)
-    return {"status": "success"} 
+    return {"status": "success"}
+
+@router.get("/academic-year/{academic_year_id}", response_model=List[Subject])
+async def read_subjects_by_academic_year(
+    *,
+    db: AsyncSession = Depends(get_db),
+    academic_year_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    # current_user: User = Depends(get_current_user)
+):
+    """
+    Lấy danh sách môn học theo năm học.
+    """
+    crud = SubjectCRUD(db)
+    subjects = await crud.get_all(
+        skip=skip,
+        limit=limit,
+        year_id=academic_year_id
+    )
+    return subjects 

@@ -6,3 +6,6 @@ from app.api.v1.endpoints import documents
 from app.api.v1.endpoints import tag
 from app.api.v1.endpoints import document_tag
 from app.api.v1.endpoints import subjects
+from app.api.v1.endpoints import comments
+from app.api.v1.endpoints import ratings
+from app.api.v1.endpoints import document_history
