@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, academic_year, major, documents, tag, document_tag, subjects, comments, ratings
+from app.api.v1.endpoints import auth, users, academic_year, major, documents, tag, document_tag, subjects, comments, ratings, document_history, shared_link, notification
 
 api_router = APIRouter()
 
@@ -13,3 +13,6 @@ api_router.include_router(tag.router, prefix="/tags", tags=["tags"])
 api_router.include_router(document_tag.router, prefix="/documents", tags=["document-tags"])
 api_router.include_router(comments.router, prefix="/comments", tags=["comments"])
 api_router.include_router(ratings.router, prefix="/ratings", tags=["ratings"])
+api_router.include_router(document_history.router, prefix="/history", tags=["document-history"])
+api_router.include_router(shared_link.router, prefix="/shared-links", tags=["shared-links"])
+api_router.include_router(notification.router, prefix="/notifications", tags=["notifications"])

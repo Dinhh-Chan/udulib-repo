@@ -1,5 +1,6 @@
 from pydantic import BaseModel, constr, conint, Field
 from typing import Optional, List
+from datetime import datetime
 from app.schemas.common import DocumentStatus, TimeStampBase
 from app.schemas.tag import Tag
 from app.schemas.user import User
@@ -25,6 +26,10 @@ class DocumentUpdate(BaseModel):
     status: Optional[DocumentStatus] = None
     tags: Optional[List[str]] = None
 
+class TimeStampBase(BaseModel):
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
 class Document(DocumentBase, TimeStampBase):
     document_id: int = Field(..., gt=0)
     user_id: int = Field(..., gt=0)
@@ -38,6 +43,16 @@ class Document(DocumentBase, TimeStampBase):
     
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+    @classmethod
+    def from_orm(cls, obj):
+        # Chỉ lấy các thông tin cần thiết từ tags
+        if hasattr(obj, 'tags'):
+            obj.tags = [{"tag_id": tag.tag_id, "tag_name": tag.tag_name} for tag in obj.tags]
+        return super().from_orm(obj)
 
 class DocumentListResponse(BaseModel):
     documents: List[Document]
