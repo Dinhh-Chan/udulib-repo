@@ -89,8 +89,10 @@ export default function AdminSidebar() {
   const sidebar = (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white shadow-lg transition-transform duration-300 ease-in-out",
+        "w-64 h-screen flex flex-col bg-white border-r transition-transform duration-300 ease-in-out",
         isMobile && !isOpen && "-translate-x-full",
+        isMobile && "fixed inset-y-0 left-0 z-50",
+        !isMobile && "sticky top-0"
       )}
     >
       <div className="flex h-14 items-center border-b px-4">
