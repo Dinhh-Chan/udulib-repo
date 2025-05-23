@@ -11,6 +11,22 @@ from app.services.crud.user_crud import user_crud
 from app.core.config import settings
 from app.schemas.common import LoginResponse
 from app.schemas.auth import RegisterRequest 
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    """Create JWT access token"""
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(
+        to_encode, 
+        settings.SECRET_KEY,  # Using SECRET_KEY from .env
+        algorithm=settings.ALGORITHM  # Using ALGORITHM from .env
+    )
+    return encoded_jwt
 router = APIRouter()
 @router.post("/login", response_model=LoginResponse)
 async def login(username: str, password: str, db: AsyncSession = Depends(get_db)):
