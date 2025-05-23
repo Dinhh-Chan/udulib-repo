@@ -84,7 +84,7 @@ export default function RegisterPage() {
 
     setIsLoading(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,14 +112,21 @@ export default function RegisterPage() {
         } else {
           toast.error(data.detail || 'Đăng ký thất bại')
         }
+        setIsLoading(false)
         return
       }
 
-      toast.success(data.message || "Đăng ký thành công!")
-      router.push('/login')
+      toast.success(data.message || "Đăng ký thành công!", {
+        duration: 2000,
+        position: "top-center"
+      })
+
+      // Thêm độ trễ 2 giây trước khi chuyển trang
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Có lỗi xảy ra khi đăng ký")
-    } finally {
       setIsLoading(false)
     }
   }
