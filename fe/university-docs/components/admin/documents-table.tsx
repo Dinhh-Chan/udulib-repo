@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import {
@@ -25,56 +25,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { EditDocumentDialog } from "./edit-document-dialog"
-
-interface Document {
-  document_id: number
-  title: string
-  description: string | null
-  file_path: string
-  file_size: number
-  file_type: string
-  subject_id: number
-  user_id: number
-  status: "approved" | "pending" | "rejected"
-  view_count: number
-  download_count: number
-  created_at: string
-  updated_at: string | null
-  subject: {
-    subject_id: number
-    subject_name: string
-  } | null
-  user: {
-    user_id: number
-    username: string
-  } | null
-  tags: Array<{
-    tag_id: number
-    tag_name: string
-  }>
-  average_rating: number
-}
+import { DocumentDetailDialog } from "./document-detail-dialog"
+import { Document, getDocuments, deleteDocument } from "@/lib/api/documents"
 
 export function DocumentsTable() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingDocument, setEditingDocument] = useState<Document | null>(null)
   const [deletingDocument, setDeletingDocument] = useState<Document | null>(null)
+  const [viewingDocument, setViewingDocument] = useState<Document | null>(null)
 
   const fetchDocuments = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`)
-      if (!response.ok) {
-        throw new Error("Không thể tải danh sách tài liệu")
-      }
-      const data = await response.json()
-      // Đảm bảo data là một mảng
-      setDocuments(Array.isArray(data.documents) ? data.documents : [])
+      const data = await getDocuments()
+      setDocuments(data)
     } catch (error) {
       console.error("Error fetching documents:", error)
-      toast.error("Không thể tải danh sách tài liệu")
-      setDocuments([]) // Set mảng rỗng nếu có lỗi
+      setDocuments([])
     } finally {
       setIsLoading(false)
     }
@@ -86,20 +54,13 @@ export function DocumentsTable() {
 
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        throw new Error("Không thể xóa tài liệu")
+      const success = await deleteDocument(id)
+      if (success) {
+        setDeletingDocument(null)
+        fetchDocuments()
       }
-
-      toast.success("Xóa tài liệu thành công")
-      setDeletingDocument(null)
-      fetchDocuments()
     } catch (error) {
       console.error("Error deleting document:", error)
-      toast.error("Không thể xóa tài liệu")
     }
   }
 
@@ -114,6 +75,7 @@ export function DocumentsTable() {
           <TableRow>
             <TableHead>Tên tài liệu</TableHead>
             <TableHead>Môn học</TableHead>
+            <TableHead>Người tải lên</TableHead>
             <TableHead>Loại file</TableHead>
             <TableHead>Trạng thái</TableHead>
             <TableHead className="text-right">Hành động</TableHead>
@@ -122,7 +84,7 @@ export function DocumentsTable() {
         <TableBody>
           {documents.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center">
+              <TableCell colSpan={6} className="text-center">
                 Không có dữ liệu
               </TableCell>
             </TableRow>
@@ -131,6 +93,7 @@ export function DocumentsTable() {
               <TableRow key={document.document_id}>
                 <TableCell className="font-medium">{document.title}</TableCell>
                 <TableCell>{document.subject?.subject_name || "N/A"}</TableCell>
+                <TableCell>{document.user?.username || "N/A"}</TableCell>
                 <TableCell>
                   <Badge
                     variant="outline"
@@ -180,6 +143,10 @@ export function DocumentsTable() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Hành động</DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setViewingDocument(document)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        <span>Xem chi tiết</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setEditingDocument(document)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         <span>Chỉnh sửa</span>
@@ -225,6 +192,20 @@ export function DocumentsTable() {
           open={!!editingDocument}
           onOpenChange={(open) => !open && setEditingDocument(null)}
           onSuccess={fetchDocuments}
+        />
+      )}
+
+      {/* Dialog xem chi tiết */}
+      {viewingDocument && (
+        <DocumentDetailDialog
+          document={viewingDocument}
+          open={!!viewingDocument}
+          onOpenChange={(open) => !open && setViewingDocument(null)}
+          onEdit={(doc) => {
+            setViewingDocument(null)
+            setEditingDocument(doc)
+          }}
+          onDelete={fetchDocuments}
         />
       )}
     </div>
