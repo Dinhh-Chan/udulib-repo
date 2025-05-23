@@ -5,25 +5,25 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { toast, Toaster } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
-    password: "",
-    remember: false
+    password: ""
   })
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target
+    const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value
+      [name]: value
     }))
   }
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login?username=${formData.username}&password=${formData.password}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login?username=${formData.username}&password=${formData.password}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -59,13 +59,8 @@ export default function LoginPage() {
         return
       }
 
-      localStorage.setItem("access_token", data.access_token)
-      localStorage.setItem("user", JSON.stringify(data.user))
+      login(data.user, data.access_token)
       
-      if (formData.remember) {
-        localStorage.setItem("remember", "true")
-      }
-
       toast.success("Đăng nhập thành công", {
         duration: 3000,
         position: "top-center"
@@ -83,6 +78,7 @@ export default function LoginPage() {
 
   return (
     <div className="container flex items-center justify-center min-h-[calc(100vh-16rem)] py-8 px-4 md:px-6">
+      <Toaster position="top-center" richColors />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Đăng nhập</CardTitle>
@@ -117,17 +113,6 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleInputChange}
               />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="remember" 
-                name="remember"
-                checked={formData.remember}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, remember: checked as boolean }))}
-              />
-              <Label htmlFor="remember" className="text-sm font-normal">
-                Ghi nhớ đăng nhập
-              </Label>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
