@@ -3,8 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
-from app.models.base import get_db
-from app.dependencies.auth import get_current_user, require_role
+
 from app.services.crud.academic_year import AcademicYearCRUD
 from app.schemas.academic_year import (
     AcademicYear, 

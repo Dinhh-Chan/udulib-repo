@@ -57,3 +57,6 @@ alembic.ini
 docker-compose.yml
 app/core/config.py
 dbeaver-ce_latest_amd64.deb
+
+# Models
+app/models/base.py
