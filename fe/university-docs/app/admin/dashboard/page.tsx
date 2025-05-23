@@ -1,49 +1,87 @@
-import { Metadata } from "next"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Overview } from "@/components/admin/overview"
-import { RecentDocuments } from "@/components/admin/recent-documents"
-import { StatsCards } from "@/components/admin/stats-cards"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Dashboard - Admin",
-  description: "Trang tổng quan quản trị hệ thống",
-}
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { FileText, Users, BookOpen, GraduationCap } from "lucide-react"
 
 export default function AdminDashboard() {
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Tổng quan</h2>
+        <p className="text-muted-foreground">
+          Thống kê và quản lý hệ thống
+        </p>
       </div>
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="analytics">Phân tích</TabsTrigger>
-          <TabsTrigger value="reports">Báo cáo</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview" className="space-y-4">
-          <StatsCards />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="col-span-4">
-              <CardHeader>
-                <CardTitle>Tổng quan</CardTitle>
-              </CardHeader>
-              <CardContent className="pl-2">
-                <Overview />
-              </CardContent>
-            </Card>
-            <Card className="col-span-3">
-              <CardHeader>
-                <CardTitle>Tài liệu gần đây</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RecentDocuments />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tổng số tài liệu</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">1,234</div>
+            <p className="text-xs text-muted-foreground">
+              +20% so với tháng trước
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Người dùng</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">567</div>
+            <p className="text-xs text-muted-foreground">
+              +10% so với tháng trước
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Môn học</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">89</div>
+            <p className="text-xs text-muted-foreground">
+              +5% so với tháng trước
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ngành học</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12</div>
+            <p className="text-xs text-muted-foreground">
+              +2% so với tháng trước
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Tài liệu mới nhất</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Add recent documents table here */}
+          </CardContent>
+        </Card>
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Hoạt động gần đây</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Add recent activities here */}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 } 

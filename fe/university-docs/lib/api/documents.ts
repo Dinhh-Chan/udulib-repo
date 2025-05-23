@@ -31,7 +31,7 @@ export interface Document {
 
 export async function getDocuments() {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/`)
     if (!response.ok) {
       throw new Error("Không thể tải danh sách tài liệu")
     }
@@ -61,7 +61,7 @@ export async function getDocument(id: number) {
 
 export async function createDocument(formData: FormData) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/`, {
       method: "POST",
       body: formData,
     })
