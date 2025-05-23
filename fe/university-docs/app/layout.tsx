@@ -6,12 +6,16 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+})
 
 export const metadata: Metadata = {
-  title: "Hệ Thống Quản Lý Tài Liệu Học Tập",
+  title: "Hệ Thống Quản Lý Tài liệu Học tập",
   description: "Hệ thống lưu trữ và quản lý tài liệu học tập cho các ngành học của trường đại học",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -20,10 +24,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="vi" suppressHydrationWarning className={inter.variable}>
+      <body className={`${inter.className} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <div className="flex min-h-screen flex-col">
+          <div className="relative flex min-h-screen flex-col">
             <Navbar />
             <main className="flex-1">{children}</main>
             <Footer />

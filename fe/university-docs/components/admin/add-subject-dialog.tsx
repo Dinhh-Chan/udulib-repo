@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { createSubject } from "@/lib/api/subject"
 import { getMajors } from "@/lib/api/major"
 import { getYears } from "@/lib/api/years"
@@ -22,12 +28,12 @@ import { Major } from "@/types/major"
 import { Year } from "@/types/year"
 import { toast } from "sonner"
 
-interface AddCourseDialogProps {
+interface AddSubjectDialogProps {
   children: React.ReactNode
   onSuccess?: () => void
 }
 
-export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
+export function AddSubjectDialog({ children, onSuccess }: AddSubjectDialogProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [majors, setMajors] = useState<Major[]>([])
@@ -46,8 +52,6 @@ export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
         getMajors(),
         getYears(),
       ])
-      console.log("Majors data:", majorsData)
-      console.log("Years data:", yearsData)
       setMajors(majorsData)
       setYears(yearsData)
     } catch (error) {
@@ -55,10 +59,6 @@ export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
       toast.error("Không thể tải dữ liệu")
     }
   }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
@@ -106,13 +106,13 @@ export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Thêm môn học mới</DialogTitle>
+          <DialogDescription>
+            Điền thông tin môn học mới vào form bên dưới.
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Thêm môn học mới</DialogTitle>
-            <DialogDescription>
-              Điền thông tin môn học mới vào form bên dưới.
-            </DialogDescription>
-          </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="subject_name" className="text-right">
@@ -146,7 +146,7 @@ export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
               <Label htmlFor="description" className="text-right">
                 Mô tả
               </Label>
-              <Input
+              <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
@@ -161,27 +161,20 @@ export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
               </Label>
               <Select
                 value={formData.major_id}
-                onValueChange={(value) => {
-                  console.log("Selected major:", value)
+                onValueChange={(value) =>
                   setFormData({ ...formData, major_id: value })
-                }}
+                }
                 required
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Chọn ngành học" />
                 </SelectTrigger>
                 <SelectContent>
-                  {majors && majors.length > 0 ? (
-                    majors.map((major) => (
-                      <SelectItem key={major.major_id} value={major.major_id.toString()}>
-                        {major.major_name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-data" disabled>
-                      Không có dữ liệu
+                  {majors.map((major) => (
+                    <SelectItem key={major.major_id} value={major.major_id.toString()}>
+                      {major.major_name}
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -191,27 +184,20 @@ export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
               </Label>
               <Select
                 value={formData.year_id}
-                onValueChange={(value) => {
-                  console.log("Selected year:", value)
+                onValueChange={(value) =>
                   setFormData({ ...formData, year_id: value })
-                }}
+                }
                 required
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Chọn năm học" />
                 </SelectTrigger>
                 <SelectContent>
-                  {years && years.length > 0 ? (
-                    years.map((year) => (
-                      <SelectItem key={year.year_id} value={year.year_id.toString()}>
-                        {year.year_name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-data" disabled>
-                      Không có dữ liệu
+                  {years.map((year) => (
+                    <SelectItem key={year.year_id} value={year.year_id.toString()}>
+                      {year.year_name}
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -225,4 +211,4 @@ export function AddCourseDialog({ children, onSuccess }: AddCourseDialogProps) {
       </DialogContent>
     </Dialog>
   )
-}
+} 

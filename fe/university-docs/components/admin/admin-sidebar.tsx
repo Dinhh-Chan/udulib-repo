@@ -16,7 +16,6 @@ import {
   MessageSquare,
   Settings,
   Menu,
-  X,
   MessageCircle,
   BarChart,
 } from "lucide-react"
@@ -47,7 +46,7 @@ const navItems: NavItem[] = [
   },
   {
     title: "Tài liệu",
-    href: "/admin/documents",
+    href: "/admin/documents/",
     icon: <FileText className="h-5 w-5" />,
   },
   {
@@ -95,17 +94,6 @@ export default function AdminSidebar() {
         !isMobile && "sticky top-0"
       )}
     >
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold">
-          <BookOpen className="h-6 w-6 text-primary" />
-          <span>Quản lý Tài liệu</span>
-        </Link>
-        {isMobile && (
-          <Button variant="ghost" size="icon" className="ml-auto" onClick={toggleSidebar}>
-            <X className="h-5 w-5" />
-          </Button>
-        )}
-      </div>
       <ScrollArea className="flex-1 py-2">
         <nav className="grid gap-1 px-2">
           {navItems.map((item) => (
