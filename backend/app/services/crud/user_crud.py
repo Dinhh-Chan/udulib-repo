@@ -1,12 +1,13 @@
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import update as sqlalchemy_update
+from datetime import datetime
+
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.services.crud.base_crud import CRUDBase
 from app.core.security import get_password_hash, verify_password
-from sqlalchemy import update as sqlalchemy_update
-from datetime import datetime
 
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
@@ -21,6 +22,31 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     async def get_by_google_id(self, db: AsyncSession, *, google_id: str) -> Optional[User]:
         result = await db.execute(select(User).where(User.google_id == google_id))
         return result.scalars().first()
+
+    async def get_all(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        role: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[User]:
+        query = select(User)
+        
+        if role:
+            query = query.where(User.role == role)
+        if search:
+            search = f"%{search}%"
+            query = query.where(
+                (User.email.ilike(search)) |
+                (User.full_name.ilike(search)) |
+                (User.username.ilike(search))
+            )
+        
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all()
 
     async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
         db_obj = User(
@@ -66,6 +92,30 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return verify_password(plain_password, hashed_password)
+
+    async def get_by_university(self, db: AsyncSession, *, university_id: int) -> List[User]:
+        result = await db.execute(
+            select(User).where(User.university_id == university_id)
+        )
+        return result.scalars().all()
+
+    async def get_active_users(self, db: AsyncSession, *, skip: int = 0, limit: int = 100) -> List[User]:
+        result = await db.execute(
+            select(User)
+            .where(User.is_active == True)
+            .offset(skip)
+            .limit(limit)
+        )
+        return result.scalars().all()
+
+    async def get_users_by_role(self, db: AsyncSession, *, role: str, skip: int = 0, limit: int = 100) -> List[User]:
+        result = await db.execute(
+            select(User)
+            .where(User.role == role)
+            .offset(skip)
+            .limit(limit)
+        )
+        return result.scalars().all()
 
 
 user_crud = CRUDUser(User)
