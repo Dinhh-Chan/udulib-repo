@@ -9,6 +9,7 @@ from app.models.academic_year import AcademicYear
 from app.schemas.academic_year import AcademicYearCreate, AcademicYearUpdate
 from app.services.crud.base_crud import CRUDBase
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -130,16 +131,21 @@ class AcademicYearCRUD(CRUDBase[AcademicYear, AcademicYearCreate, AcademicYearUp
             years = result.scalars().all()
             logger.info(f"Found {len(years)} academic years")
 
-            result_list = [
-                {
+            result_list = []
+            for year in years:
+                # Đảm bảo year_order >= 1
+                year_order = year.year_order if year.year_order and year.year_order >= 1 else 1
+                
+                # Đảm bảo created_at không null
+                created_at = year.created_at if year.created_at else datetime.now()
+                
+                result_list.append({
                     "year_id": year.year_id,
                     "year_name": year.year_name,
-                    "year_order": year.year_order,
-                    "created_at": year.created_at,
+                    "year_order": year_order,
+                    "created_at": created_at,
                     "updated_at": year.updated_at
-                }
-                for year in years
-            ]
+                })
             return result_list
         except Exception as e:
             logger.error(f"Error in get all academic years: {str(e)}")
