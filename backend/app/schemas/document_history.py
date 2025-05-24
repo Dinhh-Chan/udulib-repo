@@ -21,3 +21,17 @@ class DocumentHistory(DocumentHistoryBase):
     
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+    @classmethod
+    def from_orm(cls, obj):
+        # Chỉ lấy các thông tin cần thiết từ document
+        if obj.document:
+            obj.document = {
+                "document_id": obj.document.document_id,
+                "title": obj.document.title,
+                "subject": obj.document.subject
+            }
+        return super().from_orm(obj)

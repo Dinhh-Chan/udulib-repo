@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from app.models.base import Base
 
@@ -13,6 +14,9 @@ class Notification(Base):
     is_read = Column(Boolean, default=False)
     type = Column(String(50), nullable=False)
     reference_id = Column(Integer)
-    created_at = Column(String)  
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="notifications")
 
     

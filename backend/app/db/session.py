@@ -21,7 +21,7 @@ if "sqlite" in db_url:
 else:
     # PostgreSQL async
     engine = create_async_engine(
-        "postgresql+asyncpg://postgres:postgres@localhost:5437/postgres",
+        "postgresql+asyncpg://postgres:postgres@db:5432/app",
         pool_pre_ping=True,
         echo=settings.DB_ECHO_LOG,
         pool_size=settings.DB_POOL_SIZE,
@@ -38,7 +38,7 @@ AsyncSessionLocal = sessionmaker(
 )
 
 # Create SQLAlchemy engine and session
-engine = create_engine("postgresql://postgres:postgres@localhost:5437/postgres", pool_pre_ping=True)
+engine = create_engine("postgresql://postgres:postgres@db:5432/app", pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

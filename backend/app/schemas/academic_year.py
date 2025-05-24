@@ -1,20 +1,25 @@
-from pydantic import BaseModel, constr
+from datetime import datetime
 from typing import Optional
-from app.schemas.common import TimeStampBase
+from pydantic import BaseModel, Field
 
 class AcademicYearBase(BaseModel):
-    year_name: constr(max_length=50)
-    year_order: int
+    year_name: str = Field(..., min_length=1, max_length=50)
+    year_order: int = Field(..., ge=1)
 
 class AcademicYearCreate(AcademicYearBase):
     pass
 
 class AcademicYearUpdate(BaseModel):
-    year_name: Optional[constr(max_length=50)] = None
-    year_order: Optional[int] = None
+    year_name: Optional[str] = Field(None, min_length=1, max_length=50)
+    year_order: Optional[int] = Field(None, ge=1)
 
-class AcademicYear(AcademicYearBase, TimeStampBase):
+class AcademicYearInDB(AcademicYearBase):
     year_id: int
-    
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+class AcademicYear(AcademicYearInDB):
+    pass
