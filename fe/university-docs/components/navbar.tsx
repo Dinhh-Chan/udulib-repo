@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Menu, Search, LogIn, BookOpen, ChevronDown, LogOut, User } from "lucide-react"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import ThemeToggle from "@/components/theme-toggle"
-import LanguageSwitcher from "@/components/language-switcher"
 import NotificationDropdown from "@/components/notification-dropdown"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -39,6 +38,9 @@ export default function Navbar() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="pr-0">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
                 <div className="px-7">
                   <Link href="/" className="flex items-center gap-2 font-bold">
                     <BookOpen className="h-5 w-5" />
@@ -59,11 +61,21 @@ export default function Navbar() {
                     </Link>
                   ))}
                 </nav>
+                {!isAuthenticated && (
+                  <div className="mt-4 px-4 space-y-2">
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href="/login">Đăng nhập</Link>
+                    </Button>
+                    <Button className="w-full" asChild>
+                      <Link href="/register">Đăng ký</Link>
+                    </Button>
+                  </div>
+                )}
               </SheetContent>
             </Sheet>
             <Link href="/" className="hidden md:flex items-center gap-2 font-bold">
               <BookOpen className="h-5 w-5" />
-              <span>EduDocs</span>
+              <span>UduLib</span>
             </Link>
             <nav className="hidden md:flex gap-6">
               {mainNavItems.map((item) => (
@@ -129,7 +141,6 @@ export default function Navbar() {
                 <span className="sr-only">Tìm kiếm</span>
               </Link>
             </Button>
-            <LanguageSwitcher />
             <ThemeToggle />
             {isAuthenticated && <NotificationDropdown />}
             
