@@ -26,7 +26,6 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-<<<<<<< HEAD
     <html lang="vi" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
@@ -43,17 +42,6 @@ export default function RootLayout({
             </div>
           </ThemeProvider>
         </AuthProvider>
-=======
-    <html lang="vi" suppressHydrationWarning className={inter.variable}>
-      <body className={`${inter.className} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <div className="relative flex min-h-screen flex-col">
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-        </ThemeProvider>
->>>>>>> ecc80b408c85f8d20838f1fa131b607ddeae2f12
       </body>
     </html>
   )
