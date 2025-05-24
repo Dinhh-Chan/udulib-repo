@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import {
   Dialog,
@@ -15,23 +14,50 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { MajorCreate } from "@/types/major"
+import { createMajor } from "@/lib/api/major"
+import { toast } from "sonner"
 
 interface AddMajorDialogProps {
   children: React.ReactNode
+  onSuccess?: () => void
 }
 
-export function AddMajorDialog({ children }: AddMajorDialogProps) {
+export function AddMajorDialog({ children, onSuccess }: AddMajorDialogProps) {
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState("")
-  const [code, setCode] = useState("")
+  const [majorName, setMajorName] = useState("")
+  const [majorCode, setMajorCode] = useState("")
+  const [description, setDescription] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Xử lý thêm ngành học
-    console.log("Thêm ngành học:", { name, code })
-    setOpen(false)
-    setName("")
-    setCode("")
+    setIsLoading(true)
+
+    try {
+      const majorCreate: MajorCreate = {
+        major_name: majorName,
+        major_code: majorCode,
+        description: description || undefined,
+      }
+      await createMajor(majorCreate)
+      toast.success("Thêm ngành học thành công")
+      onSuccess?.()
+      setOpen(false)
+      setMajorName("")
+      setMajorCode("")
+      setDescription("")
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message)
+      } else {
+        toast.error("Không thể thêm ngành học")
+      }
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -45,31 +71,45 @@ export function AddMajorDialog({ children }: AddMajorDialogProps) {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Tên ngành học</Label>
+              <Label htmlFor="major_name">Tên ngành học</Label>
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="major_name"
+                value={majorName}
+                onChange={(e) => setMajorName(e.target.value)}
                 placeholder="Nhập tên ngành học"
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="code">Mã ngành</Label>
+              <Label htmlFor="major_code">Mã ngành</Label>
               <Input
-                id="code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
+                id="major_code"
+                value={majorCode}
+                onChange={(e) => setMajorCode(e.target.value)}
                 placeholder="Nhập mã ngành"
                 required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Mô tả</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Nhập mô tả ngành học"
+                disabled={isLoading}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
               Hủy
             </Button>
-            <Button type="submit">Thêm ngành học</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Đang thêm..." : "Thêm ngành học"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

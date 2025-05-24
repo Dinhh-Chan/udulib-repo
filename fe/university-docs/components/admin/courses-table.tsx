@@ -1,4 +1,6 @@
-// "use client"
+"use client"
+
+import { useEffect, useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   DropdownMenu,
@@ -11,84 +13,72 @@ import {
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-
-interface Course {
-  id: number
-  name: string
-  code: string
-  major: string
-  year: number
-  documents: number
-}
-
-const courses: Course[] = [
-  {
-    id: 1,
-    name: "Lập trình Python",
-    code: "ITEC1001",
-    major: "Công nghệ thông tin",
-    year: 1,
-    documents: 45,
-  },
-  {
-    id: 2,
-    name: "Cơ sở dữ liệu",
-    code: "ITEC2001",
-    major: "Công nghệ thông tin",
-    year: 2,
-    documents: 38,
-  },
-  {
-    id: 3,
-    name: "Hướng đối tượng",
-    code: "ITEC2002",
-    major: "Công nghệ thông tin",
-    year: 2,
-    documents: 42,
-  },
-  {
-    id: 4,
-    name: "Mạng máy tính",
-    code: "ITEC3001",
-    major: "Công nghệ thông tin",
-    year: 3,
-    documents: 36,
-  },
-  {
-    id: 5,
-    name: "Trí tuệ nhân tạo",
-    code: "ITEC4001",
-    major: "Công nghệ thông tin",
-    year: 4,
-    documents: 29,
-  },
-  {
-    id: 6,
-    name: "Kinh tế vĩ mô",
-    code: "ECON1001",
-    major: "Kinh tế",
-    year: 1,
-    documents: 32,
-  },
-  {
-    id: 7,
-    name: "Kế toán tài chính",
-    code: "ACCT2001",
-    major: "Kế toán",
-    year: 2,
-    documents: 27,
-  },
-  {
-    id: 8,
-    name: "Marketing căn bản",
-    code: "MKTG1001",
-    major: "Quản trị kinh doanh",
-    year: 1,
-    documents: 31,
-  },
-]
+import { Subject } from "@/types/subject"
+import { getSubjects, deleteSubject } from "@/lib/api/subject"
+import { getMajors } from "@/lib/api/major"
+import { getYears } from "@/lib/api/years"
+import { Major } from "@/types/major"
+import { Year } from "@/types/year"
+import { toast } from "sonner"
+import { EditSubjectDialog } from "@/components/admin/edit-subject-dialog"
+import { DeleteSubjectDialog } from "@/components/admin/delete-subject-dialog"
 
 export function CoursesTable() {
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [majors, setMajors] = useState<Major[]>([])
+  const [years, setYears] = useState<Year[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null)
+  const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null)
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true)
+      const [subjectsData, majorsData, yearsData] = await Promise.all([
+        getSubjects(),
+        getMajors(),
+        getYears()
+      ])
+
+      // Map subjects với major_name và year_name
+      const enrichedSubjects = subjectsData.map(subject => ({
+        ...subject,
+        major_name: majorsData.find(m => m.major_id === subject.major_id)?.major_name || 'N/A',
+        year_name: yearsData.find(y => y.year_id === subject.year_id)?.year_name || 'N/A'
+      }))
+
+      setSubjects(enrichedSubjects)
+      setMajors(majorsData)
+      setYears(yearsData)
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      toast.error("Không thể tải dữ liệu")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa môn học này?")) return
+
+    try {
+      await deleteSubject(id)
+      toast.success("Xóa môn học thành công")
+      fetchData() // Reload all data after deletion
+    } catch (error) {
+      console.error("Error deleting subject:", error)
+      toast.error("Không thể xóa môn học")
+    }
+  }
+
+  if (isLoading) {
+    return <div>Đang tải...</div>
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -98,46 +88,70 @@ export function CoursesTable() {
             <TableHead>Mã môn</TableHead>
             <TableHead>Ngành học</TableHead>
             <TableHead className="text-center">Năm học</TableHead>
-            <TableHead className="text-center">Số tài liệu</TableHead>
             <TableHead className="text-right">Hành động</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {courses.map((course) => (
-            <TableRow key={course.id}>
-              <TableCell className="font-medium">{course.name}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{course.code}</Badge>
-              </TableCell>
-              <TableCell>{course.major}</TableCell>
-              <TableCell className="text-center">{course.year}</TableCell>
-              <TableCell className="text-center">{course.documents}</TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Mở menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Hành động</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      <span>Chỉnh sửa</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      <span>Xóa</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          {subjects.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center">
+                Không có dữ liệu
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            subjects.map((subject) => (
+              <TableRow key={subject.subject_id}>
+                <TableCell className="font-medium">{subject.subject_name}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{subject.subject_code}</Badge>
+                </TableCell>
+                <TableCell>{subject.major_name}</TableCell>
+                <TableCell className="text-center">{subject.year_name}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Mở menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Hành động</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setEditingSubject(subject)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Chỉnh sửa</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDeletingSubject(subject)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Xóa</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
+
+      {editingSubject && (
+        <EditSubjectDialog
+          subject={editingSubject}
+          open={!!editingSubject}
+          onOpenChange={(open) => !open && setEditingSubject(null)}
+          onSuccess={fetchData}
+        />
+      )}
+
+      {deletingSubject && (
+        <DeleteSubjectDialog
+          subject={deletingSubject}
+          open={!!deletingSubject}
+          onOpenChange={(open) => !open && setDeletingSubject(null)}
+          onConfirm={() => handleDelete(deletingSubject.subject_id)}
+        />
+      )}
     </div>
   )
 }

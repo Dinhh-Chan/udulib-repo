@@ -10,23 +10,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Major } from "@/types/major"
+import { Subject } from "@/types/subject"
 
-interface DeleteMajorDialogProps {
-  major: Major
+interface DeleteSubjectDialogProps {
+  subject: Subject
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }
 
-export function DeleteMajorDialog({ major, open, onOpenChange, onConfirm }: DeleteMajorDialogProps) {
+export function DeleteSubjectDialog({ subject, open, onOpenChange, onConfirm }: DeleteSubjectDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
           <AlertDialogDescription>
-            Hành động này sẽ xóa ngành học "{major.major_name}" và không thể hoàn tác. Tất cả môn học và tài liệu liên quan sẽ
+            Hành động này sẽ xóa môn học "{subject.subject_name}" và không thể hoàn tác. Tất cả tài liệu liên quan sẽ
             bị ảnh hưởng.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -39,4 +39,4 @@ export function DeleteMajorDialog({ major, open, onOpenChange, onConfirm }: Dele
       </AlertDialogContent>
     </AlertDialog>
   )
-}
+} 
