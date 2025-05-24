@@ -1,7 +1,8 @@
 "use client"
 
-import { Bell, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Bell, LogOut, Search, Settings, User } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,53 +11,61 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { useMobile } from "@/hooks/use-mobiles"
+import { useAuth } from "@/contexts/auth-context"
+import Link from "next/link"
 
 export default function AdminHeader() {
-  const isMobile = useMobile()
+  const { logout } = useAuth()
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-white px-4 sm:px-6">
-      {isMobile && <div className="w-8" />}
-
-      {!isMobile && (
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input type="search" placeholder="Tìm kiếm..." className="w-full pl-8" />
+    <header className="sticky top-0 z-40 border-b bg-white">
+      <div className="flex h-16 items-center justify-between px-4 md:px-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-semibold">Admin Dashboard</h1>
         </div>
-      )}
-
-      <div className="ml-auto flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                3
-              </span>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2">
+            <Input
+              type="search"
+              placeholder="Tìm kiếm..."
+              className="w-64"
+            />
+            <Button variant="ghost" size="icon">
+              <Search className="h-4 w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Thông báo</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="max-h-80 overflow-auto">
-              {[1, 2, 3].map((i) => (
-                <DropdownMenuItem key={i} className="cursor-pointer py-3">
-                  <div className="flex flex-col gap-1">
-                    <p className="font-medium">Tài liệu mới cần duyệt</p>
-                    <p className="text-sm text-muted-foreground">
-                      Người dùng đã tải lên tài liệu mới cho môn Lập trình Python
-                    </p>
-                    <p className="text-xs text-muted-foreground">2 phút trước</p>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer justify-center font-medium">Xem tất cả</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+          <Button variant="ghost" size="icon">
+            <Bell className="h-4 w-4" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <User className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Tài khoản</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/admin/profile" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Hồ sơ</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/settings" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Cài đặt</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout} className="flex items-center text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Đăng xuất</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   )

@@ -9,6 +9,7 @@ import { AddDocumentDialog } from "@/components/admin/add-document-dialog"
 
 export default function DocumentsPage() {
   const [key, setKey] = useState(0)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
   const handleSuccess = () => {
     setKey((prev) => prev + 1)
@@ -19,14 +20,18 @@ export default function DocumentsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Tài liệu</CardTitle>
-          <AddDocumentDialog onSuccess={handleSuccess}>
-            <Button>Thêm tài liệu</Button>
-          </AddDocumentDialog>
+          <Button onClick={() => setIsAddDialogOpen(true)}>Thêm tài liệu</Button>
         </CardHeader>
         <CardContent>
           <DocumentsTable key={key} />
         </CardContent>
       </Card>
+
+      <AddDocumentDialog 
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSuccess={handleSuccess}
+      />
     </div>
   )
 } 

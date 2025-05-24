@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/auth-context"
 const mainNavItems = [
   { title: "Trang chủ", href: "/" },
   { title: "Ngành học", href: "/departments" },
+  { title: "Tài liệu", href: "/documents" },
   { title: "Tài liệu mới", href: "/documents/recent" },
   { title: "Thảo luận", href: "/forum" },
 ]
