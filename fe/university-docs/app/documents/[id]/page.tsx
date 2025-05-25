@@ -16,7 +16,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 
 export default function DocumentPage({ params }: { params: { id: string } }) {
-  // Trong thực tế, bạn sẽ lấy dữ liệu từ API dựa trên params.id
   const document = documents.find((doc) => doc.id === params.id) || documents[0]
   const course = courses.find((c) => c.slug === document.courseSlug) || courses[0]
   const department = departments.find((d) => d.slug === course.departmentSlug) || departments[0]
