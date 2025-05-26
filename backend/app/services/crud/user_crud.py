@@ -116,6 +116,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             .limit(limit)
         )
         return result.scalars().all()
+    async def get_by_id(self, db: AsyncSession, *, id: int) -> Optional[User]:
+        return await super().get_by_id(db=db, id=id, pk_field="user_id")
 
 
 user_crud = CRUDUser(User)
