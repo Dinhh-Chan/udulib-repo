@@ -118,3 +118,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         stmt = select(self.model).filter(filter_condition).count()
         result = await db.execute(stmt)
         return result.scalar()
+    async def get_by_id(self, db: AsyncSession, *, id: Any, pk_field: str = "id") -> Optional[ModelType]:
+        """Truy vấn bản ghi theo khóa chính (có thể tùy chỉnh tên field)."""
+        stmt = select(self.model).where(getattr(self.model, pk_field) == id)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
