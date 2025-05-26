@@ -60,6 +60,38 @@ async def get_documents(
     """
     return await document.get_filtered_documents(db, filter_request=filter_request)
 
+@router.get("/public", response_model=DocumentListResponse)
+async def get_public_documents(
+    *,
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 20,
+    subject_id: Optional[int] = None,
+    major_id: Optional[int] = None,
+    year_id: Optional[int] = None,
+    search: Optional[str] = None,
+    file_type: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_desc: bool = True
+) -> Any:
+    """
+    Lấy danh sách tài liệu công khai (đã được phê duyệt).
+    API này dành cho người dùng thông thường.
+    """
+    filter_request = DocumentFilterRequest(
+        skip=skip,
+        limit=limit,
+        subject_id=subject_id,
+        major_id=major_id,
+        year_id=year_id,
+        search=search,
+        file_type=file_type,
+        status="approved",  # Chỉ lấy tài liệu đã được phê duyệt
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
 @router.get("/academic-year/{academic_year_id}", response_model=DocumentListResponse)
 async def get_documents_by_academic_year(
     *,
