@@ -1,140 +1,88 @@
 "use client"
 
-import type React from "react"
-
+import { cn } from "@/lib/utils"
+import { LayoutDashboard, BookOpen, MessageSquare, GraduationCap, FileText, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  LayoutDashboard,
-  BookOpen,
-  GraduationCap,
-  FileText,
-  Users,
-  MessageSquare,
-  Settings,
-  Menu,
-  MessageCircle,
-  BarChart,
-} from "lucide-react"
-import { useState } from "react"
-import { useMobile } from "@/hooks/use-mobiles"
 
-interface NavItem {
-  title: string
-  href: string
-  icon: React.ReactNode
-}
-
-const navItems: NavItem[] = [
-  {
-    title: "Bảng điều khiển",
-    href: "/admin/dashboard",
-    icon: <LayoutDashboard className="h-5 w-5" />,
-  },
-  {
-    title: "Ngành học",
-    href: "/admin/majors",
-    icon: <GraduationCap className="h-5 w-5" />,
-  },
-  {
-    title: "Môn học",
-    href: "/admin/courses",
-    icon: <BookOpen className="h-5 w-5" />,
-  },
-  {
-    title: "Tài liệu",
-    href: "/admin/documents/",
-    icon: <FileText className="h-5 w-5" />,
-  },
-  {
-    title: "Người dùng",
-    href: "/admin/users",
-    icon: <Users className="h-5 w-5" />,
-  },
-  {
-    title: "Bình luận",
-    href: "/admin/comments",
-    icon: <MessageSquare className="h-5 w-5" />,
-  },
-  {
-    title: "Diễn đàn",
-    href: "/admin/forum",
-    icon: <MessageCircle className="h-5 w-5" />,
-  },
-  {
-    title: "Thống kê",
-    href: "/admin/statistics",
-    icon: <BarChart className="h-5 w-5" />,
-  },
-  {
-    title: "Cài đặt",
-    href: "/admin/settings",
-    icon: <Settings className="h-5 w-5" />,
-  },
-]
-
-export default function AdminSidebar() {
+export function AdminSidebar() {
   const pathname = usePathname()
-  const [isOpen, setIsOpen] = useState(false)
-  const isMobile = useMobile()
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen)
-  }
+  const routes = [
+    {
+      href: "/admin/dashboard",
+      label: "Tổng quan",
+      icon: <LayoutDashboard className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/dashboard",
+    },
+    {
+      href: "/admin/documents",
+      label: "Tài liệu",
+      icon: <FileText className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/documents",
+    },
+    {
+      href: "/admin/courses",
+      label: "Môn học",
+      icon: <BookOpen className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/courses",
+    },
+    {
+      href: "/admin/majors",
+      label: "Ngành học",
+      icon: <GraduationCap className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/majors",
+    },
+    {
+      href: "/admin/comments",
+      label: "Bình luận",
+      icon: <MessageSquare className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/comments",
+    },
+    {
+      href: "/admin/forum",
+      label: "Diễn đàn",
+      icon: <MessageSquare className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/forum",
+    },
+    {
+      href: "/admin/users",
+      label: "Người dùng",
+      icon: <Users className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/users",
+    },
+    {
+      href: "/admin/settings",
+      label: "Cài đặt",
+      icon: <Settings className="h-4 w-4 mr-2" />,
+      active: pathname === "/admin/settings",
+    },
+  ]
 
-  const sidebar = (
-    <div
-      className={cn(
-        "w-64 h-screen flex flex-col bg-white border-r transition-transform duration-300 ease-in-out",
-        isMobile && !isOpen && "-translate-x-full",
-        isMobile && "fixed inset-y-0 left-0 z-50",
-        !isMobile && "sticky top-0"
-      )}
-    >
-      <ScrollArea className="flex-1 py-2">
-        <nav className="grid gap-1 px-2">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} onClick={isMobile ? () => setIsOpen(false) : undefined}>
-              <Button
-                variant="ghost"
+  return (
+    <div className="pb-12">
+      <div className="space-y-4 py-4">
+        <div className="px-3 py-2">
+          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+            Quản trị
+          </h2>
+          <div className="space-y-1">
+            {routes.map((route) => (
+              <Link
+                key={route.href}
+                href={route.href}
                 className={cn(
-                  "w-full justify-start gap-2 font-normal",
-                  pathname === item.href && "bg-muted font-medium",
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                  route.active ? "bg-accent" : "transparent"
                 )}
               >
-                {item.icon}
-                {item.title}
-              </Button>
-            </Link>
-          ))}
-        </nav>
-      </ScrollArea>
-      <div className="border-t p-4">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-medium text-primary">A</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium">Admin</p>
-            <p className="text-xs text-muted-foreground">admin@example.edu.vn</p>
+                {route.icon}
+                {route.label}
+              </Link>
+            ))}
           </div>
         </div>
       </div>
     </div>
-  )
-
-  return (
-    <>
-      {sidebar}
-      {isMobile && (
-        <Button variant="outline" size="icon" className="fixed left-4 top-3 z-40" onClick={toggleSidebar}>
-          <Menu className="h-5 w-5" />
-        </Button>
-      )}
-      {isMobile && isOpen && <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setIsOpen(false)} />}
-    </>
   )
 }
