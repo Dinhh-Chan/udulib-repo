@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,62 +14,9 @@ import { Separator } from "@/components/ui/separator"
 import { ChevronRight, User, Settings, FileText, MessageSquare, History, Bell, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { getUserProfile } from "@/services/user"
-import { User as UserType } from "@/types/user"
-import { useAuth } from "@/contexts/auth-context"
-import { toast } from "sonner"
-import Loading from "@/app/loading"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile")
-  const [user, setUser] = useState<UserType | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const { user: authUser, isAuthenticated } = useAuth()
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        if (!isAuthenticated) {
-          setIsLoading(false)
-          return
-        }
-
-        if (authUser?.user_id) {
-          const userData = await getUserProfile(authUser.user_id.toString())
-          setUser(userData)
-        }
-      } catch (error) {
-        console.error("Error fetching user profile:", error)
-        toast.error("Không thể tải thông tin người dùng")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchUserProfile()
-  }, [authUser, isAuthenticated])
-
-  if (isLoading) {
-    return (
-      <Loading />
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-16rem)]">
-        <p>Vui lòng đăng nhập để xem thông tin</p>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-16rem)]">
-        <p>Không tìm thấy thông tin người dùng</p>
-      </div>
-    )
-  }
 
   return (
     <div className="container py-8 px-4 md:px-6">
@@ -91,24 +38,24 @@ export default function ProfilePage() {
             <Card>
               <CardContent className="p-4 flex flex-col items-center text-center">
                 <Avatar className="h-20 w-20 mb-4">
-                  <AvatarImage src="/placeholder.svg?height=80&width=80" alt={user.full_name} />
-                  <AvatarFallback>{user.full_name}</AvatarFallback>
+                  <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Nguyễn Văn X" />
+                  <AvatarFallback>NVX</AvatarFallback>
                 </Avatar>
-                <h3 className="font-medium text-lg">{user.full_name}</h3>
-                <p className="text-sm text-muted-foreground">{user.role}</p>
-                <Badge className="mt-2">{user.status === 'active' ? 'Đã kích hoạt' : 'Chưa kích hoạt'}</Badge>
+                <h3 className="font-medium text-lg">Nguyễn Văn X</h3>
+                <p className="text-sm text-muted-foreground">Sinh viên năm 3</p>
+                <Badge className="mt-2">Thành viên</Badge>
                 <div className="w-full mt-4 pt-4 border-t flex flex-col gap-2">
                   <div className="flex justify-between text-sm">
-                    <span>Email:</span>
-                    <span className="font-medium">{user.email}</span>
+                    <span>Tài liệu đã tải lên:</span>
+                    <span className="font-medium">12</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Tên đăng nhập:</span>
-                    <span className="font-medium">{user.username}</span>
+                    <span>Bài viết diễn đàn:</span>
+                    <span className="font-medium">8</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Ngày tham gia:</span>
-                    <span className="font-medium">{new Date(user.created_at).toLocaleDateString('vi-VN')}</span>
+                    <span className="font-medium">01/01/2023</span>
                   </div>
                 </div>
               </CardContent>
@@ -163,6 +110,11 @@ export default function ProfilePage() {
                 <Settings className="h-4 w-4 mr-2" />
                 Cài đặt tài khoản
               </Button>
+              <Separator className="my-2" />
+              <Button variant="ghost" className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50">
+                <LogOut className="h-4 w-4 mr-2" />
+                Đăng xuất
+              </Button>
             </div>
           </div>
 
@@ -178,20 +130,43 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">Họ</Label>
-                        <Input id="firstName" defaultValue={user.full_name.split(' ')[0]} />
+                        <Input id="firstName" defaultValue="Nguyễn" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Tên</Label>
-                        <Input id="lastName" defaultValue={user.full_name.split(' ')[1]} />
+                        <Input id="lastName" defaultValue="Văn X" />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue={user.email} />
+                      <Input id="email" type="email" defaultValue="nguyenvanx@example.com" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="studentId">Mã sinh viên</Label>
-                      <Input id="studentId" defaultValue={user.university_id} />
+                      <Input id="studentId" defaultValue="SV12345" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Ngành học</Label>
+                      <Select defaultValue="it">
+                        <SelectTrigger id="department">
+                          <SelectValue placeholder="Chọn ngành học" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="it">Công nghệ thông tin</SelectItem>
+                          <SelectItem value="finance">Tài chính - Ngân hàng</SelectItem>
+                          <SelectItem value="accounting">Kế toán</SelectItem>
+                          <SelectItem value="business">Quản trị kinh doanh</SelectItem>
+                          <SelectItem value="economics">Kinh tế</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bio">Giới thiệu bản thân</Label>
+                      <Textarea
+                        id="bio"
+                        placeholder="Viết một vài dòng về bản thân..."
+                        defaultValue="Sinh viên năm 3 ngành Công nghệ thông tin, đam mê lập trình và chia sẻ kiến thức."
+                      />
                     </div>
                   </div>
                 </CardContent>

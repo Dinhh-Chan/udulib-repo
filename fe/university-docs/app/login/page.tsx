@@ -40,6 +40,8 @@ export default function LoginPage() {
       })
 
       const data = await response.json()
+      console.log("Response status:", response.status)
+      console.log("Response data:", data)
 
       if (!response.ok) {
         if (response.status === 401) {

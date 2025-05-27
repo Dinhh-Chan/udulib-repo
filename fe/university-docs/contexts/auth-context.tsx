@@ -5,13 +5,10 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 interface User {
-  user_id: number
+  id: string
   username: string
   email: string
-  full_name: string
-  role: string
-  status: string
-  university_id: number
+  // Thêm các trường khác nếu cần
 }
 
 interface AuthContextType {
@@ -33,10 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem("user")
     const token = localStorage.getItem("access_token")
     
-
     if (storedUser && token) {
-      const parsedUser = JSON.parse(storedUser)
-      setUser(parsedUser)
+      setUser(JSON.parse(storedUser))
       setIsAuthenticated(true)
     }
   }, [])
