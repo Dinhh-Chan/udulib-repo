@@ -1,9 +1,9 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,11 +12,37 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronRight, Upload, FileText, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
+import { uploadDocument } from "@/lib/api/documents"
+import Loading from "@/app/loading"
 
 export default function UploadPage() {
+  const router = useRouter()
+  const { isAuthenticated } = useAuth()
+  const [isLoading, setIsLoading] = useState(true)
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    subject_id: "",
+    type: ""
+  })
+
+  // Kiểm tra đăng nhập
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem("access_token")
+      if (!token) {
+        toast.error("Vui lòng đăng nhập để tải lên tài liệu")
+        router.push("/login")
+      }
+      setIsLoading(false)
+    }
+    checkAuth()
+  }, [router])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -24,15 +50,53 @@ export default function UploadPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsUploading(true)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
 
-    // Giả lập quá trình tải lên
-    setTimeout(() => {
-      setIsUploading(false)
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file) return
+
+    try {
+      setIsUploading(true)
+      await uploadDocument({
+        title: formData.title,
+        description: formData.description,
+        subject_id: parseInt(formData.subject_id),
+        file: file,
+        tags: [formData.type]
+      })
+      
       setUploadSuccess(true)
-    }, 2000)
+      toast.success("Tải lên tài liệu thành công!")
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi tải lên tài liệu")
+      console.error(error)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <Loading />
+    )
+  }
+
+  if (!isAuthenticated) {
+    return null
   }
 
   return (
@@ -84,72 +148,54 @@ export default function UploadPage() {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="title">Tiêu đề tài liệu</Label>
-                  <Input id="title" placeholder="Nhập tiêu đề tài liệu" required />
+                  <Input 
+                    id="title" 
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    placeholder="Nhập tiêu đề tài liệu" 
+                    required 
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Mô tả</Label>
                   <Textarea
                     id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
                     placeholder="Mô tả ngắn gọn về nội dung tài liệu"
                     className="min-h-[100px]"
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Ngành học</Label>
-                    <Select required>
-                      <SelectTrigger id="department">
-                        <SelectValue placeholder="Chọn ngành học" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="it">Công nghệ thông tin</SelectItem>
-                        <SelectItem value="finance">Tài chính - Ngân hàng</SelectItem>
-                        <SelectItem value="accounting">Kế toán</SelectItem>
-                        <SelectItem value="business">Quản trị kinh doanh</SelectItem>
-                        <SelectItem value="economics">Kinh tế</SelectItem>
-                        <SelectItem value="law">Luật</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="year">Năm học</Label>
-                    <Select required>
-                      <SelectTrigger id="year">
-                        <SelectValue placeholder="Chọn năm học" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Năm 1</SelectItem>
-                        <SelectItem value="2">Năm 2</SelectItem>
-                        <SelectItem value="3">Năm 3</SelectItem>
-                        <SelectItem value="4">Năm 4</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="course">Môn học</Label>
-                  <Select required>
-                    <SelectTrigger id="course">
+                  <Label htmlFor="subject_id">Môn học</Label>
+                  <Select 
+                    required
+                    onValueChange={(value) => handleSelectChange("subject_id", value)}
+                  >
+                    <SelectTrigger id="subject_id">
                       <SelectValue placeholder="Chọn môn học" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="intro-to-programming">Nhập môn lập trình</SelectItem>
-                      <SelectItem value="data-structures">Cấu trúc dữ liệu và giải thuật</SelectItem>
-                      <SelectItem value="oop">Lập trình hướng đối tượng</SelectItem>
-                      <SelectItem value="database">Cơ sở dữ liệu</SelectItem>
-                      <SelectItem value="web-development">Phát triển ứng dụng web</SelectItem>
+                      <SelectItem value="1">Nhập môn lập trình</SelectItem>
+                      <SelectItem value="2">Cấu trúc dữ liệu và giải thuật</SelectItem>
+                      <SelectItem value="3">Lập trình hướng đối tượng</SelectItem>
+                      <SelectItem value="4">Cơ sở dữ liệu</SelectItem>
+                      <SelectItem value="5">Phát triển ứng dụng web</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="type">Loại tài liệu</Label>
-                  <Select required>
+                  <Select 
+                    required
+                    onValueChange={(value) => handleSelectChange("type", value)}
+                  >
                     <SelectTrigger id="type">
                       <SelectValue placeholder="Chọn loại tài liệu" />
                     </SelectTrigger>

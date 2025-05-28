@@ -26,9 +26,6 @@ export default function Footer() {
                   <Link href="/departments" className="text-sm text-muted-foreground hover:text-primary">
                     Ngành học
                   </Link>
-                  <Link href="/documents/recent" className="text-sm text-muted-foreground hover:text-primary">
-                    Tài liệu mới
-                  </Link>
                 </div>
               </div>
               <div className="flex flex-col gap-2">

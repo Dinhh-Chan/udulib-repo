@@ -1,4 +1,5 @@
 import { toast } from "sonner"
+import { getAuthToken } from "./auth"
 
 export interface Document {
   document_id: number
@@ -121,4 +122,45 @@ export async function deleteDocument(id: number) {
     toast.error("Không thể xóa tài liệu")
     return false
   }
-} 
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+export interface DocumentUploadData {
+  title: string;
+  description: string;
+  subject_id: number;
+  tags?: string[];
+  file: File;
+}
+
+export const uploadDocument = async (data: DocumentUploadData) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("Unauthorized");
+  }
+
+  const formData = new FormData();
+  formData.append("title", data.title);
+  formData.append("description", data.description);
+  formData.append("subject_id", data.subject_id.toString());
+  formData.append("file", data.file);
+  
+  if (data.tags) {
+    formData.append("tags", JSON.stringify(data.tags));
+  }
+
+  const response = await fetch(`${API_URL}/documents/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to upload document");
+  }
+
+  return response.json();
+}; 

@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Menu, Search, LogIn, BookOpen, ChevronDown, LogOut, User } from "lucide-react"
+import { Menu, Search, LogIn, BookOpen, ChevronDown, LogOut, User, Upload } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
@@ -17,7 +17,6 @@ const mainNavItems = [
   { title: "Trang chủ", href: "/" },
   { title: "Ngành học", href: "/departments" },
   { title: "Tài liệu", href: "/documents" },
-  { title: "Tài liệu mới", href: "/documents/recent" },
   { title: "Thảo luận", href: "/forum" },
 ]
 
@@ -143,8 +142,18 @@ export default function Navbar() {
               </Link>
             </Button>
             <ThemeToggle />
-            {isAuthenticated && <NotificationDropdown />}
-            
+            {isAuthenticated ? (
+              <>
+                <NotificationDropdown />
+                <Button variant="ghost" size="icon" asChild className="hidden md:flex">
+                  <Link href="/upload">
+                    <Upload className="h-5 w-5" />
+            <span className="sr-only">Tải lên tài liệu</span>
+                  </Link>
+                </Button>
+              </>
+            ) : null}
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -110,7 +110,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Tài liệu mới nhất</h2>
             <Button variant="outline" asChild>
-              <Link href="/documents/recent">Xem tất cả</Link>
+              <Link href="/documents">Xem tất cả</Link>
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
