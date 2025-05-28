@@ -205,7 +205,7 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
             document_id=document_id,
             user_id=user_id,
             action="view",
-            created_at=datetime.now().isoformat()
+            created_at=datetime.now()
         )
         db.add(history)
         
@@ -228,7 +228,7 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
             document_id=document_id,
             user_id=user_id,
             action="download",
-            created_at=datetime.now().isoformat()
+            created_at=datetime.now()
         )
         db.add(history)
         

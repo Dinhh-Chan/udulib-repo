@@ -239,7 +239,7 @@ async def record_document_view(
     *,
     db: Session = Depends(get_db),
     id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Ghi nhận lượt xem tài liệu.
@@ -251,7 +251,7 @@ async def record_document_view(
             detail="Tài liệu không tồn tại"
         )
     
-    await document.record_view(db, document_id=id, user_id=current_user.user_id)
+    await document.record_view(db, document_id=id, user_id=1)
     return {"message": "Ghi nhận lượt xem thành công"}
 
 @router.post("/{id}/download")
