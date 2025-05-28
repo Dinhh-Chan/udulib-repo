@@ -10,6 +10,7 @@ from app.models.document import Document
 from app.models.document_tag import DocumentTag
 from app.models.document_history import DocumentHistory
 from app.models.subject import Subject
+from app.models.tag import Tag
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentFilterRequest
 from app.services.crud.base_crud import CRUDBase
 
@@ -143,6 +144,9 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         if filter_request.status:
             query = query.where(self.model.status == filter_request.status)
         
+        if filter_request.file_type:
+            query = query.where(self.model.file_type == filter_request.file_type)
+        
         if filter_request.tags:
             query = query.join(DocumentTag).join(Tag).where(
                 Tag.tag_name.in_(filter_request.tags)
@@ -234,8 +238,6 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         """
         Lấy hoặc tạo tag mới.
         """
-        from app.models.tag import Tag
-        
         stmt = select(Tag).where(Tag.tag_name == tag_name)
         result = await db.execute(stmt)
         tag = result.scalar_one_or_none()

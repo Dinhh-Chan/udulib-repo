@@ -64,6 +64,7 @@ class DocumentFilterRequest(BaseModel):
     subject_id: Optional[int] = Field(None, gt=0)
     user_id: Optional[int] = Field(None, gt=0)
     status: Optional[DocumentStatus] = None
+    file_type: Optional[str] = Field(None, max_length=50)
     tags: Optional[List[str]] = []
     search: Optional[str] = None
     page: int = Field(default=1, ge=1)
