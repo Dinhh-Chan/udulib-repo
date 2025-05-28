@@ -19,12 +19,30 @@ import { User as UserType } from "@/types/user"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
 import Loading from "@/app/loading"
+import { getUserDocuments, getDocumentDetail, updateDocument, deleteDocument, Document, DocumentUpdateData } from "@/lib/api/documents"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile")
   const [user, setUser] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const { user: authUser, isAuthenticated } = useAuth()
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false)
+  const [editForm, setEditForm] = useState<DocumentUpdateData>({
+    title: "",
+    description: "",
+    status: "pending",
+    tags: []
+  })
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -48,6 +66,88 @@ export default function ProfilePage() {
 
     fetchUserProfile()
   }, [authUser, isAuthenticated])
+
+  useEffect(() => {
+    const fetchUserDocuments = async () => {
+      if (!authUser?.user_id) return
+
+      setIsLoadingDocuments(true)
+      try {
+        const response = await getUserDocuments(authUser.user_id, currentPage)
+        setDocuments(response.documents || [])
+        setTotalPages(Math.ceil(response.total / response.per_page))
+      } catch (error) {
+        console.error("Error fetching documents:", error)
+        toast.error("Không thể tải danh sách tài liệu")
+        setDocuments([])
+      } finally {
+        setIsLoadingDocuments(false)
+      }
+    }
+
+    if (activeTab === "documents") {
+      fetchUserDocuments()
+    }
+  }, [authUser?.user_id, currentPage, activeTab])
+
+  const handleViewDocument = async (documentId: number) => {
+    try {
+      setIsLoadingDocument(true)
+      const doc = await getDocumentDetail(documentId)
+      setSelectedDocument(doc)
+      setIsEditDialogOpen(true)
+      setEditForm({
+        title: doc.title,
+        description: doc.description,
+        status: doc.status,
+        tags: doc.tags.map((tag: any) => tag.tag_name)
+      })
+    } catch (error) {
+      console.error("Error fetching document:", error)
+      toast.error("Không thể tải thông tin tài liệu")
+    } finally {
+      setIsLoadingDocument(false)
+    }
+  }
+
+  const handleUpdateDocument = async () => {
+    if (!selectedDocument) return
+
+    try {
+      setIsLoadingDocument(true)
+      await updateDocument(selectedDocument.document_id, editForm)
+      toast.success("Cập nhật tài liệu thành công")
+      setIsEditDialogOpen(false)
+      // Refresh danh sách tài liệu
+      const response = await getUserDocuments(authUser!.user_id, currentPage)
+      setDocuments(response.documents || [])
+    } catch (error) {
+      console.error("Error updating document:", error)
+      toast.error("Không thể cập nhật tài liệu")
+    } finally {
+      setIsLoadingDocument(false)
+    }
+  }
+
+  const handleDeleteDocument = async () => {
+    if (!documentToDelete) return
+
+    try {
+      setIsLoadingDocument(true)
+      await deleteDocument(documentToDelete)
+      toast.success("Xóa tài liệu thành công")
+      setIsDeleteDialogOpen(false)
+      // Refresh danh sách tài liệu
+      const response = await getUserDocuments(authUser!.user_id, currentPage)
+      setDocuments(response.documents || [])
+    } catch (error) {
+      console.error("Error deleting document:", error)
+      toast.error("Không thể xóa tài liệu")
+    } finally {
+      setIsLoadingDocument(false)
+      setDocumentToDelete(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -215,32 +315,81 @@ export default function ProfilePage() {
                       <TabsTrigger value="downloaded">Đã tải xuống</TabsTrigger>
                     </TabsList>
                     <TabsContent value="uploaded" className="mt-6">
-                      <div className="space-y-4">
-                        {userDocuments.map((doc) => (
-                          <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex-1">
-                              <Link href={`/documents/${doc.id}`} className="font-medium hover:underline">
-                                {doc.title}
-                              </Link>
-                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                <span>{doc.course}</span>
-                                <span>•</span>
-                                <span>{doc.uploadDate}</span>
-                                <span>•</span>
-                                <span>{doc.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}</span>
+                      {isLoadingDocuments ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : documents && documents.length > 0 ? (
+                        <>
+                          <div className="space-y-4">
+                            {documents.map((doc) => (
+                              <div key={doc.document_id} className="flex items-center justify-between p-4 border rounded-lg">
+                                <div className="flex-1">
+                                  <Link href={`/documents/${doc.document_id}`} className="font-medium hover:underline">
+                                    {doc.title}
+                                  </Link>
+                                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                                    <span>{doc.subject.subject_name}</span>
+                                    <span>•</span>
+                                    <span>{new Date(doc.created_at).toLocaleDateString('vi-VN')}</span>
+                                    <span>•</span>
+                                    <span>{doc.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}</span>
+                                    <span>•</span>
+                                    <span>{doc.view_count} lượt xem</span>
+                                    <span>•</span>
+                                    <span>{doc.download_count} lượt tải</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="sm" onClick={() => handleViewDocument(doc.document_id)}>
+                                    Xem
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleViewDocument(doc.document_id)}>
+                                    Chỉnh sửa
+                                  </Button>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm" 
+                                    onClick={() => {
+                                      setDocumentToDelete(doc.document_id)
+                                      setIsDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    Xóa
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm" asChild>
-                                <Link href={`/documents/${doc.id}`}>Xem</Link>
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                Chỉnh sửa
-                              </Button>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                          {totalPages > 1 && (
+                            <div className="flex justify-center gap-2 mt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                              >
+                                Trước
+                              </Button>
+                              <span className="flex items-center px-4">
+                                Trang {currentPage} / {totalPages}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                              >
+                                Sau
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          Chưa có tài liệu nào được tải lên
+                        </div>
+                      )}
                     </TabsContent>
                     <TabsContent value="saved" className="mt-6">
                       <div className="space-y-4">
@@ -488,6 +637,83 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa tài liệu</DialogTitle>
+          </DialogHeader>
+          {isLoadingDocument ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Tiêu đề</Label>
+                <Input
+                  id="title"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Mô tả</Label>
+                <Textarea
+                  id="description"
+                  value={editForm.description || ""}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                />
+              </div>
+              {authUser?.role === "admin" && (
+                <div className="space-y-2">
+                  <Label htmlFor="status">Trạng thái</Label>
+                  <Select
+                    value={editForm.status}
+                    onValueChange={(value: "approved" | "pending" | "rejected") =>
+                      setEditForm({ ...editForm, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Chờ duyệt</SelectItem>
+                      <SelectItem value="approved">Đã duyệt</SelectItem>
+                      <SelectItem value="rejected">Từ chối</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleUpdateDocument} disabled={isLoadingDocument}>
+              Lưu thay đổi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa tài liệu này? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteDocument} disabled={isLoadingDocument}>
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

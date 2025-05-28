@@ -9,21 +9,37 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronRight, Upload, FileText, AlertCircle } from "lucide-react"
+import { ChevronRight, Upload, FileText, AlertCircle, Check, ChevronsUpDown } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { uploadDocument } from "@/lib/api/documents"
+import { getSubjects } from "@/lib/api/subject"
+import { Subject } from "@/types/subject"
 import Loading from "@/app/loading"
+import { cn } from "@/lib/utils"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export default function UploadPage() {
   const router = useRouter()
   const { isAuthenticated } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
+  const [subjects, setSubjects] = useState<Subject[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -31,15 +47,25 @@ export default function UploadPage() {
     type: ""
   })
 
-  // Kiểm tra đăng nhập
+  // Kiểm tra đăng nhập và lấy danh sách môn học
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem("access_token")
       if (!token) {
         toast.error("Vui lòng đăng nhập để tải lên tài liệu")
         router.push("/login")
+        return
       }
-      setIsLoading(false)
+
+      try {
+        const subjectsData = await getSubjects()
+        setSubjects(subjectsData)
+      } catch (error) {
+        console.error("Error loading subjects:", error)
+        toast.error("Không thể tải danh sách môn học")
+      } finally {
+        setIsLoading(false)
+      }
     }
     checkAuth()
   }, [router])
@@ -67,32 +93,43 @@ export default function UploadPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file) return
+    if (!file) {
+      toast.error("Vui lòng chọn tệp tài liệu")
+      return
+    }
+
+    if (!formData.subject_id) {
+      toast.error("Vui lòng chọn môn học")
+      return
+    }
 
     try {
       setIsUploading(true)
+      const formDataToSend = new FormData()
+      formDataToSend.append("title", formData.title)
+      formDataToSend.append("description", formData.description)
+      formDataToSend.append("subject_id", formData.subject_id)
+      formDataToSend.append("file", file)
+      
       await uploadDocument({
         title: formData.title,
         description: formData.description,
         subject_id: parseInt(formData.subject_id),
-        file: file,
-        tags: [formData.type]
+        file: file
       })
       
       setUploadSuccess(true)
       toast.success("Tải lên tài liệu thành công!")
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi tải lên tài liệu")
       console.error(error)
+      toast.error("Có lỗi xảy ra khi tải lên tài liệu")
     } finally {
       setIsUploading(false)
     }
   }
 
   if (isLoading) {
-    return (
-      <Loading />
-    )
+    return <Loading />
   }
 
   if (!isAuthenticated) {
@@ -147,7 +184,7 @@ export default function UploadPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Tiêu đề tài liệu</Label>
+                  <Label htmlFor="title">Tiêu đề tài liệu <span className="text-red-500">*</span></Label>
                   <Input 
                     id="title" 
                     name="title"
@@ -172,45 +209,50 @@ export default function UploadPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subject_id">Môn học</Label>
-                  <Select 
-                    required
-                    onValueChange={(value) => handleSelectChange("subject_id", value)}
-                  >
-                    <SelectTrigger id="subject_id">
-                      <SelectValue placeholder="Chọn môn học" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Nhập môn lập trình</SelectItem>
-                      <SelectItem value="2">Cấu trúc dữ liệu và giải thuật</SelectItem>
-                      <SelectItem value="3">Lập trình hướng đối tượng</SelectItem>
-                      <SelectItem value="4">Cơ sở dữ liệu</SelectItem>
-                      <SelectItem value="5">Phát triển ứng dụng web</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="subject_id">Môn học <span className="text-red-500">*</span></Label>
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between"
+                      >
+                        {formData.subject_id
+                          ? subjects.find(subject => subject.subject_id === parseInt(formData.subject_id))?.subject_name
+                          : "Chọn môn học..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandGroup className="max-h-[400px] overflow-y-auto">
+                          {subjects.map((subject) => (
+                            <CommandItem
+                              key={subject.subject_id}
+                              value={subject.subject_id.toString()}
+                              onSelect={(currentValue) => {
+                                handleSelectChange("subject_id", currentValue)
+                                setOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.subject_id === subject.subject_id.toString() ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {subject.subject_name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="type">Loại tài liệu</Label>
-                  <Select 
-                    required
-                    onValueChange={(value) => handleSelectChange("type", value)}
-                  >
-                    <SelectTrigger id="type">
-                      <SelectValue placeholder="Chọn loại tài liệu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lecture">Bài giảng</SelectItem>
-                      <SelectItem value="exercise">Bài tập</SelectItem>
-                      <SelectItem value="exam">Đề thi</SelectItem>
-                      <SelectItem value="reference">Tài liệu tham khảo</SelectItem>
-                      <SelectItem value="other">Khác</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="file">Tệp tài liệu</Label>
+                  <Label htmlFor="file">Tệp tài liệu <span className="text-red-500">*</span></Label>
                   <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center">
                     {file ? (
                       <div className="flex flex-col items-center gap-2">

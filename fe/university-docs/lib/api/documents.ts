@@ -1,33 +1,131 @@
 import { toast } from "sonner"
 import { getAuthToken } from "./auth"
 
+export interface Subject {
+  subject_id: number
+  subject_name: string
+  subject_code: string
+  description: string
+  major_id: number
+  year_id: number
+  created_at: string
+  updated_at: string
+}
+
+export interface User {
+  user_id: number
+  username: string
+  email: string
+  full_name: string
+  role: string
+  university_id: string
+  status: string
+  created_at: string
+  updated_at: string
+  last_login: string
+  google_id: string | null
+}
+
 export interface Document {
   document_id: number
   title: string
-  description: string | null
+  description: string
   file_path: string
   file_size: number
   file_type: string
   subject_id: number
   user_id: number
-  status: "approved" | "pending" | "rejected"
+  status: string
+  created_at: string
+  updated_at: string
   view_count: number
   download_count: number
-  created_at: string
-  updated_at: string | null
-  subject: {
-    subject_id: number
-    subject_name: string
-  } | null
-  user: {
-    user_id: number
-    username: string
-  } | null
-  tags: Array<{
-    tag_id: number
-    tag_name: string
-  }>
+  subject: Subject
+  user: User
+  tags: any[]
   average_rating: number
+}
+
+export interface DocumentListResponse {
+  documents: Document[]
+  total: number
+  page: number
+  per_page: number
+}
+
+export interface DocumentUpdateData {
+  title?: string
+  description?: string
+  status?: "approved" | "pending" | "rejected"
+  tags?: string[]
+}
+
+export const getUserDocuments = async (userId: number, page: number = 1, perPage: number = 5) => {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/documents/?user_id=${userId}&page=${page}&per_page=${perPage}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách tài liệu")
+  }
+
+  return response.json()
+}
+
+export const getDocumentDetail = async (documentId: number) => {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy thông tin tài liệu")
+  }
+
+  return response.json()
+}
+
+export const updateDocument = async (documentId: number, data: DocumentUpdateData) => {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error("Không thể cập nhật tài liệu")
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error("Error updating document:", error)
+    throw error
+  }
 }
 
 export async function getDocuments() {
@@ -71,37 +169,10 @@ export async function createDocument(formData: FormData) {
       throw new Error("Không thể tạo tài liệu mới")
     }
 
-    const data = await response.json()
-    toast.success("Tạo tài liệu thành công")
-    return data
+    return response.json()
   } catch (error) {
     console.error("Error creating document:", error)
-    toast.error("Không thể tạo tài liệu mới")
-    return null
-  }
-}
-
-export async function updateDocument(id: number, data: Partial<Document>) {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    })
-
-    if (!response.ok) {
-      throw new Error("Không thể cập nhật tài liệu")
-    }
-
-    const responseData = await response.json()
-    toast.success("Cập nhật tài liệu thành công")
-    return responseData
-  } catch (error) {
-    console.error("Error updating document:", error)
-    toast.error("Không thể cập nhật tài liệu")
-    return null
+    throw error
   }
 }
 
@@ -115,39 +186,37 @@ export async function deleteDocument(id: number) {
       throw new Error("Không thể xóa tài liệu")
     }
 
-    toast.success("Xóa tài liệu thành công")
     return true
   } catch (error) {
     console.error("Error deleting document:", error)
-    toast.error("Không thể xóa tài liệu")
-    return false
+    throw error
   }
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export interface DocumentUploadData {
-  title: string;
-  description: string;
-  subject_id: number;
-  tags?: string[];
-  file: File;
+  title: string
+  description: string
+  subject_id: number
+  tags?: string[]
+  file: File
 }
 
 export const uploadDocument = async (data: DocumentUploadData) => {
-  const token = getAuthToken();
+  const token = getAuthToken()
   if (!token) {
-    throw new Error("Unauthorized");
+    throw new Error("Unauthorized")
   }
 
-  const formData = new FormData();
-  formData.append("title", data.title);
-  formData.append("description", data.description);
-  formData.append("subject_id", data.subject_id.toString());
-  formData.append("file", data.file);
-  
+  const formData = new FormData()
+  formData.append("title", data.title)
+  formData.append("description", data.description)
+  formData.append("subject_id", data.subject_id.toString())
+  formData.append("file", data.file)
+
   if (data.tags) {
-    formData.append("tags", JSON.stringify(data.tags));
+    formData.append("tags", JSON.stringify(data.tags))
   }
 
   const response = await fetch(`${API_URL}/documents/`, {
@@ -156,11 +225,11 @@ export const uploadDocument = async (data: DocumentUploadData) => {
       Authorization: `Bearer ${token}`,
     },
     body: formData,
-  });
+  })
 
   if (!response.ok) {
-    throw new Error("Failed to upload document");
+    throw new Error("Failed to upload document")
   }
 
-  return response.json();
-}; 
+  return response.json()
+} 
