@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { AuthProvider } from "@/contexts/auth-context"
-import MainLayout from "@/components/main-layout"
+import { Toaster } from "sonner"
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -30,12 +30,16 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            <MainLayout 
-              navbar={<Navbar />}
-              footer={<Footer />}
-            >
-              {children}
-            </MainLayout>
+            <Toaster position="top-center" richColors />
+            <div className="flex min-h-screen flex-col">
+              <Navbar />
+              <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-[1400px] w-full">
+                <main className="flex-1 py-6">
+                  {children}
+                </main>
+              </div>
+              <Footer />
+            </div>
           </ThemeProvider>
         </AuthProvider>
       </body>

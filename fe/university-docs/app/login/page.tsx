@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { toast, Toaster } from "sonner"
+import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
@@ -78,7 +78,6 @@ export default function LoginPage() {
 
   return (
     <div className="container flex items-center justify-center min-h-[calc(100vh-16rem)] py-8 px-4 md:px-6">
-      <Toaster position="top-center" richColors />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Đăng nhập</CardTitle>

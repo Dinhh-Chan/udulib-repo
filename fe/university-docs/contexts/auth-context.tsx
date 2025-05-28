@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { toast, Toaster } from "sonner"
+import { toast } from "sonner"
 
 interface User {
   id: string
@@ -54,15 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       position: "top-center"
     })
 
-    // Thêm độ trễ 2 giây trước khi chuyển trang
-    setTimeout(() => {
-      router.push("/")
-    }, 2000)
+    router.push("/")
   }
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
-      <Toaster position="top-center" richColors />
       {children}
     </AuthContext.Provider>
   )
