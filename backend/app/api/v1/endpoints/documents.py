@@ -64,11 +64,10 @@ async def get_documents(
 async def get_public_documents(
     *,
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = 20,
     subject_id: Optional[int] = None,
-    major_id: Optional[int] = None,
-    year_id: Optional[int] = None,
+    user_id: Optional[int] = None,
     search: Optional[str] = None,
     file_type: Optional[str] = None,
     sort_by: str = "created_at",
@@ -79,11 +78,10 @@ async def get_public_documents(
     API này dành cho người dùng thông thường.
     """
     filter_request = DocumentFilterRequest(
-        skip=skip,
-        limit=limit,
+        page=page,
+        per_page=per_page,
         subject_id=subject_id,
-        major_id=major_id,
-        year_id=year_id,
+        user_id=user_id,
         search=search,
         file_type=file_type,
         status="approved",  # Chỉ lấy tài liệu đã được phê duyệt
