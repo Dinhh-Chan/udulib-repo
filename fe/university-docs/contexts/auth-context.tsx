@@ -1,17 +1,9 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-
-interface User {
-  user_id: number
-  username: string
-  email: string
-  role: "admin" | "student" | "teacher"
-  full_name: string
-  status: "active" | "inactive" | "banned"
-}
+import type { User } from "@/types/user"
 
 interface AuthContextType {
   user: User | null
@@ -30,7 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
     // Kiểm tra trạng thái đăng nhập khi component mount
@@ -61,8 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true)
     setIsAdmin(user.role === "admin")
 
-    // Lấy callbackUrl từ query params
-    const callbackUrl = searchParams.get("callbackUrl")
+    // Lấy callbackUrl từ URL search params
+    const urlParams = new URLSearchParams(window.location.search)
+    const callbackUrl = urlParams.get("callbackUrl")
     
     toast.success("Đăng nhập thành công", {
       duration: 2000,
