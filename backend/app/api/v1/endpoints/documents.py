@@ -64,11 +64,10 @@ async def get_documents(
 async def get_public_documents(
     *,
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = 20,
     subject_id: Optional[int] = None,
-    major_id: Optional[int] = None,
-    year_id: Optional[int] = None,
+    user_id: Optional[int] = None,
     search: Optional[str] = None,
     file_type: Optional[str] = None,
     sort_by: str = "created_at",
@@ -79,11 +78,10 @@ async def get_public_documents(
     API này dành cho người dùng thông thường.
     """
     filter_request = DocumentFilterRequest(
-        skip=skip,
-        limit=limit,
+        page=page,
+        per_page=per_page,
         subject_id=subject_id,
-        major_id=major_id,
-        year_id=year_id,
+        user_id=user_id,
         search=search,
         file_type=file_type,
         status="approved",  # Chỉ lấy tài liệu đã được phê duyệt
@@ -241,7 +239,7 @@ async def record_document_view(
     *,
     db: Session = Depends(get_db),
     id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Ghi nhận lượt xem tài liệu.
@@ -253,7 +251,7 @@ async def record_document_view(
             detail="Tài liệu không tồn tại"
         )
     
-    await document.record_view(db, document_id=id, user_id=current_user.user_id)
+    await document.record_view(db, document_id=id, user_id=1)
     return {"message": "Ghi nhận lượt xem thành công"}
 
 @router.post("/{id}/download")

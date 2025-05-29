@@ -10,6 +10,7 @@ from app.models.document import Document
 from app.models.document_tag import DocumentTag
 from app.models.document_history import DocumentHistory
 from app.models.subject import Subject
+from app.models.tag import Tag
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentFilterRequest
 from app.services.crud.base_crud import CRUDBase
 
@@ -143,6 +144,9 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         if filter_request.status:
             query = query.where(self.model.status == filter_request.status)
         
+        if filter_request.file_type:
+            query = query.where(self.model.file_type == filter_request.file_type)
+        
         if filter_request.tags:
             query = query.join(DocumentTag).join(Tag).where(
                 Tag.tag_name.in_(filter_request.tags)
@@ -201,7 +205,7 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
             document_id=document_id,
             user_id=user_id,
             action="view",
-            created_at=datetime.now().isoformat()
+            created_at=datetime.now()
         )
         db.add(history)
         
@@ -224,7 +228,7 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
             document_id=document_id,
             user_id=user_id,
             action="download",
-            created_at=datetime.now().isoformat()
+            created_at=datetime.now()
         )
         db.add(history)
         
@@ -234,8 +238,6 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         """
         Lấy hoặc tạo tag mới.
         """
-        from app.models.tag import Tag
-        
         stmt = select(Tag).where(Tag.tag_name == tag_name)
         result = await db.execute(stmt)
         tag = result.scalar_one_or_none()
@@ -252,7 +254,7 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
 
     async def delete(self, db: AsyncSession, *, id: int) -> bool:
         """
-        Xóa tài liệu và các dữ liệu liên quan.
+        Xóa tài liệu và tất cả các dữ liệu liên quan.
         """
         # Lấy document
         stmt = select(self.model).where(self.model.document_id == id)
@@ -262,14 +264,47 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         if not doc:
             return False
         
-        # Xóa các document_tags
+        # Import các model cần thiết
+        from app.models.comment import Comment
+        from app.models.rating import Rating
+        from app.models.shared_link import SharedLink
+        
+        # 1. Xóa các comments
+        stmt = select(Comment).where(Comment.document_id == id)
+        result = await db.execute(stmt)
+        comments = result.scalars().all()
+        for comment in comments:
+            await db.delete(comment)
+        
+        # 2. Xóa các ratings
+        stmt = select(Rating).where(Rating.document_id == id)
+        result = await db.execute(stmt)
+        ratings = result.scalars().all()
+        for rating in ratings:
+            await db.delete(rating)
+        
+        # 3. Xóa các shared_links
+        stmt = select(SharedLink).where(SharedLink.document_id == id)
+        result = await db.execute(stmt)
+        shared_links = result.scalars().all()
+        for link in shared_links:
+            await db.delete(link)
+        
+        # 4. Xóa các document_histories
+        stmt = select(DocumentHistory).where(DocumentHistory.document_id == id)
+        result = await db.execute(stmt)
+        histories = result.scalars().all()
+        for history in histories:
+            await db.delete(history)
+        
+        # 5. Xóa các document_tags
         stmt = select(DocumentTag).where(DocumentTag.document_id == id)
         result = await db.execute(stmt)
         doc_tags = result.scalars().all()
         for tag in doc_tags:
             await db.delete(tag)
         
-        # Xóa document
+        # 6. Cuối cùng xóa document
         await db.delete(doc)
         await db.commit()
         
