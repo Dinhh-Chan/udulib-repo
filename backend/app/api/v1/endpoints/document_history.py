@@ -13,8 +13,8 @@ router = APIRouter()
 @router.get("/", response_model=List[DocumentHistory])
 async def read_document_histories(
     db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
     action: Optional[str] = None,
@@ -24,9 +24,10 @@ async def read_document_histories(
     Lấy danh sách lịch sử truy cập tài liệu.
     """
     crud = DocumentHistoryCRUD(db)
+    skip = (page - 1) * per_page
     histories = await crud.get_all(
         skip=skip, 
-        limit=limit,
+        limit=per_page,
         document_id=document_id,
         user_id=user_id,
         action=action
@@ -44,7 +45,7 @@ async def create_document_history(
     Tạo bản ghi lịch sử truy cập tài liệu mới.
     """
     crud = DocumentHistoryCRUD(db)
-    history = await crud.create(obj_in=history_in, user_id=1)
+    history = await crud.create(obj_in=history_in, user_id=current_user.user_id)
     return history
 
 @router.get("/{history_id}", response_model=DocumentHistory)

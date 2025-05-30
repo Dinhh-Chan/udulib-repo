@@ -13,20 +13,21 @@ router = APIRouter()
 @router.get("/", response_model=List[Notification])
 async def read_notifications(
     db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     is_read: Optional[bool] = None,
     type: Optional[str] = None,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách notifications của user hiện tại.
     """
     crud = NotificationCRUD(db)
+    skip = (page - 1) * per_page
     notifications = await crud.get_all(
         skip=skip, 
-        limit=limit,
-        user_id=1,
+        limit=per_page,
+        user_id=current_user.user_id,
         is_read=is_read,
         type=type
     )
@@ -37,13 +38,13 @@ async def create_notification(
     *,
     db: AsyncSession = Depends(get_db),
     notification_in: NotificationCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo notification mới.
     """
     crud = NotificationCRUD(db)
-    notification = await crud.create(obj_in=notification_in, user_id=1)
+    notification = await crud.create(obj_in=notification_in, user_id=current_user.user_id)
     return notification
 
 @router.get("/{notification_id}", response_model=Notification)
@@ -51,7 +52,7 @@ async def read_notification(
     *,
     db: AsyncSession = Depends(get_db),
     notification_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một notification.
@@ -63,11 +64,11 @@ async def read_notification(
             status_code=404,
             detail="Notification not found"
         )
-    # if notification.user_id != current_user.user_id and current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if notification.user_id != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     return notification
 
 @router.put("/{notification_id}", response_model=Notification)
@@ -76,7 +77,7 @@ async def update_notification(
     db: AsyncSession = Depends(get_db),
     notification_id: int,
     notification_in: NotificationUpdate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Cập nhật thông tin của một notification.
@@ -88,11 +89,11 @@ async def update_notification(
             status_code=404,
             detail="Notification not found"
         )
-        # if notification.user_id != current_user.user_id and current_user.role != "admin":
-        #     raise HTTPException(
-        #         status_code=403,
-        #         detail="Not enough permissions"
-        #     )
+    if notification.user_id != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     notification = await crud.update(db_obj=notification, obj_in=notification_in)
     return notification
 
@@ -101,7 +102,7 @@ async def delete_notification(
     *,
     db: AsyncSession = Depends(get_db),
     notification_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Xóa một notification.
@@ -113,11 +114,11 @@ async def delete_notification(
             status_code=404,
             detail="Notification not found"
         )
-    # if notification.user_id != current_user.user_id and current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if notification.user_id != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     success = await crud.delete(id=notification_id)
     if not success:
         raise HTTPException(
@@ -130,11 +131,11 @@ async def delete_notification(
 async def mark_all_notifications_as_read(
     *,
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Đánh dấu tất cả notifications của user hiện tại là đã đọc.
     """
     crud = NotificationCRUD(db)
-    success = await crud.mark_all_as_read(user_id=1)
+    success = await crud.mark_all_as_read(user_id=current_user.user_id)
     return {"status": "success"} 

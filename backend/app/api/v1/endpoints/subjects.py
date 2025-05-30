@@ -13,17 +13,18 @@ router = APIRouter()
 @router.get("/", response_model=List[Subject])
 async def read_subjects(
     db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     major_id: Optional[int] = None,
     year_id: Optional[int] = None,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retrieve subjects.
     """
     crud = SubjectCRUD(db)
-    subjects = await crud.get_all(skip=skip, limit=limit, major_id=major_id, year_id=year_id)
+    skip = (page - 1) * per_page
+    subjects = await crud.get_all(skip=skip, limit=per_page, major_id=major_id, year_id=year_id)
     return subjects
 
 @router.post("/", response_model=Subject)
@@ -31,7 +32,7 @@ async def create_subject(
     *,
     db: AsyncSession = Depends(get_db),
     subject_in: SubjectCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create new subject.
@@ -52,7 +53,7 @@ async def update_subject(
     db: AsyncSession = Depends(get_db),
     subject_id: int,
     subject_in: SubjectUpdate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Update a subject.
@@ -91,7 +92,7 @@ async def delete_subject(
     *,
     db: AsyncSession = Depends(get_db),
     subject_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Delete a subject.
@@ -111,17 +112,18 @@ async def read_subjects_by_academic_year(
     *,
     db: AsyncSession = Depends(get_db),
     academic_year_id: int,
-    skip: int = 0,
-    limit: int = 100,
-    # current_user: User = Depends(get_current_user)
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách môn học theo năm học.
     """
     crud = SubjectCRUD(db)
+    skip = (page - 1) * per_page
     subjects = await crud.get_all(
         skip=skip,
-        limit=limit,
+        limit=per_page,
         year_id=academic_year_id
     )
     return subjects 

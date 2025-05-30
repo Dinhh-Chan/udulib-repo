@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
@@ -13,19 +13,20 @@ router = APIRouter()
 @router.get("/", response_model=List[User])
 async def read_users(
     db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     role: Optional[str] = None,
     search: Optional[str] = None,
-    # current_user: UserModel = Depends(get_current_user)
+    current_user: UserModel = Depends(get_current_user)
 ):
     """
     Lấy danh sách người dùng.
     """
+    skip = (page - 1) * per_page
     users = await user_crud.get_all(
         db=db,
         skip=skip,
-        limit=limit,
+        limit=per_page,
         role=role,
         search=search
     )
@@ -36,7 +37,7 @@ async def create_user(
     *,
     db: AsyncSession = Depends(get_db),
     user_in: UserCreate,
-    # current_user: UserModel = Depends(require_role("admin"))
+    current_user: UserModel = Depends(require_role("admin"))
 ):
     """
     Tạo người dùng mới.
