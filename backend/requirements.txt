@@ -1,7 +1,6 @@
 fastapi==0.101.1
 uvicorn==0.23.2
 sqlalchemy==2.0.20
-alembic==1.11.3
 pydantic[email]==2.1.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
