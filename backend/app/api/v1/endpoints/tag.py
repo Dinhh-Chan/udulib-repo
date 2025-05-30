@@ -11,15 +11,16 @@ router = APIRouter()
 
 @router.get("/", response_model=List[Tag])
 async def get_tags(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách các tags.
     """
-    tags = await tag_crud.get_all(db, skip=skip, limit=limit)
+    skip = (page - 1) * per_page
+    tags = await tag_crud.get_all(db, skip=skip, limit=per_page)
     return tags
 
 @router.get("/{tag_id}", response_model=Tag)

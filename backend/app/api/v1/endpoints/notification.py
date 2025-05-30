@@ -13,8 +13,8 @@ router = APIRouter()
 @router.get("/", response_model=List[Notification])
 async def read_notifications(
     db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     is_read: Optional[bool] = None,
     type: Optional[str] = None,
     current_user: User = Depends(get_current_user)
@@ -23,9 +23,10 @@ async def read_notifications(
     Lấy danh sách notifications của user hiện tại.
     """
     crud = NotificationCRUD(db)
+    skip = (page - 1) * per_page
     notifications = await crud.get_all(
         skip=skip, 
-        limit=limit,
+        limit=per_page,
         user_id=current_user.user_id,
         is_read=is_read,
         type=type
