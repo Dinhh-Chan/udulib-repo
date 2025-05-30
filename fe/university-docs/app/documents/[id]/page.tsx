@@ -111,9 +111,27 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       }
     }
 
-    fetchDocument()
+    const increaseView = async () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+      let userId = null;
+      try {
+        if (userStr) userId = JSON.parse(userStr).user_id;
+      } catch {}
+      if (!userId) return;
+      const viewedKey = `viewed_doc_${params.id}_user_${userId}`;
+      if (typeof window !== "undefined" && !localStorage.getItem(viewedKey)) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${params.id}/view`, {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        localStorage.setItem(viewedKey, "1");
+      }
+    }
 
-    // Fetch ratings for this document
+    fetchDocument();
+    increaseView();
+
     const fetchRatings = async () => {
       try {
         setRatingLoading(true)
@@ -125,7 +143,6 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
         if (!res.ok) throw new Error("Không thể tải đánh giá")
         const data = await res.json()
         setRatings(Array.isArray(data) ? data : [])
-        // Kiểm tra user đã đánh giá chưa
         if (userId) {
           const found = (Array.isArray(data) ? data : []).find((r: Rating) => r.user_id === userId)
           if (found) {
@@ -145,14 +162,12 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
     fetchRatings()
   }, [params.id, userId])
 
-  // Khi click vào sao, nếu chưa đánh giá thì mở modal xác nhận
   const handleStarClick = (score: number) => {
-    if (userRating) return; // Đã đánh giá rồi
+    if (userRating) return;
     setPendingScore(score)
     setShowConfirm(true)
   }
 
-  // Xác nhận gửi đánh giá
   const confirmRate = async () => {
     if (!pendingScore) return;
     setShowConfirm(false)
@@ -172,7 +187,6 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
         }),
       })
       if (!res.ok) throw new Error("Không thể gửi đánh giá")
-      // Reload ratings
       const newRating = await res.json()
       setRatings((prev) => [...prev, newRating])
       setUserRating(pendingScore)
