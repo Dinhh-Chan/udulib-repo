@@ -14,7 +14,7 @@ async def get_majors(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách các ngành học.
@@ -57,17 +57,17 @@ async def get_major_by_code(
 async def create_major(
     major_in: MajorCreate,
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo mới một ngành học.
     Chỉ admin mới có quyền tạo.
     """
-    # if current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     
     crud = MajorCRUD(db)
     # Kiểm tra xem mã ngành đã tồn tại chưa
@@ -108,17 +108,17 @@ async def update_major(
 async def delete_major(
     major_id: int,
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Xóa một ngành học.
     Chỉ admin mới có quyền xóa.
     """
-    # if current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     
     crud = MajorCRUD(db)
     success = await crud.delete(major_id)

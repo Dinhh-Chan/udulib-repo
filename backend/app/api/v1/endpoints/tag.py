@@ -40,7 +40,7 @@ async def get_tag(
 async def create_tag(
     tag_in: TagCreate,
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo mới một tag.
@@ -77,7 +77,7 @@ async def update_tag(
 async def delete_tag(
     tag_id: int,
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Xóa một tag.

@@ -18,7 +18,7 @@ async def read_shared_links(
     limit: int = 100,
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách shared links.
@@ -37,13 +37,13 @@ async def create_shared_link(
     *,
     db: AsyncSession = Depends(get_db),
     link_in: SharedLinkCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo shared link mới.
     """
     crud = SharedLinkCRUD(db)
-    link = await crud.create(obj_in=link_in, user_id=1)
+    link = await crud.create(obj_in=link_in, user_id=current_user.user_id)
     return link
 
 @router.get("/{link_id}", response_model=SharedLink)
@@ -90,7 +90,7 @@ async def update_shared_link(
     db: AsyncSession = Depends(get_db),
     link_id: int,
     link_in: SharedLinkUpdate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Cập nhật thông tin của một shared link.
@@ -102,11 +102,11 @@ async def update_shared_link(
             status_code=404,
             detail="Shared link not found"
         )
-    # if link.user_id != current_user.user_id and current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if link.user_id != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     link = await crud.update(db_obj=link, obj_in=link_in)
     return link
 
@@ -115,7 +115,7 @@ async def delete_shared_link(
     *,
     db: AsyncSession = Depends(get_db),
     link_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Xóa một shared link.
@@ -127,11 +127,11 @@ async def delete_shared_link(
             status_code=404,
             detail="Shared link not found"
         )
-    # if link.user_id != current_user.user_id and current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if link.user_id != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     success = await crud.delete(id=link_id)
     if not success:
         raise HTTPException(
