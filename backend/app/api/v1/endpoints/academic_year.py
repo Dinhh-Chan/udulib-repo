@@ -21,7 +21,7 @@ async def get_academic_years(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách các năm học.
@@ -34,7 +34,7 @@ async def get_academic_years(
 async def get_academic_year(
     year_id: int,
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một năm học theo ID.
@@ -49,17 +49,17 @@ async def get_academic_year(
 async def create_academic_year(
     year_in: AcademicYearCreate,
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo mới một năm học.
     Chỉ admin mới có quyền tạo.
     """
-    # if current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not enough permissions"
+        )
     
     crud = AcademicYearCRUD(db)
     # Kiểm tra xem năm học đã tồn tại chưa
