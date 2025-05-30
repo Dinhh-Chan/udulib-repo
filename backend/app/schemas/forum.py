@@ -11,6 +11,9 @@ class ForumBase(BaseModel):
 class ForumCreate(ForumBase):
     pass
 
+class ForumUpdate(BaseModel):
+    subject_id: Optional[int] = None
+
 class Forum(ForumBase):
     forum_id: int
     created_at: Optional[datetime] = None
