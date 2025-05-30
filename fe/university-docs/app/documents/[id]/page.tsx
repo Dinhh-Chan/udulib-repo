@@ -121,11 +121,11 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       if (!userId) return;
       const viewedKey = `viewed_doc_${params.id}_user_${userId}`;
       if (typeof window !== "undefined" && !localStorage.getItem(viewedKey)) {
+        localStorage.setItem(viewedKey, "1");
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${params.id}/view`, {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-        localStorage.setItem(viewedKey, "1");
       }
     }
 
