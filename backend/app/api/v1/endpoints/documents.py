@@ -53,7 +53,7 @@ async def get_documents(
     *,
     db: Session = Depends(get_db),
     filter_request: DocumentFilterRequest = Depends(),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy danh sách tài liệu với bộ lọc.
@@ -97,7 +97,7 @@ async def get_documents_by_academic_year(
     academic_year_id: int,
     skip: int = 0,
     limit: int = 100,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy danh sách tài liệu theo năm học.
@@ -114,7 +114,7 @@ async def get_document(
     *,
     db: Session = Depends(get_db),
     id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy thông tin chi tiết của một tài liệu.
@@ -136,7 +136,7 @@ async def create_document(
     file: UploadFile = File(...),
     subject_id: int = File(...),
     tags: Optional[str] = Form(None),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Tạo tài liệu mới.
@@ -174,7 +174,7 @@ async def create_document(
         tags=tags_list
     )
     
-    return await document.create_with_tags(db, obj_in=doc_in, user_id=1)
+    return await document.create_with_tags(db, obj_in=doc_in, user_id=current_user.user_id)
 
 @router.put("/{id}", response_model=Document)
 async def update_document(
@@ -182,7 +182,7 @@ async def update_document(
     db: Session = Depends(get_db),
     id: int,
     doc_in: DocumentUpdate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Cập nhật thông tin tài liệu.
@@ -194,12 +194,12 @@ async def update_document(
             detail="Tài liệu không tồn tại"
         )
     
-    # # Kiểm tra quyền
-    # if doc.user_id != current_user.user_id and current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Không có quyền cập nhật tài liệu này"
-    #     )
+    # Kiểm tra quyền
+    if doc.user_id != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền cập nhật tài liệu này"
+        )
     
     return await document.update_with_tags(db, db_obj=doc, obj_in=doc_in)
 
@@ -208,7 +208,7 @@ async def delete_document(
     *,
     db: Session = Depends(get_db),
     id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Xóa tài liệu.
@@ -221,11 +221,11 @@ async def delete_document(
         )
     
     # Kiểm tra quyền
-    # if doc.user_id != current_user.user_id and current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Không có quyền xóa tài liệu này"
-    #     )
+    if doc.user_id != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền xóa tài liệu này"
+        )
     
     # Xóa file vật lý
     if os.path.exists(doc.file_path):

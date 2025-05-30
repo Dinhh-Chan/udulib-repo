@@ -44,7 +44,7 @@ async def create_document_history(
     Tạo bản ghi lịch sử truy cập tài liệu mới.
     """
     crud = DocumentHistoryCRUD(db)
-    history = await crud.create(obj_in=history_in, user_id=1)
+    history = await crud.create(obj_in=history_in, user_id=current_user.user_id)
     return history
 
 @router.get("/{history_id}", response_model=DocumentHistory)
