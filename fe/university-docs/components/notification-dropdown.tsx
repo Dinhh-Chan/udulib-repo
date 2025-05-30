@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
-import { Notification, getUnreadNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/api/notification"
+import { Notification, getUnreadNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/api/notification"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function NotificationDropdown() {
@@ -31,29 +31,32 @@ export default function NotificationDropdown() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchNotifications()
-      // Poll for new notifications every minute
-      const interval = setInterval(fetchNotifications, 60000)
+      // Cập nhật thông báo mỗi 30 giây
+      const interval = setInterval(fetchNotifications, 30000)
       return () => clearInterval(interval)
     }
   }, [isAuthenticated])
-
-  const handleNotificationClick = async (notification: Notification) => {
-    try {
-      await markNotificationAsRead(notification.id)
-      setNotifications(notifications.filter(n => n.id !== notification.id))
-      router.push(`/profile?tab=notifications`)
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error)
-    }
-  }
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllNotificationsAsRead()
       setNotifications([])
-      router.push(`/profile?tab=notifications`)
+      router.push("/profile?tab=notifications")
     } catch (error) {
-      console.error("Failed to mark all notifications as read:", error)
+      console.error("Failed to mark all as read:", error)
+    }
+  }
+
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      await markNotificationAsRead(notification.notification_id)
+      // Cập nhật state ngay lập tức để UI phản hồi nhanh
+      setNotifications(prevNotifications => 
+        prevNotifications.filter(n => n.notification_id !== notification.notification_id)
+      )
+      router.push("/profile?tab=notifications")
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error)
     }
   }
 
@@ -82,7 +85,7 @@ export default function NotificationDropdown() {
               onClick={handleMarkAllAsRead}
               className="text-xs"
             >
-              Đánh dấu tất cả đã đọc
+              Đánh dấu đã đọc
             </Button>
           )}
         </div>
@@ -94,16 +97,18 @@ export default function NotificationDropdown() {
           <div className="max-h-[300px] overflow-y-auto">
             {notifications.map((notification) => (
               <DropdownMenuItem
-                key={notification.id}
-                className="flex flex-col items-start p-3 cursor-pointer"
+                key={`notification-${notification.notification_id}`}
+                className="p-3 cursor-pointer"
                 onClick={() => handleNotificationClick(notification)}
               >
-                <div className="font-medium">{notification.title}</div>
-                <div className="text-sm text-muted-foreground line-clamp-2">
-                  {notification.content}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {new Date(notification.created_at).toLocaleDateString("vi-VN")}
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium text-sm">{notification.title}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {notification.content}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(notification.created_at).toLocaleDateString("vi-VN")}
+                  </p>
                 </div>
               </DropdownMenuItem>
             ))}
@@ -112,7 +117,8 @@ export default function NotificationDropdown() {
         <div className="p-2 border-t">
           <Button
             variant="ghost"
-            className="w-full text-sm"
+            size="sm"
+            className="w-full text-xs"
             onClick={() => router.push("/profile?tab=notifications")}
           >
             Xem tất cả thông báo

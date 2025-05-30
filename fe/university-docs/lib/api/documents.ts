@@ -144,8 +144,14 @@ export async function getDocuments() {
 }
 
 export async function getDocument(id: number) {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
     if (!response.ok) {
       throw new Error("Không thể tải thông tin tài liệu")
     }
@@ -159,9 +165,14 @@ export async function getDocument(id: number) {
 }
 
 export async function createDocument(formData: FormData) {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/`, {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: formData,
     })
 
@@ -177,9 +188,14 @@ export async function createDocument(formData: FormData) {
 }
 
 export async function deleteDocument(id: number) {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`, {
       method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     })
 
     if (!response.ok) {
@@ -232,4 +248,21 @@ export const uploadDocument = async (data: DocumentUploadData) => {
   }
 
   return response.json()
-} 
+}
+
+export const getPublicDocuments = async (page: number = 1, perPage: number = 4) => {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/documents/public?page=${page}&per_page=${perPage}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách tài liệu");
+  }
+
+  return response.json();
+}; 

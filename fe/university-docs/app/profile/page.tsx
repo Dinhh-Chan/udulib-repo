@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,7 +15,7 @@ import { Separator } from "@/components/ui/separator"
 import { ChevronRight, User, Settings, FileText, MessageSquare, History, Bell, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { getUserProfile } from "@/lib/api/user"
+import { getUserProfile, updateUserProfile } from "@/lib/api/user"
 import { User as UserType } from "@/types/user"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
@@ -22,8 +23,11 @@ import Loading from "@/app/loading"
 import { getUserDocuments, getDocumentDetail, updateDocument, deleteDocument, Document, DocumentUpdateData } from "@/lib/api/documents"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Notification, getAllNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/api/notification"
 
 export default function ProfilePage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("profile")
   const [user, setUser] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -43,6 +47,24 @@ export default function ProfilePage() {
   })
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+  const [activeNotificationTab, setActiveNotificationTab] = useState("all")
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    studentId: ""
+  })
+
+  useEffect(() => {
+    // Lấy tab từ URL query parameter
+    const tab = searchParams.get("tab")
+    if (tab && ["profile", "documents", "forum", "notifications", "settings"].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -89,6 +111,43 @@ export default function ProfilePage() {
       fetchUserDocuments()
     }
   }, [authUser?.user_id, currentPage, activeTab])
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!isAuthenticated || activeTab !== "notifications") return
+
+      setIsLoadingNotifications(true)
+      try {
+        const data = await getAllNotifications()
+        setNotifications(data)
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error)
+        toast.error("Không thể tải thông báo")
+      } finally {
+        setIsLoadingNotifications(false)
+      }
+    }
+
+    fetchNotifications()
+  }, [isAuthenticated, activeTab])
+
+  useEffect(() => {
+    if (user) {
+      const nameParts = user.full_name.split(" ")
+      setFormData({
+        firstName: nameParts[0] || "",
+        lastName: nameParts.slice(1).join(" ") || "",
+        email: user.email || "",
+        studentId: user.university_id?.toString() || ""
+      })
+    }
+  }, [user])
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab)
+    // Cập nhật URL với tab mới
+    router.push(`/profile?tab=${tab}`)
+  }
 
   const handleViewDocument = async (documentId: number) => {
     try {
@@ -146,6 +205,74 @@ export default function ProfilePage() {
     } finally {
       setIsLoadingDocument(false)
       setDocumentToDelete(null)
+    }
+  }
+
+  const handleMarkNotificationAsRead = async (notificationId: number) => {
+    try {
+      await markNotificationAsRead(notificationId)
+      setNotifications(prevNotifications => 
+        prevNotifications.map(n => 
+          n.notification_id === notificationId 
+            ? { ...n, is_read: true }
+            : n
+        )
+      )
+      toast.success("Đã đánh dấu thông báo đã đọc")
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error)
+      toast.error("Không thể đánh dấu thông báo đã đọc")
+    }
+  }
+
+  const handleMarkAllNotificationsAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead()
+      setNotifications(prevNotifications => 
+        prevNotifications.map(n => ({ ...n, is_read: true }))
+      )
+      toast.success("Đã đánh dấu tất cả thông báo đã đọc")
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error)
+      toast.error("Không thể đánh dấu tất cả thông báo đã đọc")
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }))
+  }
+
+  const handleUpdateProfile = async () => {
+    if (!user) return
+
+    try {
+      setIsUpdating(true)
+      const updatedUser = await updateUserProfile(user.user_id, {
+        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        university_id: formData.studentId
+      })
+
+      // Cập nhật thông tin người dùng trong context
+      const updatedUserData = {
+        ...user,
+        full_name: updatedUser.full_name,
+        email: updatedUser.email,
+        university_id: updatedUser.university_id
+      }
+      localStorage.setItem("user", JSON.stringify(updatedUserData))
+      setUser(updatedUserData)
+
+      toast.success("Cập nhật thông tin thành công")
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      toast.error("Không thể cập nhật thông tin")
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -218,7 +345,7 @@ export default function ProfilePage() {
               <Button
                 variant={activeTab === "profile" ? "default" : "ghost"}
                 className="justify-start"
-                onClick={() => setActiveTab("profile")}
+                onClick={() => handleTabChange("profile")}
               >
                 <User className="h-4 w-4 mr-2" />
                 Thông tin cá nhân
@@ -226,7 +353,7 @@ export default function ProfilePage() {
               <Button
                 variant={activeTab === "documents" ? "default" : "ghost"}
                 className="justify-start"
-                onClick={() => setActiveTab("documents")}
+                onClick={() => handleTabChange("documents")}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Tài liệu của tôi
@@ -234,23 +361,15 @@ export default function ProfilePage() {
               <Button
                 variant={activeTab === "forum" ? "default" : "ghost"}
                 className="justify-start"
-                onClick={() => setActiveTab("forum")}
+                onClick={() => handleTabChange("forum")}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Bài viết diễn đàn
               </Button>
               <Button
-                variant={activeTab === "history" ? "default" : "ghost"}
-                className="justify-start"
-                onClick={() => setActiveTab("history")}
-              >
-                <History className="h-4 w-4 mr-2" />
-                Lịch sử hoạt động
-              </Button>
-              <Button
                 variant={activeTab === "notifications" ? "default" : "ghost"}
                 className="justify-start"
-                onClick={() => setActiveTab("notifications")}
+                onClick={() => handleTabChange("notifications")}
               >
                 <Bell className="h-4 w-4 mr-2" />
                 Thông báo
@@ -258,7 +377,7 @@ export default function ProfilePage() {
               <Button
                 variant={activeTab === "settings" ? "default" : "ghost"}
                 className="justify-start"
-                onClick={() => setActiveTab("settings")}
+                onClick={() => handleTabChange("settings")}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Cài đặt tài khoản
@@ -278,25 +397,47 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">Họ</Label>
-                        <Input id="firstName" defaultValue={user.full_name.split(' ')[0]} />
+                        <Input 
+                          id="firstName" 
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Tên</Label>
-                        <Input id="lastName" defaultValue={user.full_name.split(' ')[1]} />
+                        <Input 
+                          id="lastName" 
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue={user.email} />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={formData.email}
+                        onChange={handleInputChange}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="studentId">Mã sinh viên</Label>
-                      <Input id="studentId" defaultValue={user.university_id} />
+                      <Input 
+                        id="studentId" 
+                        value={formData.studentId}
+                        onChange={handleInputChange}
+                      />
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button>Lưu thay đổi</Button>
+                  <Button 
+                    onClick={handleUpdateProfile}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? "Đang cập nhật..." : "Lưu thay đổi"}
+                  </Button>
                 </CardFooter>
               </Card>
             )}
@@ -309,11 +450,6 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="uploaded">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="uploaded">Đã tải lên</TabsTrigger>
-                      <TabsTrigger value="saved">Đã lưu</TabsTrigger>
-                      <TabsTrigger value="downloaded">Đã tải xuống</TabsTrigger>
-                    </TabsList>
                     <TabsContent value="uploaded" className="mt-6">
                       {isLoadingDocuments ? (
                         <div className="flex justify-center items-center py-8">
@@ -329,11 +465,13 @@ export default function ProfilePage() {
                                     {doc.title}
                                   </Link>
                                   <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                    <span>{doc.subject.subject_name}</span>
+                                    <Badge variant={doc.status === "approved" ? "default" : "secondary"}>
+                                      {doc.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}
+                                    </Badge>
                                     <span>•</span>
                                     <span>{new Date(doc.created_at).toLocaleDateString('vi-VN')}</span>
                                     <span>•</span>
-                                    <span>{doc.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}</span>
+                                    <span>{doc.subject.subject_name}</span>
                                     <span>•</span>
                                     <span>{doc.view_count} lượt xem</span>
                                     <span>•</span>
@@ -555,77 +693,149 @@ export default function ProfilePage() {
                   <CardDescription>Quản lý thông báo của bạn</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Tabs defaultValue="all">
+                  <Tabs defaultValue="all" value={activeNotificationTab} onValueChange={setActiveNotificationTab}>
                     <TabsList className="grid w-full grid-cols-3">
                       <TabsTrigger value="all">Tất cả</TabsTrigger>
                       <TabsTrigger value="unread">Chưa đọc</TabsTrigger>
                       <TabsTrigger value="read">Đã đọc</TabsTrigger>
                     </TabsList>
                     <TabsContent value="all" className="mt-6">
-                      <div className="space-y-4">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`p-4 border rounded-lg ${
-                              notification.read ? "" : "bg-primary/5 border-primary/20"
-                            }`}
-                          >
-                            <div className="flex items-start gap-4">
-                              <div
-                                className={`w-2 h-2 mt-2 rounded-full ${notification.read ? "bg-muted" : "bg-primary"}`}
-                              />
-                              <div className="flex-1">
-                                <p className={notification.read ? "text-muted-foreground" : ""}>
-                                  {notification.content}
-                                </p>
-                                <p className="text-sm text-muted-foreground mt-1">{notification.time}</p>
+                      {isLoadingNotifications ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : notifications.length > 0 ? (
+                        <div className="space-y-4">
+                          {notifications.map((notification) => (
+                            <div
+                              key={`notification-${notification.notification_id}`}
+                              className={`p-4 border rounded-lg ${
+                                !notification.is_read ? "bg-primary/5 border-primary/20" : ""
+                              }`}
+                            >
+                              <div className="flex items-start gap-4">
+                                <div
+                                  className={`w-2 h-2 mt-2 rounded-full ${
+                                    notification.is_read ? "bg-muted" : "bg-primary"
+                                  }`}
+                                />
+                                <div className="flex-1">
+                                  <p className={notification.is_read ? "text-muted-foreground" : ""}>
+                                    {notification.content}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {new Date(notification.created_at).toLocaleDateString("vi-VN")}
+                                  </p>
+                                </div>
+                                {!notification.is_read && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleMarkNotificationAsRead(notification.notification_id)}
+                                  >
+                                    Đánh dấu đã đọc
+                                  </Button>
+                                )}
                               </div>
-                              {!notification.read && (
-                                <Button variant="ghost" size="sm">
-                                  Đánh dấu đã đọc
-                                </Button>
-                              )}
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                          {notifications.some(n => !n.is_read) && (
+                            <div className="flex justify-end mt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleMarkAllNotificationsAsRead}
+                              >
+                                Đánh dấu tất cả đã đọc
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          Không có thông báo nào
+                        </div>
+                      )}
                     </TabsContent>
                     <TabsContent value="unread" className="mt-6">
-                      <div className="space-y-4">
-                        {notifications
-                          .filter((n) => !n.read)
-                          .map((notification) => (
-                            <div key={notification.id} className="p-4 border rounded-lg bg-primary/5 border-primary/20">
-                              <div className="flex items-start gap-4">
-                                <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
-                                <div className="flex-1">
-                                  <p>{notification.content}</p>
-                                  <p className="text-sm text-muted-foreground mt-1">{notification.time}</p>
+                      {isLoadingNotifications ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : notifications.filter(n => !n.is_read).length > 0 ? (
+                        <div className="space-y-4">
+                          {notifications
+                            .filter(n => !n.is_read)
+                            .map((notification) => (
+                              <div
+                                key={`notification-${notification.notification_id}`}
+                                className="p-4 border rounded-lg bg-primary/5 border-primary/20"
+                              >
+                                <div className="flex items-start gap-4">
+                                  <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
+                                  <div className="flex-1">
+                                    <p>{notification.content}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {new Date(notification.created_at).toLocaleDateString("vi-VN")}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleMarkNotificationAsRead(notification.notification_id)}
+                                  >
+                                    Đánh dấu đã đọc
+                                  </Button>
                                 </div>
-                                <Button variant="ghost" size="sm">
-                                  Đánh dấu đã đọc
-                                </Button>
                               </div>
-                            </div>
-                          ))}
-                      </div>
+                            ))}
+                          <div className="flex justify-end mt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleMarkAllNotificationsAsRead}
+                            >
+                              Đánh dấu tất cả đã đọc
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          Không có thông báo chưa đọc
+                        </div>
+                      )}
                     </TabsContent>
                     <TabsContent value="read" className="mt-6">
-                      <div className="space-y-4">
-                        {notifications
-                          .filter((n) => n.read)
-                          .map((notification) => (
-                            <div key={notification.id} className="p-4 border rounded-lg">
-                              <div className="flex items-start gap-4">
-                                <div className="w-2 h-2 mt-2 rounded-full bg-muted" />
-                                <div className="flex-1">
-                                  <p className="text-muted-foreground">{notification.content}</p>
-                                  <p className="text-sm text-muted-foreground mt-1">{notification.time}</p>
+                      {isLoadingNotifications ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : notifications.filter(n => n.is_read).length > 0 ? (
+                        <div className="space-y-4">
+                          {notifications
+                            .filter(n => n.is_read)
+                            .map((notification) => (
+                              <div
+                                key={`notification-${notification.notification_id}`}
+                                className="p-4 border rounded-lg"
+                              >
+                                <div className="flex items-start gap-4">
+                                  <div className="w-2 h-2 mt-2 rounded-full bg-muted" />
+                                  <div className="flex-1">
+                                    <p className="text-muted-foreground">{notification.content}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {new Date(notification.created_at).toLocaleDateString("vi-VN")}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                      </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          Không có thông báo đã đọc
+                        </div>
+                      )}
                     </TabsContent>
                   </Tabs>
                 </CardContent>
