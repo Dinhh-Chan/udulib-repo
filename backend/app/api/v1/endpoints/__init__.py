@@ -9,3 +9,6 @@ from app.api.v1.endpoints import subjects
 from app.api.v1.endpoints import comments
 from app.api.v1.endpoints import ratings
 from app.api.v1.endpoints import document_history
+from app.api.v1.endpoints import forums
+from app.api.v1.endpoints import forum_posts
+from app.api.v1.endpoints import forum_replies
