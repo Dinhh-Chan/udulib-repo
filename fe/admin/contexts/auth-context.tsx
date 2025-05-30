@@ -1,98 +1,84 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react"
-import { useRouter } from "next/navigation"
+import { createContext, useContext, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import type { User } from "@/types/user"
+import { User } from "@/types/user"
+import { login as apiLogin } from "@/lib/api/auth"
 
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isAdmin: boolean
-  isLoading: boolean
-  login: (user: User, token: string) => void
+  login: (username: string, password: string) => Promise<void>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Kiểm tra trạng thái đăng nhập khi component mount
-    try {
-      const storedUser = localStorage.getItem("user")
-      const token = localStorage.getItem("access_token")
-      
-      if (storedUser && token) {
-        const parsedUser = JSON.parse(storedUser)
-        setUser(parsedUser)
+    // Kiểm tra user từ localStorage khi component mount
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser)
+        setUser(userData)
         setIsAuthenticated(true)
-        setIsAdmin(parsedUser.role === "admin")
+        setIsAdmin(userData.role === "admin")
+      } catch (error) {
+        console.error("Error parsing stored user data:", error)
+        localStorage.removeItem("user")
+        localStorage.removeItem("access_token")
       }
-    } catch (error) {
-      console.error("Error parsing stored user data:", error)
-      // Clear invalid data
-      localStorage.removeItem("user")
-      localStorage.removeItem("access_token")
-    } finally {
-      setIsLoading(false)
     }
   }, [])
 
-  const login = (user: User, token: string) => {
-    localStorage.setItem("user", JSON.stringify(user))
-    localStorage.setItem("access_token", token)
-    setUser(user)
-    setIsAuthenticated(true)
-    setIsAdmin(user.role === "admin")
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await apiLogin(username, password)
+      
+      // Lưu token và user vào localStorage
+      localStorage.setItem("access_token", response.access_token)
+      localStorage.setItem("user", JSON.stringify(response.user))
 
-    // Lấy callbackUrl từ URL search params
-    const urlParams = new URLSearchParams(window.location.search)
-    const callbackUrl = urlParams.get("callbackUrl")
-    
-    toast.success("Đăng nhập thành công", {
-      duration: 2000,
-      position: "top-center"
-    })
+      setUser(response.user)
+      setIsAuthenticated(true)
+      setIsAdmin(response.user.role === "admin")
 
-    // Nếu có callbackUrl thì chuyển hướng đến đó, nếu không thì về trang chủ
-    if (callbackUrl) {
-      router.push(callbackUrl)
-    } else {
-      router.push("/")
+      // Luôn chuyển về trang /admin sau khi đăng nhập thành công
+      router.push("/admin")
+
+      toast.success("Đăng nhập thành công!")
+    } catch (error) {
+      console.error("Login error:", error)
+      toast.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!")
     }
   }
 
   const logout = () => {
-    localStorage.removeItem("user")
+    // Xóa dữ liệu từ localStorage
     localStorage.removeItem("access_token")
+    localStorage.removeItem("user")
+    
+    // Reset state
     setUser(null)
     setIsAuthenticated(false)
     setIsAdmin(false)
     
-    toast.success("Đăng xuất thành công", {
-      duration: 2000,
-      position: "top-center"
-    })
-
+    // Chuyển hướng về trang chủ
     router.push("/")
+    toast.success("Đăng xuất thành công!")
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      isAdmin, 
-      isLoading, 
-      login, 
-      logout 
-    }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isAdmin, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

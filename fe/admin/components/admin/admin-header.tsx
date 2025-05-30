@@ -2,14 +2,26 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu } from "lucide-react"
+import { Menu, Bell, User, LogOut } from "lucide-react"
 import Link from "next/link"
 import { AdminSidebar } from "./admin-sidebar"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 export function AdminHeader() {
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    logout()
+    router.push("/login")
+    toast.success("Đăng xuất thành công")
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+      <div className="flex h-16 items-center px-6">
         <Sheet>
           <SheetTrigger asChild>
             <Button
@@ -24,11 +36,49 @@ export function AdminHeader() {
             <AdminSidebar />
           </SheetContent>
         </Sheet>
+
         <div className="flex flex-1 items-center justify-between">
           <div className="flex items-center space-x-2">
             <Link href="/admin" className="flex items-center space-x-2">
-              <span className="font-bold">Admin Dashboard</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Admin Dashboard
+              </span>
             </Link>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={() => toast.info("Tính năng đang phát triển")}
+            >
+              <Bell className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
+                3
+              </span>
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium">{user?.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="hover:bg-destructive/10 hover:text-destructive"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
