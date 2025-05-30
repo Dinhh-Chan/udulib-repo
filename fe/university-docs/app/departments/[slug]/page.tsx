@@ -26,7 +26,6 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
   const [loading, setLoading] = useState(false)
   const [documentCounts, setDocumentCounts] = useState<{ [subject_id: number]: number }>({})
 
-  // Lấy major_id từ params hoặc localStorage
   useEffect(() => {
     let majorIdFromUrl = Number(params.slug)
     let foundMajor: Major | null = null
@@ -34,7 +33,6 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
     async function fetchMajor() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`)
       const data = await res.json()
-      // Nếu params.slug là số, tìm theo major_id, nếu là chuỗi, tìm theo slug
       if (!isNaN(majorIdFromUrl)) {
         foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl)
       } else {
@@ -46,7 +44,6 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
       }
     }
 
-    // Nếu reload lại trang, lấy major_id từ localStorage nếu không có params
     if (!isNaN(majorIdFromUrl)) {
       fetchMajor()
     } else {
@@ -60,7 +57,6 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
     }
   }, [params.slug])
 
-  // Lấy danh sách môn học theo năm học và ngành học
   useEffect(() => {
     if (!selectedYear || !major) return
     setLoading(true)
@@ -69,7 +65,6 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
       .then(data => {
         setSubjects(Array.isArray(data) ? data : [])
         setLoading(false)
-        // Lấy số lượng tài liệu cho từng môn học
         if (Array.isArray(data)) {
           data.forEach((subject: Subject) => {
             fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${subject.subject_id}`)

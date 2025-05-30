@@ -36,13 +36,13 @@ async def create_rating(
     *,
     db: AsyncSession = Depends(get_db),
     rating_in: RatingCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create new rating.
     """
     crud = RatingCRUD(db)
-    rating = await crud.create(obj_in=rating_in, user_id=1)
+    rating = await crud.create(obj_in=rating_in, user_id=current_user.user_id)
     return rating
 
 @router.put("/{rating_id}", response_model=Rating)

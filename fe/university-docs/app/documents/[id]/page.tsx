@@ -14,10 +14,12 @@ import {
   Share2,
   Bookmark,
   Flag,
+  Eye,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 
 interface Document {
   document_id: number
@@ -51,11 +53,41 @@ interface Document {
   }>
 }
 
+interface Rating {
+  rating_id: number;
+  document_id: number;
+  user_id: number;
+  score: number;
+  comment?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default function DocumentPage({ params }: { params: { id: string } }) {
   const [document, setDocument] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [ratings, setRatings] = useState<Rating[]>([])
+  const [userRating, setUserRating] = useState<number | null>(null)
+  const [userRatingId, setUserRatingId] = useState<number | null>(null)
+  const [ratingLoading, setRatingLoading] = useState(false)
+  const [ratingError, setRatingError] = useState<string | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [pendingScore, setPendingScore] = useState<number | null>(null)
   const router = useRouter()
+
+  const getUserId = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return null;
+      const user = JSON.parse(userStr);
+      return user.user_id;
+    } catch {
+      return null;
+    }
+  }
+  const userId = getUserId();
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -77,7 +109,78 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
     }
 
     fetchDocument()
-  }, [params.id])
+
+    // Fetch ratings for this document
+    const fetchRatings = async () => {
+      try {
+        setRatingLoading(true)
+        setRatingError(null)
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings?document_id=${params.id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!res.ok) throw new Error("Không thể tải đánh giá")
+        const data = await res.json()
+        setRatings(Array.isArray(data) ? data : [])
+        // Kiểm tra user đã đánh giá chưa
+        if (userId) {
+          const found = (Array.isArray(data) ? data : []).find((r: Rating) => r.user_id === userId)
+          if (found) {
+            setUserRating(found.score)
+            setUserRatingId(found.rating_id)
+          } else {
+            setUserRating(null)
+            setUserRatingId(null)
+          }
+        }
+      } catch (err) {
+        setRatingError(err instanceof Error ? err.message : "Có lỗi khi tải đánh giá")
+      } finally {
+        setRatingLoading(false)
+      }
+    }
+    fetchRatings()
+  }, [params.id, userId])
+
+  // Khi click vào sao, nếu chưa đánh giá thì mở modal xác nhận
+  const handleStarClick = (score: number) => {
+    if (userRating) return; // Đã đánh giá rồi
+    setPendingScore(score)
+    setShowConfirm(true)
+  }
+
+  // Xác nhận gửi đánh giá
+  const confirmRate = async () => {
+    if (!pendingScore) return;
+    setShowConfirm(false)
+    setRatingLoading(true)
+    setRatingError(null)
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          document_id: Number(params.id),
+          score: pendingScore,
+        }),
+      })
+      if (!res.ok) throw new Error("Không thể gửi đánh giá")
+      // Reload ratings
+      const newRating = await res.json()
+      setRatings((prev) => [...prev, newRating])
+      setUserRating(pendingScore)
+      setUserRatingId(newRating.rating_id)
+    } catch (err) {
+      setRatingError(err instanceof Error ? err.message : "Có lỗi khi gửi đánh giá")
+    } finally {
+      setRatingLoading(false)
+      setPendingScore(null)
+    }
+  }
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B'
@@ -135,14 +238,18 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
               <span className="text-muted-foreground">{document.file_type.split('/')[1].toUpperCase()}</span>
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
-            </div>
-            <div className="flex items-center gap-1 text-sm">
+              <span className="text-muted-foreground">•</span>
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">{formatDate(document.created_at)}</span>
-            </div>
-            <div className="flex items-center gap-1 text-sm">
+              <span className="text-muted-foreground">•</span>
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">{document.user.full_name}</span>
+              <span className="text-muted-foreground">•</span>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{document.view_count} lượt xem</span>
+              <span className="text-muted-foreground">•</span>
+              <Download className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{document.download_count} lượt tải</span>
             </div>
           </div>
         </div>
@@ -167,7 +274,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm">
                   <ThumbsUp className="h-4 w-4 mr-2" />
-                  Thích ({document.view_count})
+                  Thích
                 </Button>
                 <Button variant="ghost" size="sm">
                   <MessageSquare className="h-4 w-4 mr-2" />
@@ -206,7 +313,12 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
                   <div className="text-sm font-medium">Đánh giá:</div>
                   <div className="flex items-center">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} className="text-yellow-400 focus:outline-none">
+                      <button
+                        key={star}
+                        className={`text-yellow-400 focus:outline-none ${userRating && userRating >= star ? "" : "opacity-40"}`}
+                        onClick={() => handleStarClick(star)}
+                        disabled={!!userRating || ratingLoading}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
@@ -223,9 +335,12 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
                     ))}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    ({document.average_rating.toFixed(1)}/5)
+                    ({ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length).toFixed(1) : "0.0"}/5)
+                    <span className="ml-1">({ratings.length} đánh giá)</span>
                   </div>
                 </div>
+                {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}
+                {ratingError && <div className="text-xs text-red-500 mt-1">{ratingError}</div>}
                 <Button className="w-full">
                   <Download className="h-4 w-4 mr-2" />
                   Tải xuống
@@ -254,6 +369,19 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       </div>
+      {/* Modal xác nhận đánh giá */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận đánh giá</DialogTitle>
+          </DialogHeader>
+          <div>Bạn có chắc chắn muốn đánh giá {pendingScore} sao cho tài liệu này không?</div>
+          <DialogFooter>
+            <Button onClick={() => setShowConfirm(false)} variant="outline">Huỷ</Button>
+            <Button onClick={confirmRate} disabled={ratingLoading}>Xác nhận</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
