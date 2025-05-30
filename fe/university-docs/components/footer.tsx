@@ -10,7 +10,7 @@ export default function Footer() {
             <div className="flex flex-col items-center md:items-start gap-2">
               <Link href="/" className="flex items-center gap-2 font-bold">
                 <BookOpen className="h-5 w-5" />
-                <span>EduDocs</span>
+                <span>UduLib</span>
               </Link>
               <p className="text-sm text-muted-foreground text-center md:text-left">
                 Hệ thống quản lý tài liệu học tập dành cho sinh viên và giảng viên
@@ -25,9 +25,6 @@ export default function Footer() {
                   </Link>
                   <Link href="/departments" className="text-sm text-muted-foreground hover:text-primary">
                     Ngành học
-                  </Link>
-                  <Link href="/documents/recent" className="text-sm text-muted-foreground hover:text-primary">
-                    Tài liệu mới
                   </Link>
                 </div>
               </div>
@@ -60,7 +57,7 @@ export default function Footer() {
           </div>
         </div>
       </footer>
-      <div className="w-full bg-gray-100 py-3 border-t">
+      <div className="w-full py-3 border-t">
         <p className="text-xs text-center text-gray-500">
           © {new Date().getFullYear()} UduLib. Bản quyền thuộc về IU CLUB - PTIT.
         </p>

@@ -17,7 +17,7 @@ async def read_users(
     limit: int = 100,
     role: Optional[str] = None,
     search: Optional[str] = None,
-    # current_user: UserModel = Depends(get_current_user)
+    current_user: UserModel = Depends(get_current_user)
 ):
     """
     Lấy danh sách người dùng.
@@ -36,7 +36,7 @@ async def create_user(
     *,
     db: AsyncSession = Depends(get_db),
     user_in: UserCreate,
-    # current_user: UserModel = Depends(require_role("admin"))
+    current_user: UserModel = Depends(require_role("admin"))
 ):
     """
     Tạo người dùng mới.

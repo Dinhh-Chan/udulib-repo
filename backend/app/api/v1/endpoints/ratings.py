@@ -17,7 +17,7 @@ async def read_ratings(
     limit: int = 100,
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retrieve ratings.
@@ -51,14 +51,14 @@ async def update_rating(
     db: AsyncSession = Depends(get_db),
     rating_id: int,
     rating_in: RatingUpdate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Update a rating.
     """
     crud = RatingCRUD(db)
     try:
-        rating = await crud.update(id=rating_id, obj_in=rating_in, user_id=1)
+        rating = await crud.update(id=rating_id, obj_in=rating_in, user_id=current_user.user_id)
         if not rating:
             raise HTTPException(
                 status_code=404,
@@ -76,7 +76,7 @@ async def read_rating(
     *,
     db: AsyncSession = Depends(get_db),
     rating_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get rating by ID.
@@ -95,14 +95,14 @@ async def delete_rating(
     *,
     db: AsyncSession = Depends(get_db),
     rating_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Delete a rating.
     """
     crud = RatingCRUD(db)
     try:
-        success = await crud.delete(id=rating_id, user_id=1)
+        success = await crud.delete(id=rating_id, user_id=current_user.user_id)
         if not success:
             raise HTTPException(
                 status_code=404,

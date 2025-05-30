@@ -5,7 +5,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Menu, Search, LogIn, BookOpen, ChevronDown, LogOut, User } from "lucide-react"
+import { Menu, Search, LogIn, BookOpen, ChevronDown, LogOut, User, Upload } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
@@ -17,7 +17,6 @@ const mainNavItems = [
   { title: "Trang chủ", href: "/" },
   { title: "Ngành học", href: "/departments" },
   { title: "Tài liệu", href: "/documents" },
-  { title: "Tài liệu mới", href: "/documents/recent" },
   { title: "Thảo luận", href: "/forum" },
 ]
 
@@ -45,7 +44,7 @@ export default function Navbar() {
                 <div className="px-7">
                   <Link href="/" className="flex items-center gap-2 font-bold">
                     <BookOpen className="h-5 w-5" />
-                    <span>EduDocs</span>
+                    <span>UduLib</span>
                   </Link>
                 </div>
                 <nav className="flex flex-col gap-4 px-2 pt-8">
@@ -91,31 +90,6 @@ export default function Navbar() {
                   {item.title}
                 </Link>
               ))}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="p-0 h-auto text-sm font-medium text-muted-foreground hover:text-primary"
-                  >
-                    <span>Danh mục</span>
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/departments/it">Công nghệ thông tin</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/departments/finance">Tài chính</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/departments/accounting">Kế toán</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/departments">Xem tất cả ngành học</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </nav>
           </div>
           <div className="flex items-center gap-2">
@@ -143,8 +117,18 @@ export default function Navbar() {
               </Link>
             </Button>
             <ThemeToggle />
-            {isAuthenticated && <NotificationDropdown />}
-            
+            {isAuthenticated ? (
+              <>
+                <NotificationDropdown />
+                <Button variant="ghost" size="icon" asChild className="hidden md:flex">
+                  <Link href="/upload">
+                    <Upload className="h-5 w-5" />
+            <span className="sr-only">Tải lên tài liệu</span>
+                  </Link>
+                </Button>
+              </>
+            ) : null}
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

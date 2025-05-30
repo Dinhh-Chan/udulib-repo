@@ -17,7 +17,7 @@ async def read_subjects(
     limit: int = 100,
     major_id: Optional[int] = None,
     year_id: Optional[int] = None,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retrieve subjects.
@@ -31,7 +31,7 @@ async def create_subject(
     *,
     db: AsyncSession = Depends(get_db),
     subject_in: SubjectCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create new subject.
@@ -52,7 +52,7 @@ async def update_subject(
     db: AsyncSession = Depends(get_db),
     subject_id: int,
     subject_in: SubjectUpdate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Update a subject.
@@ -91,7 +91,7 @@ async def delete_subject(
     *,
     db: AsyncSession = Depends(get_db),
     subject_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Delete a subject.
@@ -113,7 +113,7 @@ async def read_subjects_by_academic_year(
     academic_year_id: int,
     skip: int = 0,
     limit: int = 100,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách môn học theo năm học.

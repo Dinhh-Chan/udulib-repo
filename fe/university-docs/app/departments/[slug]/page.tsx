@@ -31,7 +31,10 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
     let foundMajor: Major | null = null
 
     async function fetchMajor() {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`)
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const data = await res.json()
       if (!isNaN(majorIdFromUrl)) {
         foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl)
@@ -60,14 +63,19 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
   useEffect(() => {
     if (!selectedYear || !major) return
     setLoading(true)
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects?major_id=${major.major_id}&year_id=${selectedYear}`)
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects?major_id=${major.major_id}&year_id=${selectedYear}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then(res => res.json())
       .then(data => {
         setSubjects(Array.isArray(data) ? data : [])
         setLoading(false)
         if (Array.isArray(data)) {
           data.forEach((subject: Subject) => {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${subject.subject_id}`)
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${subject.subject_id}`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })
               .then(res => res.json())
               .then(docData => {
                 setDocumentCounts(prev => ({

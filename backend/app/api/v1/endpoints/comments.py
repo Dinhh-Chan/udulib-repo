@@ -18,7 +18,7 @@ async def read_comments(
     limit: int = 100,
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retrieve comments.
@@ -37,13 +37,13 @@ async def create_comment(
     *,
     db: AsyncSession = Depends(get_db),
     comment_in: CommentCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create new comment.
     """
     crud = CommentCRUD(db)
-    comment = await crud.create(obj_in=comment_in, user_id=1)
+    comment = await crud.create(obj_in=comment_in, user_id=current_user.user_id)
     return comment
 
 @router.put("/{comment_id}", response_model=Comment)
@@ -52,14 +52,14 @@ async def update_comment(
     db: AsyncSession = Depends(get_db),
     comment_id: int,
     comment_in: CommentUpdate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Update a comment.
     """
     crud = CommentCRUD(db)
     try:
-        comment = await crud.update(id=comment_id, obj_in=comment_in, user_id=1)
+        comment = await crud.update(id=comment_id, obj_in=comment_in, user_id=current_user.user_id)
         if not comment:
             raise HTTPException(
                 status_code=404,
@@ -96,14 +96,14 @@ async def delete_comment(
     *,
     db: AsyncSession = Depends(get_db),
     comment_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Delete a comment.
     """
     crud = CommentCRUD(db)
     try:
-        success = await crud.delete(id=comment_id, user_id=1)
+        success = await crud.delete(id=comment_id, user_id=current_user.user_id)
         if not success:
             raise HTTPException(
                 status_code=404,

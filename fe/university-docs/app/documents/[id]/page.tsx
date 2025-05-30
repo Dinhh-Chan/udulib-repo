@@ -94,7 +94,10 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${params.id}`)
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${params.id}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        )
         if (!response.ok) {
           throw new Error(`Lỗi khi tải dữ liệu: ${response.status}`)
         }
@@ -310,7 +313,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
                   ))}
                 </div>
                 <div className="flex items-center gap-2 mt-4">
-                  <div className="text-sm font-medium">Đánh giá:</div>
+                  <div className="text-sm font-medium">{ratings.length} đánh giá:</div>
                   <div className="flex items-center">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -336,7 +339,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
                   </div>
                   <div className="text-sm text-muted-foreground">
                     ({ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length).toFixed(1) : "0.0"}/5)
-                    <span className="ml-1">({ratings.length} đánh giá)</span>
+                    {/* <span className="ml-1">({ratings.length} đánh giá)</span> */}
                   </div>
                 </div>
                 {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}

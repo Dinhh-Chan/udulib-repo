@@ -53,15 +53,22 @@ export default function DepartmentsPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
-      const majorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`)
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const majorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const majorsData = await majorsRes.json()
       setMajors(Array.isArray(majorsData) ? majorsData : [])
 
-      const subjectsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects`)
+      const subjectsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const subjectsData = await subjectsRes.json()
       setSubjects(Array.isArray(subjectsData) ? subjectsData : [])
 
-      const documentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`)
+      const documentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const documentsData = await documentsRes.json()
       setDocuments(Array.isArray(documentsData.documents) ? documentsData.documents : [])
 

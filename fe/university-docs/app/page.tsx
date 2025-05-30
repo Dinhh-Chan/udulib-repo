@@ -1,9 +1,33 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, FileText, Upload, Users, Search } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { getPublicDocuments, Document } from "@/lib/api/documents"
 
 export default function Home() {
+  const { isAuthenticated } = useAuth()
+  const [recentDocuments, setRecentDocuments] = useState<Document[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRecentDocuments = async () => {
+      try {
+        const response = await getPublicDocuments(1, 4)
+        setRecentDocuments(response.documents || [])
+      } catch (error) {
+        console.error("Error fetching recent documents:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRecentDocuments()
+  }, [])
+
   return (
     <div className="flex flex-col gap-12 pb-8">
       {/* Hero Section */}
@@ -15,14 +39,16 @@ export default function Home() {
           <p className="max-w-[700px] text-muted-foreground md:text-xl">
             Truy cập, chia sẻ và quản lý tài liệu học tập cho tất cả các ngành học một cách dễ dàng
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <Button size="lg" asChild>
-              <Link href="/departments">Khám phá tài liệu</Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/login">Đăng nhập để tải lên</Link>
-            </Button>
-          </div>
+          {!isAuthenticated && (
+            <div className="flex flex-col sm:flex-row gap-4 mt-4">
+              <Button size="lg" asChild>
+                <Link href="/departments">Khám phá tài liệu</Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/login">Đăng nhập để tải lên</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -110,37 +136,57 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Tài liệu mới nhất</h2>
             <Button variant="outline" asChild>
-              <Link href="/documents/recent">Xem tất cả</Link>
+              <Link href="/documents">Xem tất cả</Link>
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recentDocuments.map((doc) => (
-              <Card key={doc.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                    <span>{doc.department}</span>
-                    <span>•</span>
-                    <span>{doc.course}</span>
-                  </div>
-                  <CardTitle className="line-clamp-1">{doc.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">{doc.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{doc.fileType}</span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="text-muted-foreground">{doc.fileSize}</span>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link href={`/documents/${doc.id}`}>Xem tài liệu</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="pb-3">
+                    <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+                    <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-muted rounded w-full"></div>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <div className="h-4 bg-muted rounded w-1/3"></div>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <div className="h-9 bg-muted rounded w-full"></div>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {recentDocuments.map((doc) => (
+                <Card key={doc.document_id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                      <span>{doc.subject?.subject_name}</span>
+                      <span>•</span>
+                      <span>{doc.file_type}</span>
+                    </div>
+                    <CardTitle className="line-clamp-1">{doc.title}</CardTitle>
+                    <CardDescription className="line-clamp-2">{doc.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">{doc.file_type}</span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-muted-foreground">{(doc.file_size / 1024 / 1024).toFixed(1)} MB</span>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <Button variant="outline" size="sm" asChild className="w-full">
+                      <Link href={`/documents/${doc.document_id}`}>Xem tài liệu</Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -176,7 +222,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
+    {!isAuthenticated && (
       <section className="w-full py-12 md:py-24 bg-primary/5">
         <div className="container px-4 md:px-6 flex flex-col items-center text-center space-y-4">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tighter">Bắt đầu chia sẻ tài liệu ngay hôm nay</h2>
@@ -193,42 +239,13 @@ export default function Home() {
             </Button>
           </div>
         </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }
 
 // Sample data
-const recentDocuments = [
-  {
-    id: "1",
-    title: "Giáo trình Lập trình Python cơ bản",
-    description: "Tài liệu hướng dẫn lập trình Python từ cơ bản đến nâng cao dành cho sinh viên năm nhất ngành CNTT",
-    department: "Công nghệ thông tin",
-    course: "Lập trình Python",
-    fileType: "PDF",
-    fileSize: "8.5 MB",
-  },
-  {
-    id: "2",
-    title: "Bài giảng Kế toán tài chính",
-    description: "Slide bài giảng môn Kế toán tài chính dành cho sinh viên năm hai ngành Kế toán",
-    department: "Kế toán",
-    course: "Kế toán tài chính",
-    fileType: "PPTX",
-    fileSize: "5.2 MB",
-  },
-  {
-    id: "3",
-    title: "Đề cương ôn tập Kinh tế vĩ mô",
-    description: "Đề cương ôn tập môn Kinh tế vĩ mô kỳ thi cuối kỳ dành cho sinh viên năm nhất ngành Kinh tế",
-    department: "Kinh tế",
-    course: "Kinh tế vĩ mô",
-    fileType: "DOCX",
-    fileSize: "3.7 MB",
-  },
-]
-
 const popularDepartments = [
   {
     id: "1",
