@@ -1,7 +1,13 @@
+"use client"
 import Link from "next/link"
 import { BookOpen } from "lucide-react"
+import { useState, useEffect } from "react"
 
 export default function Footer() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+
   return (
     <>
       <footer className="w-full border-t bg-background py-6">

@@ -13,8 +13,8 @@ router = APIRouter()
 @router.get("/", response_model=List[Subject])
 async def read_subjects(
     db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     major_id: Optional[int] = None,
     year_id: Optional[int] = None,
     current_user: User = Depends(get_current_user)
@@ -23,7 +23,8 @@ async def read_subjects(
     Retrieve subjects.
     """
     crud = SubjectCRUD(db)
-    subjects = await crud.get_all(skip=skip, limit=limit, major_id=major_id, year_id=year_id)
+    skip = (page - 1) * per_page
+    subjects = await crud.get_all(skip=skip, limit=per_page, major_id=major_id, year_id=year_id)
     return subjects
 
 @router.post("/", response_model=Subject)
@@ -111,17 +112,18 @@ async def read_subjects_by_academic_year(
     *,
     db: AsyncSession = Depends(get_db),
     academic_year_id: int,
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách môn học theo năm học.
     """
     crud = SubjectCRUD(db)
+    skip = (page - 1) * per_page
     subjects = await crud.get_all(
         skip=skip,
-        limit=limit,
+        limit=per_page,
         year_id=academic_year_id
     )
     return subjects 

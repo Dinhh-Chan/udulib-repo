@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronRight, FileText, Download, Eye, Calendar, User } from "lucide-react"
+import React from "react"
 
 type Document = {
   document_id: number;
@@ -40,38 +41,41 @@ type Major = {
   description: string;
 }
 
-export default function CoursePage({
-  params,
-}: {
-  params: { slug: string; courseSlug: string }
-}) {
+export default function CoursePage({ params }: { params: Promise<{ slug: string; courseSlug: string }> }) {
+  const { slug, courseSlug } = React.use(params);
   const [documents, setDocuments] = useState<Document[]>([])
   const [subject, setSubject] = useState<Subject | null>(null)
   const [major, setMajor] = useState<Major | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     async function fetchData() {
       setLoading(true)
       try {
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
 
         const subjectRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/subjects/${params.courseSlug}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/subjects/${courseSlug}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const subjectData = await subjectRes.json();
         setSubject(subjectData);
 
         const majorRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/majors/${params.slug}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/majors/${slug}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const majorData = await majorRes.json();
         setMajor(majorData);
 
         const documentsRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${params.courseSlug}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${courseSlug}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const documentsData = await documentsRes.json();
@@ -82,8 +86,9 @@ export default function CoursePage({
       setLoading(false);
     }
     fetchData();
-  }, [params.slug, params.courseSlug]);
+  }, [slug, courseSlug, mounted]);
 
+  if (!mounted) return null;
   if (loading) return <div>Đang tải...</div>
   if (!subject || !major) return <div>Không tìm thấy thông tin môn học</div>
 

@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
+import React from "react"
 
 interface Document {
   document_id: number
@@ -63,7 +64,8 @@ interface Rating {
   updated_at?: string;
 }
 
-export default function DocumentPage({ params }: { params: { id: string } }) {
+export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params);
   const [document, setDocument] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +97,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
         setLoading(true)
         setError(null)
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${params.id}`,
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`,
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         )
         if (!response.ok) {
@@ -111,7 +113,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       }
     }
 
-    const increaseView = async () => {
+    const checkAndIncreaseView = async () => {
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
       const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
       let userId = null;
@@ -119,10 +121,17 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
         if (userStr) userId = JSON.parse(userStr).user_id;
       } catch {}
       if (!userId) return;
-      const viewedKey = `viewed_doc_${params.id}_user_${userId}`;
-      if (typeof window !== "undefined" && !localStorage.getItem(viewedKey)) {
-        localStorage.setItem(viewedKey, "1");
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${params.id}/view`, {
+
+      // 1. Kiểm tra trong DB xem user đã xem tài liệu này chưa
+      const checkRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/document_history?document_id=${id}&user_id=${userId}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      const history = await checkRes.json();
+
+      // 2. Nếu chưa có bản ghi, mới gọi API tăng view
+      if (!Array.isArray(history) || history.length === 0) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/view`, {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
@@ -130,14 +139,14 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
     }
 
     fetchDocument();
-    increaseView();
+    checkAndIncreaseView();
 
     const fetchRatings = async () => {
       try {
         setRatingLoading(true)
         setRatingError(null)
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings?document_id=${params.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings?document_id=${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
         if (!res.ok) throw new Error("Không thể tải đánh giá")
@@ -160,7 +169,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       }
     }
     fetchRatings()
-  }, [params.id, userId])
+  }, [id, userId])
 
   const handleStarClick = (score: number) => {
     if (userRating) return;
@@ -182,7 +191,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          document_id: Number(params.id),
+          document_id: Number(id),
           score: pendingScore,
         }),
       })

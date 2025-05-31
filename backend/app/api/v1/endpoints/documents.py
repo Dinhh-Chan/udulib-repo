@@ -95,17 +95,18 @@ async def get_documents_by_academic_year(
     *,
     db: Session = Depends(get_db),
     academic_year_id: int,
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy danh sách tài liệu theo năm học.
     """
+    skip = (page - 1) * per_page
     filter_request = DocumentFilterRequest(
         academic_year_id=academic_year_id,
         skip=skip,
-        limit=limit
+        limit=per_page
     )
     return await document.get_filtered_documents(db, filter_request=filter_request)
 

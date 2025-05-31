@@ -14,8 +14,8 @@ router = APIRouter()
 @router.get("/", response_model=List[Comment])
 async def read_comments(
     db: AsyncSession = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
     current_user: User = Depends(get_current_user)
@@ -24,9 +24,10 @@ async def read_comments(
     Retrieve comments.
     """
     crud = CommentCRUD(db)
+    skip = (page - 1) * per_page
     comments = await crud.get_all(
         skip=skip, 
-        limit=limit,
+        limit=per_page,
         document_id=document_id,
         user_id=user_id
     )

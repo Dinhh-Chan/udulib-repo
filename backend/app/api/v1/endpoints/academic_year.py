@@ -18,8 +18,8 @@ router = APIRouter()
 
 @router.get("/", response_model=List[AcademicYear])
 async def get_academic_years(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -27,7 +27,8 @@ async def get_academic_years(
     Lấy danh sách các năm học.
     """
     crud = AcademicYearCRUD(db)
-    years = await crud.get_all(skip=skip, limit=limit)
+    skip = (page - 1) * per_page
+    years = await crud.get_all(skip=skip, limit=per_page)
     return years
 
 @router.get("/{year_id}", response_model=AcademicYear)
@@ -138,8 +139,8 @@ async def get_latest_academic_year(
 @router.get("/with-subjects-count", response_model=List[dict])
 async def get_years_with_subjects_count(
     db: AsyncSession = Depends(get_db),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """
@@ -147,4 +148,5 @@ async def get_years_with_subjects_count(
     Only admin users can access this endpoint.
     """
     crud = AcademicYearCRUD(db)
-    return await crud.get_with_subjects_count(skip=skip, limit=limit)
+    skip = (page - 1) * per_page
+    return await crud.get_with_subjects_count(skip=skip, limit=per_page)
