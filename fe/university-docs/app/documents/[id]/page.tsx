@@ -17,7 +17,7 @@ import {
   Eye,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import React from "react"
@@ -77,19 +77,43 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [showConfirm, setShowConfirm] = useState(false)
   const [pendingScore, setPendingScore] = useState<number | null>(null)
   const router = useRouter()
+  const [userId, setUserId] = useState<number | null>(null);
+  const hasIncreasedView = useRef(false);
 
-  const getUserId = () => {
-    if (typeof window === "undefined") return null;
-    try {
-      const userStr = localStorage.getItem("user");
-      if (!userStr) return null;
-      const user = JSON.parse(userStr);
-      return user.user_id;
-    } catch {
-      return null;
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setUserId(user.user_id);
+        }
+      } catch {}
     }
-  }
-  const userId = getUserId();
+  }, []);
+
+  useEffect(() => {
+    if (!id || !userId || hasIncreasedView.current) return;
+
+    const checkAndIncreaseView = async () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const checkRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/history?document_id=${id}&user_id=${userId}&page=1&per_page=1`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      const history = await checkRes.json();
+
+      if (!Array.isArray(history) || history.length === 0) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/view`, {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+      }
+      hasIncreasedView.current = true;
+    };
+
+    checkAndIncreaseView();
+  }, [id, userId]);
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -113,31 +137,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       }
     }
 
-    const checkAndIncreaseView = async () => {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
-      let userId = null;
-      try {
-        if (userStr) userId = JSON.parse(userStr).user_id;
-      } catch {}
-      if (!userId) return;
-
-      const checkRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/history?document_id=${id}&user_id=${userId}&page=1&per_page=1`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-      const history = await checkRes.json();
-
-      if (!Array.isArray(history) || history.length === 0) {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/view`, {
-          method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-      }
-    }
-
     fetchDocument();
-    checkAndIncreaseView();
 
     const fetchRatings = async () => {
       try {
