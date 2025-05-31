@@ -14,3 +14,11 @@ export function formatFileSize(bytes: number): string {
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
+
+export function formatDate(date: string | Date) {
+  return new Date(date).toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}

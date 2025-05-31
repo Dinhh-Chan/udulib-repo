@@ -25,6 +25,7 @@ class UserUpdate(BaseModel):
     role: Optional[UserRole] = None
     status: Optional[UserStatus] = None
     university_id: Optional[str] = Field(None, max_length=50)
+    password: Optional[str] = None
 
 class User(UserBase, TimeStampBase):
     user_id: int

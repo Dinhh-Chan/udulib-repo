@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -15,15 +15,11 @@ import { Separator } from "@/components/ui/separator"
 import { ChevronRight, User, Settings, FileText, MessageSquare, History, Bell, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { getUserProfile, updateUserProfile } from "@/lib/api/user"
+import { getUserProfile } from "@/services/user"
 import { User as UserType } from "@/types/user"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
 import Loading from "@/app/loading"
-import { getUserDocuments, getDocumentDetail, updateDocument, deleteDocument, Document, DocumentUpdateData } from "@/lib/api/documents"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Notification, getAllNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/api/notification"
 
 export default function ProfilePage() {
   const searchParams = useSearchParams()
@@ -31,40 +27,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile")
   const [user, setUser] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const { user: authUser, isAuthenticated } = useAuth()
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isLoadingDocument, setIsLoadingDocument] = useState(false)
-  const [editForm, setEditForm] = useState<DocumentUpdateData>({
-    title: "",
-    description: "",
-    status: "pending",
-    tags: []
-  })
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null)
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
-  const [activeNotificationTab, setActiveNotificationTab] = useState("all")
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    studentId: ""
-  })
-
-  useEffect(() => {
-    // Lấy tab từ URL query parameter
-    const tab = searchParams.get("tab")
-    if (tab && ["profile", "documents", "forum", "notifications", "settings"].includes(tab)) {
-      setActiveTab(tab)
-    }
-  }, [searchParams])
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -88,193 +51,6 @@ export default function ProfilePage() {
 
     fetchUserProfile()
   }, [authUser, isAuthenticated])
-
-  useEffect(() => {
-    const fetchUserDocuments = async () => {
-      if (!authUser?.user_id) return
-
-      setIsLoadingDocuments(true)
-      try {
-        const response = await getUserDocuments(authUser.user_id, currentPage)
-        setDocuments(response.documents || [])
-        setTotalPages(Math.ceil(response.total / response.per_page))
-      } catch (error) {
-        console.error("Error fetching documents:", error)
-        toast.error("Không thể tải danh sách tài liệu")
-        setDocuments([])
-      } finally {
-        setIsLoadingDocuments(false)
-      }
-    }
-
-    if (activeTab === "documents") {
-      fetchUserDocuments()
-    }
-  }, [authUser?.user_id, currentPage, activeTab])
-
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!isAuthenticated || activeTab !== "notifications") return
-
-      setIsLoadingNotifications(true)
-      try {
-        const data = await getAllNotifications()
-        setNotifications(data)
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error)
-        toast.error("Không thể tải thông báo")
-      } finally {
-        setIsLoadingNotifications(false)
-      }
-    }
-
-    fetchNotifications()
-  }, [isAuthenticated, activeTab])
-
-  useEffect(() => {
-    if (user) {
-      const nameParts = user.full_name.split(" ")
-      setFormData({
-        firstName: nameParts[0] || "",
-        lastName: nameParts.slice(1).join(" ") || "",
-        email: user.email || "",
-        studentId: user.university_id?.toString() || ""
-      })
-    }
-  }, [user])
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-    // Cập nhật URL với tab mới
-    router.push(`/profile?tab=${tab}`)
-  }
-
-  const handleViewDocument = async (documentId: number) => {
-    try {
-      setIsLoadingDocument(true)
-      const doc = await getDocumentDetail(documentId)
-      setSelectedDocument(doc)
-      setIsEditDialogOpen(true)
-      setEditForm({
-        title: doc.title,
-        description: doc.description,
-        status: doc.status,
-        tags: doc.tags.map((tag: any) => tag.tag_name)
-      })
-    } catch (error) {
-      console.error("Error fetching document:", error)
-      toast.error("Không thể tải thông tin tài liệu")
-    } finally {
-      setIsLoadingDocument(false)
-    }
-  }
-
-  const handleUpdateDocument = async () => {
-    if (!selectedDocument) return
-
-    try {
-      setIsLoadingDocument(true)
-      await updateDocument(selectedDocument.document_id, editForm)
-      toast.success("Cập nhật tài liệu thành công")
-      setIsEditDialogOpen(false)
-      // Refresh danh sách tài liệu
-      const response = await getUserDocuments(authUser!.user_id, currentPage)
-      setDocuments(response.documents || [])
-    } catch (error) {
-      console.error("Error updating document:", error)
-      toast.error("Không thể cập nhật tài liệu")
-    } finally {
-      setIsLoadingDocument(false)
-    }
-  }
-
-  const handleDeleteDocument = async () => {
-    if (!documentToDelete) return
-
-    try {
-      setIsLoadingDocument(true)
-      await deleteDocument(documentToDelete)
-      toast.success("Xóa tài liệu thành công")
-      setIsDeleteDialogOpen(false)
-      // Refresh danh sách tài liệu
-      const response = await getUserDocuments(authUser!.user_id, currentPage)
-      setDocuments(response.documents || [])
-    } catch (error) {
-      console.error("Error deleting document:", error)
-      toast.error("Không thể xóa tài liệu")
-    } finally {
-      setIsLoadingDocument(false)
-      setDocumentToDelete(null)
-    }
-  }
-
-  const handleMarkNotificationAsRead = async (notificationId: number) => {
-    try {
-      await markNotificationAsRead(notificationId)
-      setNotifications(prevNotifications => 
-        prevNotifications.map(n => 
-          n.notification_id === notificationId 
-            ? { ...n, is_read: true }
-            : n
-        )
-      )
-      toast.success("Đã đánh dấu thông báo đã đọc")
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error)
-      toast.error("Không thể đánh dấu thông báo đã đọc")
-    }
-  }
-
-  const handleMarkAllNotificationsAsRead = async () => {
-    try {
-      await markAllNotificationsAsRead()
-      setNotifications(prevNotifications => 
-        prevNotifications.map(n => ({ ...n, is_read: true }))
-      )
-      toast.success("Đã đánh dấu tất cả thông báo đã đọc")
-    } catch (error) {
-      console.error("Failed to mark all notifications as read:", error)
-      toast.error("Không thể đánh dấu tất cả thông báo đã đọc")
-    }
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [id]: value
-    }))
-  }
-
-  const handleUpdateProfile = async () => {
-    if (!user) return
-
-    try {
-      setIsUpdating(true)
-      const updatedUser = await updateUserProfile(user.user_id, {
-        full_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        email: formData.email,
-        university_id: formData.studentId
-      })
-
-      // Cập nhật thông tin người dùng trong context
-      const updatedUserData = {
-        ...user,
-        full_name: updatedUser.full_name,
-        email: updatedUser.email,
-        university_id: updatedUser.university_id
-      }
-      localStorage.setItem("user", JSON.stringify(updatedUserData))
-      setUser(updatedUserData)
-
-      toast.success("Cập nhật thông tin thành công")
-    } catch (error) {
-      console.error("Error updating profile:", error)
-      toast.error("Không thể cập nhật thông tin")
-    } finally {
-      setIsUpdating(false)
-    }
-  }
 
   if (isLoading) {
     return (
@@ -318,24 +94,24 @@ export default function ProfilePage() {
             <Card>
               <CardContent className="p-4 flex flex-col items-center text-center">
                 <Avatar className="h-20 w-20 mb-4">
-                  <AvatarImage src="/placeholder.svg?height=80&width=80" alt={user.full_name} />
-                  <AvatarFallback>{user.full_name}</AvatarFallback>
+                  <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Nguyễn Văn X" />
+                  <AvatarFallback>NVX</AvatarFallback>
                 </Avatar>
-                <h3 className="font-medium text-lg">{user.full_name}</h3>
-                <p className="text-sm text-muted-foreground">{user.role}</p>
-                <Badge className="mt-2">{user.status === 'active' ? 'Đã kích hoạt' : 'Chưa kích hoạt'}</Badge>
+                <h3 className="font-medium text-lg">Nguyễn Văn X</h3>
+                <p className="text-sm text-muted-foreground">Sinh viên năm 3</p>
+                <Badge className="mt-2">Thành viên</Badge>
                 <div className="w-full mt-4 pt-4 border-t flex flex-col gap-2">
                   <div className="flex justify-between text-sm">
-                    <span>Email:</span>
-                    <span className="font-medium">{user.email}</span>
+                    <span>Tài liệu đã tải lên:</span>
+                    <span className="font-medium">12</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Tên đăng nhập:</span>
-                    <span className="font-medium">{user.username}</span>
+                    <span>Bài viết diễn đàn:</span>
+                    <span className="font-medium">8</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Ngày tham gia:</span>
-                    <span className="font-medium">{new Date(user.created_at).toLocaleDateString('vi-VN')}</span>
+                    <span className="font-medium">01/01/2023</span>
                   </div>
                 </div>
               </CardContent>
@@ -382,6 +158,11 @@ export default function ProfilePage() {
                 <Settings className="h-4 w-4 mr-2" />
                 Cài đặt tài khoản
               </Button>
+              <Separator className="my-2" />
+              <Button variant="ghost" className="justify-start text-red-500 hover:text-red-600 hover:bg-red-50">
+                <LogOut className="h-4 w-4 mr-2" />
+                Đăng xuất
+              </Button>
             </div>
           </div>
 
@@ -397,37 +178,20 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">Họ</Label>
-                        <Input 
-                          id="firstName" 
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                        />
+                        <Input id="firstName" defaultValue={user.full_name.split(' ')[0]} />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Tên</Label>
-                        <Input 
-                          id="lastName" 
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                        />
+                        <Input id="lastName" defaultValue={user.full_name.split(' ')[1]} />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        value={formData.email}
-                        onChange={handleInputChange}
-                      />
+                      <Input id="email" type="email" defaultValue={user.email} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="studentId">Mã sinh viên</Label>
-                      <Input 
-                        id="studentId" 
-                        value={formData.studentId}
-                        onChange={handleInputChange}
-                      />
+                      <Input id="studentId" defaultValue={user.university_id} />
                     </div>
                   </div>
                 </CardContent>
