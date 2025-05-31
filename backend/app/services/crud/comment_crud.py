@@ -1,6 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from app.models.comment import Comment
+from app.models.document import Document
 from app.schemas.comment import CommentCreate, CommentUpdate
 from typing import List, Optional, Dict, Any
 import logging
@@ -20,7 +22,12 @@ class CommentCRUD:
         user_id: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         try:
-            query = select(Comment)
+            query = select(Comment).options(
+                selectinload(Comment.user),
+                selectinload(Comment.document).selectinload(Document.subject),
+                selectinload(Comment.document).selectinload(Document.user),
+                selectinload(Comment.document).selectinload(Document.tags)
+            )
             
             if document_id is not None:
                 query = query.filter(Comment.document_id == document_id)
@@ -51,7 +58,12 @@ class CommentCRUD:
 
     async def get_by_id(self, id: int) -> Optional[Dict[str, Any]]:
         try:
-            query = select(Comment).where(Comment.comment_id == id)
+            query = select(Comment).options(
+                selectinload(Comment.user),
+                selectinload(Comment.document).selectinload(Document.subject),
+                selectinload(Comment.document).selectinload(Document.user),
+                selectinload(Comment.document).selectinload(Document.tags)
+            ).where(Comment.comment_id == id)
             result = await self.db.execute(query)
             comment = result.scalar_one_or_none()
 

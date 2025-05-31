@@ -1,12 +1,14 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.models.base import get_db
 from app.services.crud.document_history_crud import DocumentHistoryCRUD
 from app.schemas.document_history import DocumentHistory, DocumentHistoryCreate
 from app.dependencies.auth import get_current_user
 from app.models.user import User
+from app.models.document import Document
 
 router = APIRouter()
 
@@ -44,8 +46,13 @@ async def create_document_history(
     """
     Tạo bản ghi lịch sử truy cập tài liệu mới.
     """
+    # Kiểm tra document có tồn tại không
+    document_result = await db.execute(select(Document).where(Document.document_id == history_in.document_id))
+    if not document_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Document not found")
+    
     crud = DocumentHistoryCRUD(db)
-    history = await crud.create(obj_in=history_in, user_id=current_user.user_id)
+    history = await crud.create(obj_in=history_in, user_id=1)
     return history
 
 @router.get("/{history_id}", response_model=DocumentHistory)

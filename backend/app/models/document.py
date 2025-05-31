@@ -23,5 +23,5 @@ class Document(Base):
     # Relationships
     subject = relationship("Subject", back_populates="documents")
     user = relationship("User", back_populates="documents")
-    document_tags = relationship("DocumentTag", back_populates="document", overlaps="tags")
+    document_tags = relationship("DocumentTag", back_populates="document", overlaps="tags,document_tags")
     tags = relationship("Tag", secondary="document_tags", back_populates="documents", overlaps="document_tags")

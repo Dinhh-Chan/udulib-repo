@@ -17,6 +17,7 @@ class DocumentHistoryCRUD:
             .options(
                 selectinload(DocumentHistory.user),
                 selectinload(DocumentHistory.document).selectinload(Document.subject),
+                selectinload(DocumentHistory.document).selectinload(Document.user),
                 selectinload(DocumentHistory.document).selectinload(Document.tags)
             )
             .where(DocumentHistory.history_id == id)
@@ -35,6 +36,7 @@ class DocumentHistoryCRUD:
         query = select(DocumentHistory).options(
             selectinload(DocumentHistory.user),
             selectinload(DocumentHistory.document).selectinload(Document.subject),
+            selectinload(DocumentHistory.document).selectinload(Document.user),
             selectinload(DocumentHistory.document).selectinload(Document.tags)
         )
         
@@ -68,6 +70,7 @@ class DocumentHistoryCRUD:
             .options(
                 selectinload(DocumentHistory.user),
                 selectinload(DocumentHistory.document).selectinload(Document.subject),
+                selectinload(DocumentHistory.document).selectinload(Document.user),
                 selectinload(DocumentHistory.document).selectinload(Document.tags)
             )
             .where(DocumentHistory.history_id == db_obj.history_id)
