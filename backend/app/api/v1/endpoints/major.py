@@ -11,8 +11,8 @@ router = APIRouter()
 
 @router.get("/", response_model=List[Major])
 async def get_majors(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -20,7 +20,8 @@ async def get_majors(
     Lấy danh sách các ngành học.
     """
     crud = MajorCRUD(db)
-    majors = await crud.get_all(skip=skip, limit=limit)
+    skip = (page - 1) * per_page
+    majors = await crud.get_all(skip=skip, limit=per_page)
     return majors
 
 @router.get("/{major_id}", response_model=Major)
