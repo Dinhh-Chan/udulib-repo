@@ -122,14 +122,12 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       } catch {}
       if (!userId) return;
 
-      // 1. Kiểm tra trong DB xem user đã xem tài liệu này chưa
       const checkRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/document_history?document_id=${id}&user_id=${userId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/history?document_id=${id}&user_id=${userId}&page=1&per_page=1`,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       const history = await checkRes.json();
 
-      // 2. Nếu chưa có bản ghi, mới gọi API tăng view
       if (!Array.isArray(history) || history.length === 0) {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/view`, {
           method: "POST",
