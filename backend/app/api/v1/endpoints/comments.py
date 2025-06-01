@@ -20,7 +20,7 @@ async def read_comments(
     user_id: Optional[int] = None,
     parent_comment_id: Optional[int] = None,
     include_replies: bool = Query(False, description="Bao gồm cả replies nếu true"),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retrieve comments.
@@ -44,7 +44,7 @@ async def create_comment(
     *,
     db: AsyncSession = Depends(get_db),
     comment_in: CommentCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Create new comment.
@@ -114,7 +114,7 @@ async def get_comment_replies(
     comment_id: int,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get all replies of a specific comment.
