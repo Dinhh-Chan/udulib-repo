@@ -8,6 +8,7 @@ from app.schemas.user import User
 class CommentBase(BaseModel):
     content: str
     document_id: int
+    parent_comment_id: Optional[int] = None
 
 # Properties to receive on comment creation
 class CommentCreate(CommentBase):
@@ -16,6 +17,7 @@ class CommentCreate(CommentBase):
 # Properties to receive on comment update
 class CommentUpdate(BaseModel):
     content: Optional[str] = None
+    parent_comment_id: Optional[int] = None
 
 # Properties shared by models stored in DB
 class CommentInDBBase(CommentBase):
@@ -31,6 +33,11 @@ class CommentInDBBase(CommentBase):
 class Comment(CommentInDBBase, TimeStampBase):
     status: ForumStatus
     user: Optional[User] = None
+    parent_comment_id: Optional[int] = None
+    replies: List["Comment"] = []
     
     class Config:
         from_attributes = True
+
+# Update forward references
+Comment.model_rebuild()
