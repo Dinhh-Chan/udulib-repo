@@ -21,6 +21,7 @@ import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import React from "react"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Document {
   document_id: number
@@ -64,6 +65,17 @@ interface Rating {
   updated_at?: string;
 }
 
+interface Comment {
+  comment_id: number;
+  document_id: number;
+  user_id: number;
+  content: string;
+  created_at: string;
+  updated_at?: string;
+  user?: { full_name: string; username: string };
+  replies?: Comment[];
+}
+
 export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const [document, setDocument] = useState<Document | null>(null)
@@ -79,6 +91,13 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const router = useRouter()
   const [userId, setUserId] = useState<number | null>(null);
   const hasIncreasedView = useRef(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentContent, setCommentContent] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
+  const userCache = useRef<{ [userId: number]: { full_name: string; username: string } }>({});
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -169,6 +188,79 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     fetchRatings()
   }, [id, userId])
 
+  const fetchUserInfo = async (userId: number, token: string | null) => {
+    if (userCache.current[userId]) return userCache.current[userId];
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        userCache.current[userId] = { full_name: userData.full_name, username: userData.username };
+        return userCache.current[userId];
+      }
+    } catch {}
+    return { full_name: "Ẩn danh", username: "" };
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchComments = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments?document_id=${id}&include_replies=true&page=1&per_page=20`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("Không thể tải bình luận");
+        let data = await res.json();
+        const tree = buildCommentTree(data);
+        await fillUserInfoForComments(tree, token, fetchUserInfo);
+        setComments(tree);
+      } catch (err) {}
+    };
+    fetchComments();
+  }, [id]);
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentContent.trim() || !userId) return;
+    setCommentLoading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          document_id: Number(id),
+          content: commentContent,
+        }),
+      });
+      if (!res.ok) throw new Error("Không thể gửi bình luận");
+      let newComment = await res.json();
+      // Nếu comment chưa có user, fetch user info
+      if (!newComment.user && newComment.user_id) {
+        try {
+          const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${newComment.user_id}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            newComment.user = { full_name: userData.full_name, username: userData.username };
+          }
+        } catch {}
+      }
+      setComments((prev) => [newComment, ...prev]);
+      setCommentContent("");
+    } catch (err) {
+      // ignore
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
   const handleStarClick = (score: number) => {
     if (userRating) return;
     setPendingScore(score)
@@ -221,6 +313,144 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       month: '2-digit',
       day: '2-digit'
     })
+  }
+
+  // Lấy replies cho một comment
+  const fetchReplies = async (parentId: number) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments?parent_comment_id=${parentId}&page=1&per_page=20`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Không thể tải replies");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  };
+
+  // Gửi reply
+  const handleSubmitReply = async (e: React.FormEvent, parentId: number) => {
+    e.preventDefault();
+    if (!replyContent.trim() || !userId) return;
+    setReplyLoading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          document_id: Number(id),
+          content: replyContent,
+          parent_comment_id: parentId,
+        }),
+      });
+      if (!res.ok) throw new Error("Không thể gửi reply");
+      const newReply = await res.json();
+      // Lấy user info cho reply nếu cần
+      if (!newReply.user && newReply.user_id) {
+        newReply.user = await fetchUserInfo(newReply.user_id, token);
+      }
+      // Luôn cập nhật replies cho comment cha
+      setComments((prev) =>
+        prev.map((c) =>
+          c.comment_id === parentId
+            ? { ...c, replies: c.replies ? [newReply, ...c.replies] : [newReply] }
+            : c
+        )
+      );
+      setReplyContent("");
+      setReplyingToId(null);
+    } catch {}
+    setReplyLoading(false);
+  };
+
+  // Khi render comment, thêm phần hiển thị replies và form trả lời
+  const renderComment = (comment: Comment) => (
+    <div key={comment.comment_id} className="border rounded-lg p-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="font-medium text-sm">{comment.user?.full_name || comment.user?.username || "Ẩn danh"}</span>
+        <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
+      </div>
+      <div className="text-sm">{comment.content}</div>
+      <Button
+        variant="link"
+        size="sm"
+        className="px-0 text-xs"
+        onClick={() => setReplyingToId(comment.comment_id)}
+      >
+        Trả lời
+      </Button>
+      {/* Hiển thị replies nếu có */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="pl-4 mt-2 border-l space-y-2">
+          {comment.replies.map((reply) => renderComment(reply))}
+        </div>
+      )}
+      {/* Form trả lời */}
+      {replyingToId === comment.comment_id && (
+        <form
+          onSubmit={(e) => handleSubmitReply(e, comment.comment_id)}
+          className="flex flex-col gap-2 mt-2"
+        >
+          <Textarea
+            value={replyContent}
+            onChange={(e) => setReplyContent(e.target.value)}
+            placeholder="Nhập trả lời..."
+            rows={2}
+            required
+            disabled={replyLoading}
+          />
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={replyLoading || !replyContent.trim()}>
+              {replyLoading ? "Đang gửi..." : "Gửi trả lời"}
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setReplyingToId(null)}>
+              Hủy
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+
+  function buildCommentTree(flatComments: any[]) {
+    const map: { [id: number]: any } = {};
+    const roots: any[] = [];
+
+    // Tạo map comment_id -> comment
+    flatComments.forEach(comment => {
+      map[comment.comment_id] = { ...comment, replies: [] };
+    });
+
+    // Gắn replies vào comment cha
+    flatComments.forEach(comment => {
+      if (comment.parent_comment_id) {
+        const parent = map[comment.parent_comment_id];
+        if (parent) {
+          parent.replies.push(map[comment.comment_id]);
+        }
+      } else {
+        roots.push(map[comment.comment_id]);
+      }
+    });
+
+    return roots;
+  }
+
+  async function fillUserInfoForComments(comments: any[], token: string | null, fetchUserInfo: any) {
+    for (const comment of comments) {
+      if (!comment.user && comment.user_id) {
+        comment.user = await fetchUserInfo(comment.user_id, token);
+      }
+      if (comment.replies && comment.replies.length > 0) {
+        await fillUserInfoForComments(comment.replies, token, fetchUserInfo);
+      }
+    }
   }
 
   if (loading) {
@@ -390,6 +620,31 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </div>
+
+        {/* Bình luận */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Bình luận</h2>
+          <form onSubmit={handleSubmitComment} className="flex flex-col gap-2 mb-4">
+            <Textarea
+              value={commentContent}
+              onChange={e => setCommentContent(e.target.value)}
+              placeholder="Nhập bình luận của bạn..."
+              rows={3}
+              required
+              disabled={commentLoading}
+            />
+            <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
+              {commentLoading ? "Đang gửi..." : "Gửi bình luận"}
+            </Button>
+          </form>
+          <div className="space-y-4">
+            {comments.length === 0 ? (
+              <div className="text-muted-foreground">Chưa có bình luận nào.</div>
+            ) : (
+              comments.map((comment) => renderComment(comment))
+            )}
           </div>
         </div>
       </div>
