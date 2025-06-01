@@ -98,6 +98,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [replyContent, setReplyContent] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
   const userCache = useRef<{ [userId: number]: { full_name: string; username: string } }>({});
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -308,11 +309,16 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN', {
       year: 'numeric',
       month: '2-digit',
-      day: '2-digit'
-    })
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
   }
 
   // Lấy replies cho một comment
@@ -530,7 +536,11 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                   <ThumbsUp className="h-4 w-4 mr-2" />
                   Thích
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowComments((v) => !v)}
+                >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Bình luận
                 </Button>
@@ -623,30 +633,31 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           </div>
         </div>
 
-        {/* Bình luận */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Bình luận</h2>
-          <form onSubmit={handleSubmitComment} className="flex flex-col gap-2 mb-4">
-            <Textarea
-              value={commentContent}
-              onChange={e => setCommentContent(e.target.value)}
-              placeholder="Nhập bình luận của bạn..."
-              rows={3}
-              required
-              disabled={commentLoading}
-            />
-            <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
-              {commentLoading ? "Đang gửi..." : "Gửi bình luận"}
-            </Button>
-          </form>
-          <div className="space-y-4">
-            {comments.length === 0 ? (
-              <div className="text-muted-foreground">Chưa có bình luận nào.</div>
-            ) : (
-              comments.map((comment) => renderComment(comment))
-            )}
+        {showComments && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4">Bình luận</h2>
+            <form onSubmit={handleSubmitComment} className="flex flex-col gap-2 mb-4">
+              <Textarea
+                value={commentContent}
+                onChange={e => setCommentContent(e.target.value)}
+                placeholder="Nhập bình luận của bạn..."
+                rows={3}
+                required
+                disabled={commentLoading}
+              />
+              <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
+                {commentLoading ? "Đang gửi..." : "Gửi bình luận"}
+              </Button>
+            </form>
+            <div className="space-y-4">
+              {comments.length === 0 ? (
+                <div className="text-muted-foreground">Chưa có bình luận nào.</div>
+              ) : (
+                comments.map((comment) => renderComment(comment))
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
       {/* Modal xác nhận đánh giá */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
