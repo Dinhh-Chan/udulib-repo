@@ -20,7 +20,13 @@ from app.schemas.document import (
 )
 
 router = APIRouter()
-
+@router.get("/count-document")
+async def count_document(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    return await document.count_document(db)
 # Tạo thư mục uploads nếu chưa tồn tại
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):

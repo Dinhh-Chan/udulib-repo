@@ -27,7 +27,7 @@ async def read_subjects(
     subjects = await crud.get_all(skip=skip, limit=per_page, major_id=major_id, year_id=year_id)
     return subjects
 
-@router.get("/count")
+@router.get("/count-subject")
 async def count_subjects(
     *,
     db: AsyncSession = Depends(get_db),
