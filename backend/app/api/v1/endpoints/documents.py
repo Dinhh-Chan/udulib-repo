@@ -273,4 +273,4 @@ async def record_document_download(
         )
     
     await document.record_download(db, document_id=id, user_id=current_user.user_id)
-    return {"message": "Ghi nhận lượt tải thành công"} 
+    return {"message": "Ghi nhận lượt tải thành công"}

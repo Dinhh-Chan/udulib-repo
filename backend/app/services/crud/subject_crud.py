@@ -5,7 +5,7 @@ from app.schemas.subject import SubjectCreate, SubjectUpdate
 from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime
-
+from sqlalchemy import func
 logger = logging.getLogger(__name__)
 
 class SubjectCRUD:
@@ -162,4 +162,13 @@ class SubjectCRUD:
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Error in delete subject: {str(e)}")
+            raise 
+    async def count_subject(self) -> int:
+        try:
+            query = select(func.count(Subject.subject_id))
+            result = await self.db.execute(query)
+            count = result.scalar()
+            return count
+        except Exception as e:
+            logger.error(f"Error in count subjects: {str(e)}")
             raise 

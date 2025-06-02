@@ -18,11 +18,8 @@ async def read_comments(
     per_page: int = Query(20, ge=1, le=100),
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
-<<<<<<< HEAD
-=======
     parent_comment_id: Optional[int] = None,
     include_replies: bool = Query(False, description="Bao gồm cả replies nếu true"),
->>>>>>> 566c39abc2183f7d94abb95eaca35aec3dbfa36c
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -54,10 +51,6 @@ async def create_comment(
     Có thể tạo comment mới hoặc reply comment bằng cách chỉ định parent_comment_id.
     """
     crud = CommentCRUD(db)
-<<<<<<< HEAD
-    comment = await crud.create(obj_in=comment_in, user_id=current_user.user_id)
-    return comment
-=======
     try:
         comment = await crud.create(obj_in=comment_in, user_id=1)
         return comment
@@ -66,7 +59,6 @@ async def create_comment(
             status_code=400,
             detail=str(e)
         )
->>>>>>> 566c39abc2183f7d94abb95eaca35aec3dbfa36c
 
 @router.put("/{comment_id}", response_model=Comment)
 async def update_comment(
