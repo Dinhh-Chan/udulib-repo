@@ -46,7 +46,7 @@ export default function DocumentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const ITEMS_PER_PAGE = 20 // Số tài liệu mỗi trang theo API
+  const ITEMS_PER_PAGE = 15 // Số tài liệu mỗi trang theo API
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
@@ -80,10 +80,9 @@ export default function DocumentsPage() {
       if (filters.file_type) params.append("file_type", filters.file_type)
       if (filters.subject_id) params.append("subject_id", filters.subject_id.toString())
       
-      // Tính toán skip dựa trên trang hiện tại
-      const skip = (currentPage - 1) * ITEMS_PER_PAGE
-      params.append("skip", skip.toString())
-      params.append("limit", ITEMS_PER_PAGE.toString())
+      // Sử dụng page và per_page thay vì skip và limit
+      params.append("page", currentPage.toString())
+      params.append("per_page", ITEMS_PER_PAGE.toString())
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public?${params.toString()}`)
       if (!response.ok) {

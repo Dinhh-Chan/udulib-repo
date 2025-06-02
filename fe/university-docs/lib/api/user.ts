@@ -1,7 +1,8 @@
 import { User } from "@/types/user"
+import { getAuthToken } from "./auth"
 
 export const getUserProfile = async (userId: string): Promise<User> => {
-  const token = localStorage.getItem("access_token")
+  const token = getAuthToken()
   
   if (!token) {
     throw new Error("Không tìm thấy token xác thực")
@@ -16,6 +17,33 @@ export const getUserProfile = async (userId: string): Promise<User> => {
 
   if (!response.ok) {
     throw new Error("Không thể lấy thông tin người dùng")
+  }
+
+  return response.json()
+}
+
+export const updateUserProfile = async (userId: number, userData: {
+  full_name: string;
+  email: string;
+  university_id: string;
+}) => {
+  const token = getAuthToken()
+  
+  if (!token) {
+    throw new Error("Không tìm thấy token xác thực")
+  }
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(userData),
+  })
+
+  if (!response.ok) {
+    throw new Error("Không thể cập nhật thông tin người dùng")
   }
 
   return response.json()
