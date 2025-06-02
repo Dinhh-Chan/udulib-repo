@@ -2,14 +2,14 @@ import { Subject, SubjectCreate, SubjectUpdate } from "@/types/subject"
 import { apiClient } from "./client"
 import { toast } from "sonner"
 
-export async function getSubjects(): Promise<Subject[]> {
-  try {
-    return await apiClient.get<Subject[]>("/subjects")
-  } catch (error) {
-    console.error("Error fetching subjects:", error)
-    toast.error("Không thể lấy danh sách môn học")
-    return []
-  }
+interface GetSubjectsParams {
+  search?: string
+}
+
+export async function getSubjects(params: GetSubjectsParams = {}) {
+  const { search = "" } = params
+  const response = await apiClient.get<Subject[]>(`/subjects?search=${search}`)
+  return response
 }
 
 export async function getSubject(id: number): Promise<Subject | null> {

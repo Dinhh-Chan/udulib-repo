@@ -23,7 +23,11 @@ import { toast } from "sonner"
 import { EditSubjectDialog } from "@/components/admin/edit-subject-dialog"
 import { DeleteSubjectDialog } from "@/components/admin/delete-subject-dialog"
 
-export function CoursesTable() {
+interface CoursesTableProps {
+  search?: string
+}
+
+export function CoursesTable({ search = "" }: CoursesTableProps) {
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [majors, setMajors] = useState<Major[]>([])
   const [years, setYears] = useState<Year[]>([])
@@ -35,7 +39,7 @@ export function CoursesTable() {
     try {
       setIsLoading(true)
       const [subjectsData, majorsData, yearsData] = await Promise.all([
-        getSubjects(),
+        getSubjects({ search }),
         getMajors(),
         getYears()
       ])
@@ -60,7 +64,7 @@ export function CoursesTable() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [search])
 
   const handleDelete = async (id: number) => {
     if (!confirm("Bạn có chắc chắn muốn xóa môn học này?")) return

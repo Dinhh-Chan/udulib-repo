@@ -1,158 +1,121 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios"
 import { toast } from "sonner"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
+
+interface RequestOptions extends RequestInit {
+  params?: Record<string, any>
+}
+
 class ApiClient {
-  private static instance: ApiClient
-  private baseURL: string
+  private baseUrl: string
 
-  private constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl
   }
 
-  public static getInstance(): ApiClient {
-    if (!ApiClient.instance) {
-      ApiClient.instance = new ApiClient()
-    }
-    return ApiClient.instance
-  }
-
-  private getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    }
-
-    // Lấy token từ localStorage
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token")
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`
-      }
-    }
-
-    return headers
-  }
-
-  private async handleResponse<T>(response: AxiosResponse<T>): Promise<T> {
-    // Kiểm tra status code
-    if (response.status >= 200 && response.status < 300) {
-      return response.data
-    }
-
-    // Xử lý lỗi
-    let errorMessage = "Có lỗi xảy ra"
+  private async request<T>(
+    endpoint: string,
+    options: RequestOptions = {}
+  ): Promise<T> {
+    const { params, ...fetchOptions } = options
     
-    if (response.data && typeof response.data === "object") {
-      // Nếu response.data là object, lấy message từ detail hoặc message
-      const data = response.data as any
-      errorMessage = data.detail || data.message || JSON.stringify(data)
-    } else if (typeof response.data === "string") {
-      errorMessage = response.data
+    let url = `${this.baseUrl}${endpoint}`
+    
+    // Xử lý params nếu có
+    if (params) {
+      const queryParams = new URLSearchParams()
+      for (const key in params) {
+        if (params[key] !== undefined && params[key] !== null) {
+          queryParams.append(key, params[key].toString())
+        }
+      }
+      const queryString = queryParams.toString()
+      if (queryString) {
+        url += `?${queryString}`
+      }
+    }
+    
+    const token = localStorage.getItem("token")
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...fetchOptions.headers,
     }
 
-    throw new Error(errorMessage)
-  }
-
-  private async handleError(error: any): Promise<never> {
-    if (error.response) {
-      const { status, data } = error.response
-      
-      // Xử lý lỗi 401 (Unauthorized)
-      if (status === 401) {
-        // Xóa token và user data
-        localStorage.removeItem("access_token")
-        localStorage.removeItem("user")
-        
-        // Chuyển hướng về trang login
-        window.location.href = "/login"
-        throw new Error("Unauthorized")
-      }
-
-      // Xử lý lỗi 403 (Forbidden)
-      if (status === 403) {
-        throw new Error("Forbidden")
-      }
-
-      // Xử lý lỗi validation
-      if (status === 422) {
-        const errorMessage = data.detail?.[0]?.msg || "Validation error"
-        throw new Error(errorMessage)
-      }
-
-      // Xử lý các lỗi khác
-      const errorMessage = data.detail || data.message || "An error occurred"
-      throw new Error(errorMessage)
+    const config: RequestInit = {
+      ...fetchOptions,
+      headers,
     }
 
-    // Xử lý lỗi network
-    if (error.request) {
-      throw new Error("Network error")
-    }
-
-    // Xử lý lỗi khác
-    throw new Error(error.message || "An error occurred")
-  }
-
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
-      // Lấy token từ localStorage
-      const token = localStorage.getItem("access_token")
-      
-      // Thêm headers
-      const headers = {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-      }
-
-      // Gọi API
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
-        ...options,
-        headers,
-      })
-
-      // Parse response
+      const response = await fetch(url, config)
       const data = await response.json()
 
-      // Kiểm tra lỗi
       if (!response.ok) {
-        throw { response: { status: response.status, data } }
+        if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            const errorMessage = data.detail[0]?.msg || "Validation error"
+            throw new Error(errorMessage)
+          }
+          throw new Error(data.detail)
+        }
+        throw new Error("An error occurred")
       }
 
       return data
     } catch (error) {
-      return this.handleError(error)
+      console.error("API request failed:", error)
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error("An unexpected error occurred")
     }
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    const queryString = params ? `?${new URLSearchParams(params).toString()}` : ""
-    return this.request<T>(`${endpoint}${queryString}`)
+  async get<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: "GET" })
   }
 
-  async post<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
+  async post<T>(endpoint: string, data: any, options: RequestOptions = {}): Promise<T> {
     return this.request<T>(endpoint, {
-      method: "POST",
-      body: data instanceof FormData ? data : JSON.stringify(data),
       ...options,
+      method: "POST",
+      body: JSON.stringify(data),
     })
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data: any, options: RequestOptions = {}): Promise<T> {
     return this.request<T>(endpoint, {
+      ...options,
       method: "PUT",
       body: JSON.stringify(data),
     })
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: "DELETE" })
+  }
+
+  async postFormData<T>(endpoint: string, formData: FormData, options: RequestOptions = {}): Promise<T> {
+    const token = localStorage.getItem("token")
+    const headers: HeadersInit = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    }
+
     return this.request<T>(endpoint, {
-      method: "DELETE",
+      ...options,
+      method: "POST",
+      headers,
+      body: formData,
     })
   }
 
   // Utility method to check if user is authenticated
   isAuthenticated(): boolean {
-    return !!localStorage.getItem("access_token")
+    return !!localStorage.getItem("token")
   }
 
   // Utility method to get current user
@@ -168,7 +131,7 @@ class ApiClient {
   // Test connection method
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseURL}/health`, {
+      const response = await fetch(`${this.baseUrl}/health`, {
         method: "GET",
         headers: { "Content-Type": "application/json" }
       })
@@ -179,4 +142,4 @@ class ApiClient {
   }
 }
 
-export const apiClient = ApiClient.getInstance()
+export const apiClient = new ApiClient(API_URL)

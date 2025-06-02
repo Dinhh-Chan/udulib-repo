@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,9 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { getSubjects } from "@/lib/api/subject"
-import { createDocument } from "@/lib/api/documents"
-import { getTags, createTag, addDocumentTags, Tag } from "@/lib/api/tags"
+import { apiClient } from "@/lib/api/client"
 import { Badge } from "@/components/ui/badge"
 import { X, Plus } from "lucide-react"
 import {
@@ -40,14 +39,25 @@ import {
 } from "@/components/ui/popover"
 
 interface AddDocumentDialogProps {
+  children?: ReactNode
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocumentDialogProps) {
+interface Subject {
+  subject_id: number
+  subject_name: string
+}
+
+interface Tag {
+  tag_id: number
+  tag_name: string
+}
+
+export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: AddDocumentDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [subjects, setSubjects] = useState<Array<{ subject_id: number; subject_name: string }>>([])
+  const [subjects, setSubjects] = useState<Subject[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
@@ -55,8 +65,8 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
 
   const fetchSubjects = async () => {
     try {
-      const data = await getSubjects()
-      setSubjects(data)
+      const data = await apiClient.get<{ subjects: Subject[] }>("/subjects")
+      setSubjects(data.subjects || [])
     } catch (error) {
       console.error("Error fetching subjects:", error)
       toast.error("Không thể tải danh sách môn học")
@@ -65,8 +75,8 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
 
   const fetchTags = async () => {
     try {
-      const data = await getTags()
-      setTags(data)
+      const data = await apiClient.get<{ tags: Tag[] }>("/tags")
+      setTags(data.tags || [])
     } catch (error) {
       console.error("Error fetching tags:", error)
       toast.error("Không thể tải danh sách tags")
@@ -86,23 +96,14 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
 
     try {
       const formData = new FormData(e.currentTarget)
-      const data = {
-        title: formData.get("title"),
-        description: formData.get("description"),
-        subject_id: formData.get("subject_id"),
-        file: formData.get("file"),
+      
+      // Thêm tags vào formData
+      if (selectedTags.length > 0) {
+        formData.append('tags', JSON.stringify(selectedTags))
       }
 
       // Tạo tài liệu mới
-      const document = await createDocument(formData)
-      if (!document) {
-        throw new Error("Không thể tạo tài liệu")
-      }
-
-      // Thêm tags cho tài liệu
-      if (selectedTags.length > 0) {
-        await addDocumentTags(document.document_id, selectedTags)
-      }
+      await apiClient.postFormData("/documents", formData)
 
       toast.success("Tạo tài liệu thành công")
       onOpenChange(false)
@@ -126,12 +127,8 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
           setSelectedTags([...selectedTags, existingTag.tag_name])
         }
       } else {
-        // Tạo tag mới
-        const tag = await createTag(newTag)
-        if (tag) {
-          setTags([...tags, tag])
-          setSelectedTags([...selectedTags, tag.tag_name])
-        }
+        // Thêm vào danh sách tags đã chọn
+        setSelectedTags([...selectedTags, newTag])
       }
       setNewTag("")
     } catch (error) {
@@ -152,11 +149,12 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Tạo tài liệu mới</DialogTitle>
+          <DialogTitle>Thêm tài liệu mới</DialogTitle>
           <DialogDescription>
-            Thêm tài liệu mới vào hệ thống. Nhấn Lưu khi hoàn tất.
+            Nhập thông tin cho tài liệu mới. Nhấn Lưu khi hoàn tất.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -169,6 +167,7 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
                 id="title"
                 name="title"
                 className="col-span-3"
+                placeholder="Nhập tên tài liệu"
                 required
               />
             </div>
@@ -180,6 +179,8 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
                 id="description"
                 name="description"
                 className="col-span-3"
+                placeholder="Nhập mô tả tài liệu"
+                rows={3}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -209,11 +210,11 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
                 type="file"
                 className="col-span-3"
                 required
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">
                 Tags
               </Label>
               <div className="col-span-3 space-y-2">
@@ -221,6 +222,7 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
                   <Popover open={openTagCombobox} onOpenChange={setOpenTagCombobox}>
                     <PopoverTrigger asChild>
                       <Button
+                        type="button"
                         variant="outline"
                         role="combobox"
                         aria-expanded={openTagCombobox}
@@ -288,10 +290,25 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess }: AddDocument
                 </div>
               </div>
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Trạng thái
+              </Label>
+              <Select name="status" defaultValue="pending">
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Chọn trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Chờ duyệt</SelectItem>
+                  <SelectItem value="approved">Đã duyệt</SelectItem>
+                  <SelectItem value="rejected">Từ chối</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Đang lưu..." : "Lưu"}
+              {isLoading ? "Đang tạo..." : "Tạo tài liệu"}
             </Button>
           </DialogFooter>
         </form>
