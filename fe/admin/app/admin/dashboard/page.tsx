@@ -2,8 +2,44 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Users, BookOpen, GraduationCap } from "lucide-react"
+import { useEffect, useState } from "react"
+import { getDocumentCount } from "@/lib/api/documents"
+import { getSubjectCount } from "@/lib/api/subject"
+import { getMajorCount } from "@/lib/api/major"
+import { getUsers } from "@/lib/api/users"
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState({
+    documents: 0,
+    users: 0,
+    subjects: 0,
+    majors: 0
+  })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [docCount, subCount, majCount, users] = await Promise.all([
+          getDocumentCount(),
+          getSubjectCount(),
+          getMajorCount(),
+          getUsers()
+        ])
+
+        setStats({
+          documents: docCount,
+          subjects: subCount,
+          majors: majCount,
+          users: users.length
+        })
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,9 +56,9 @@ export default function AdminDashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
+            <div className="text-2xl font-bold">{stats.documents}</div>
             <p className="text-xs text-muted-foreground">
-              +20% so với tháng trước
+              Tài liệu trong hệ thống
             </p>
           </CardContent>
         </Card>
@@ -32,9 +68,9 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">567</div>
+            <div className="text-2xl font-bold">{stats.users}</div>
             <p className="text-xs text-muted-foreground">
-              +10% so với tháng trước
+              Người dùng đã đăng ký
             </p>
           </CardContent>
         </Card>
@@ -44,9 +80,9 @@ export default function AdminDashboard() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
+            <div className="text-2xl font-bold">{stats.subjects}</div>
             <p className="text-xs text-muted-foreground">
-              +5% so với tháng trước
+              Môn học trong hệ thống
             </p>
           </CardContent>
         </Card>
@@ -56,9 +92,9 @@ export default function AdminDashboard() {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{stats.majors}</div>
             <p className="text-xs text-muted-foreground">
-              +2% so với tháng trước
+              Ngành học trong hệ thống
             </p>
           </CardContent>
         </Card>

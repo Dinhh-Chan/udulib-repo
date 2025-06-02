@@ -1,85 +1,69 @@
 import { Major, MajorCreate, MajorUpdate } from "@/types/major"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { apiClient } from "./client"
+import { toast } from "sonner"
 
 export async function getMajors(): Promise<Major[]> {
-  const response = await fetch(`${API_URL}/majors`)
-  if (!response.ok) {
-    throw new Error("Failed to fetch majors")
-  }
-  return response.json()
-}
-
-export async function getMajor(id: number): Promise<Major> {
-  const response = await fetch(`${API_URL}/majors/${id}`)
-  if (!response.ok) {
-    throw new Error("Failed to fetch major")
-  }
-  return response.json()
-}
-
-export async function createMajor(major: MajorCreate): Promise<Major> {
   try {
-    const response = await fetch(`${API_URL}/majors/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(major),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.message || "Failed to create major")
-    }
-
-    return response.json()
+    return await apiClient.get<Major[]>("/majors")
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message)
-    }
-    throw new Error("Failed to create major")
+    console.error("Error fetching majors:", error)
+    toast.error("Không thể lấy danh sách ngành học")
+    return []
+  }
+}
+export async function getMajorCount(): Promise<number> {
+  try {
+    const response = await apiClient.get<{ count: number }>("/majors/count-major")
+    return response.count
+  } catch (error) {
+    console.error("Error fetching major count:", error)
+    toast.error("Không thể lấy số lượng ngành học")
+    return 0
   }
 }
 
-export async function updateMajor(id: number, major: MajorUpdate): Promise<Major> {
+export async function getMajor(id: number): Promise<Major | null> {
   try {
-    const response = await fetch(`${API_URL}/majors/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(major),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.message || "Failed to update major")
-    }
-
-    return response.json()
+    return await apiClient.get<Major>(`/majors/${id}`)
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message)
-    }
-    throw new Error("Failed to update major")
+    console.error("Error fetching major:", error)
+    toast.error("Không thể lấy thông tin ngành học")
+    return null
   }
 }
 
-export async function deleteMajor(id: number): Promise<void> {
+export async function createMajor(major: MajorCreate): Promise<Major | null> {
   try {
-    const response = await fetch(`${API_URL}/majors/${id}`, {
-      method: "DELETE",
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData?.message || "Failed to delete major")
-    }
+    const response = await apiClient.post<Major>("/majors/", major)
+    toast.success("Tạo ngành học mới thành công")
+    return response
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message)
-    }
-    throw new Error("Failed to delete major")
+    console.error("Error creating major:", error)
+    toast.error("Không thể tạo ngành học mới")
+    return null
+  }
+}
+
+export async function updateMajor(id: number, major: MajorUpdate): Promise<Major | null> {
+  try {
+    const response = await apiClient.put<Major>(`/majors/${id}`, major)
+    toast.success("Cập nhật ngành học thành công")
+    return response
+  } catch (error) {
+    console.error("Error updating major:", error)
+    toast.error("Không thể cập nhật ngành học")
+    return null
+  }
+}
+
+export async function deleteMajor(id: number): Promise<boolean> {
+  try {
+    await apiClient.delete(`/majors/${id}`)
+    toast.success("Xóa ngành học thành công")
+    return true
+  } catch (error) {
+    console.error("Error deleting major:", error)
+    toast.error("Không thể xóa ngành học")
+    return false
   }
 } 

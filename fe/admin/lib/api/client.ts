@@ -6,7 +6,7 @@ class ApiClient {
   private baseURL: string
 
   private constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1"
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
   }
 
   public static getInstance(): ApiClient {
@@ -52,81 +52,102 @@ class ApiClient {
     throw new Error(errorMessage)
   }
 
-  private async handleError(error: unknown): Promise<never> {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError
+  private async handleError(error: any): Promise<never> {
+    if (error.response) {
+      const { status, data } = error.response
       
-      // Xử lý lỗi từ response
-      if (axiosError.response) {
-        const response = axiosError.response
-        let errorMessage = "Có lỗi xảy ra"
+      // Xử lý lỗi 401 (Unauthorized)
+      if (status === 401) {
+        // Xóa token và user data
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("user")
+        
+        // Chuyển hướng về trang login
+        window.location.href = "/login"
+        throw new Error("Unauthorized")
+      }
 
-        if (response.data && typeof response.data === "object") {
-          const data = response.data as any
-          errorMessage = data.detail || data.message || JSON.stringify(data)
-        } else if (typeof response.data === "string") {
-          errorMessage = response.data
-        }
+      // Xử lý lỗi 403 (Forbidden)
+      if (status === 403) {
+        throw new Error("Forbidden")
+      }
 
+      // Xử lý lỗi validation
+      if (status === 422) {
+        const errorMessage = data.detail?.[0]?.msg || "Validation error"
         throw new Error(errorMessage)
       }
 
-      // Xử lý lỗi network
-      if (axiosError.request) {
-        throw new Error("Không thể kết nối đến server")
-      }
+      // Xử lý các lỗi khác
+      const errorMessage = data.detail || data.message || "An error occurred"
+      throw new Error(errorMessage)
+    }
+
+    // Xử lý lỗi network
+    if (error.request) {
+      throw new Error("Network error")
     }
 
     // Xử lý lỗi khác
-    throw error
+    throw new Error(error.message || "An error occurred")
   }
 
-  public async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
-      const response = await axios.get<T>(`${this.baseURL}${url}`, {
-        ...config,
-        headers: this.getHeaders(),
+      // Lấy token từ localStorage
+      const token = localStorage.getItem("access_token")
+      
+      // Thêm headers
+      const headers = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      }
+
+      // Gọi API
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...options,
+        headers,
       })
-      return this.handleResponse(response)
+
+      // Parse response
+      const data = await response.json()
+
+      // Kiểm tra lỗi
+      if (!response.ok) {
+        throw { response: { status: response.status, data } }
+      }
+
+      return data
     } catch (error) {
       return this.handleError(error)
     }
   }
 
-  public async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    try {
-      const response = await axios.post<T>(`${this.baseURL}${url}`, data, {
-        ...config,
-        headers: this.getHeaders(),
-      })
-      return this.handleResponse(response)
-    } catch (error) {
-      return this.handleError(error)
-    }
+  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : ""
+    return this.request<T>(`${endpoint}${queryString}`)
   }
 
-  public async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    try {
-      const response = await axios.put<T>(`${this.baseURL}${url}`, data, {
-        ...config,
-        headers: this.getHeaders(),
-      })
-      return this.handleResponse(response)
-    } catch (error) {
-      return this.handleError(error)
-    }
+  async post<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "POST",
+      body: data instanceof FormData ? data : JSON.stringify(data),
+      ...options,
+    })
   }
 
-  public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    try {
-      const response = await axios.delete<T>(`${this.baseURL}${url}`, {
-        ...config,
-        headers: this.getHeaders(),
-      })
-      return this.handleResponse(response)
-    } catch (error) {
-      return this.handleError(error)
-    }
+  async put<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: "DELETE",
+    })
   }
 
   // Utility method to check if user is authenticated
