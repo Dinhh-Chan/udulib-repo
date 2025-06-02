@@ -43,7 +43,10 @@ async def get_academic_year(
     crud = AcademicYearCRUD(db)
     year = await crud.get_by_id(year_id)
     if not year:
-        raise HTTPException(status_code=404, detail="Academic year not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy năm học"
+        )
     return year
 
 @router.post("/", response_model=AcademicYear)
@@ -58,8 +61,8 @@ async def create_academic_year(
     """
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
         )
     
     crud = AcademicYearCRUD(db)
@@ -67,8 +70,8 @@ async def create_academic_year(
     existing_year = await crud.get_by_name(year_in.year_name)
     if existing_year:
         raise HTTPException(
-            status_code=400,
-            detail="Academic year already exists"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Năm học đã tồn tại"
         )
     
     year = await crud.create(year_in)
@@ -87,14 +90,20 @@ async def update_academic_year(
     """
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
         )
     
     crud = AcademicYearCRUD(db)
+    # Kiểm tra năm học có tồn tại không trước khi cập nhật
+    existing_year = await crud.get_by_id(year_id)
+    if not existing_year:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy năm học"
+        )
+    
     year = await crud.update(year_id, year_in)
-    if not year:
-        raise HTTPException(status_code=404, detail="Academic year not found")
     return year
 
 @router.delete("/{year_id}")
@@ -109,30 +118,41 @@ async def delete_academic_year(
     """
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
         )
     
     crud = AcademicYearCRUD(db)
+    # Kiểm tra năm học có tồn tại không trước khi xóa
+    existing_year = await crud.get_by_id(year_id)
+    if not existing_year:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy năm học"
+        )
+    
     success = await crud.delete(year_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Academic year not found")
-    return {"message": "Academic year deleted successfully"}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi xóa năm học"
+        )
+    return {"status": "success", "message": "Năm học đã được xóa thành công"}
 
 @router.get("/latest", response_model=AcademicYear)
 async def get_latest_academic_year(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Get the most recent academic year (highest year_order).
-    This endpoint is public and does not require authentication.
+    Lấy năm học mới nhất (có year_order cao nhất).
+    Endpoint này là công khai và không yêu cầu xác thực.
     """
     crud = AcademicYearCRUD(db)
     latest_year = await crud.get_latest_year()
     if not latest_year:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No academic years found"
+            detail="Không tìm thấy năm học nào"
         )
     return latest_year
 
@@ -144,8 +164,8 @@ async def get_years_with_subjects_count(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """
-    Get academic years with a count of associated subjects.
-    Only admin users can access this endpoint.
+    Lấy danh sách năm học kèm số lượng môn học liên quan.
+    Chỉ admin mới có thể truy cập endpoint này.
     """
     crud = AcademicYearCRUD(db)
     skip = (page - 1) * per_page

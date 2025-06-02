@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
@@ -20,7 +20,7 @@ async def read_ratings(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Retrieve ratings.
+    Lấy danh sách đánh giá.
     """
     crud = RatingCRUD(db)
     skip = (page - 1) * per_page
@@ -40,7 +40,7 @@ async def create_rating(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create new rating.
+    Tạo đánh giá mới.
     """
     crud = RatingCRUD(db)
     rating = await crud.create(obj_in=rating_in, user_id=current_user.user_id)
@@ -55,20 +55,20 @@ async def update_rating(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Update a rating.
+    Cập nhật đánh giá.
     """
     crud = RatingCRUD(db)
     try:
         rating = await crud.update(id=rating_id, obj_in=rating_in, user_id=current_user.user_id)
         if not rating:
             raise HTTPException(
-                status_code=404,
-                detail="Rating not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy đánh giá"
             )
         return rating
     except ValueError as e:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
 
@@ -80,14 +80,14 @@ async def read_rating(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get rating by ID.
+    Lấy thông tin chi tiết của một đánh giá.
     """
     crud = RatingCRUD(db)
     rating = await crud.get_by_id(id=rating_id)
     if not rating:
         raise HTTPException(
-            status_code=404,
-            detail="Rating not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy đánh giá"
         )
     return rating
 
@@ -99,19 +99,19 @@ async def delete_rating(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Delete a rating.
+    Xóa một đánh giá.
     """
     crud = RatingCRUD(db)
     try:
         success = await crud.delete(id=rating_id, user_id=current_user.user_id)
         if not success:
             raise HTTPException(
-                status_code=404,
-                detail="Rating not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy đánh giá"
             )
-        return {"status": "success"}
+        return {"status": "success", "message": "Đánh giá đã được xóa thành công"}
     except ValueError as e:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         ) 
