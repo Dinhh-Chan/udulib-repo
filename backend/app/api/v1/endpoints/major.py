@@ -8,6 +8,17 @@ from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User
 
 router = APIRouter()
+@router.get("/count-major")
+async def count_major(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Đếm số lượng ngành học.
+    """
+    crud = MajorCRUD(db)
+    count = await crud.count_major()
+    return {"count": count}
 
 @router.get("/", response_model=List[Major])
 async def get_majors(
