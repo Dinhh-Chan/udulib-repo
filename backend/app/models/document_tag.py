@@ -13,7 +13,7 @@ class DocumentTag(Base):
     created_at = Column(DateTime, default=datetime.utcnow)  
 
     # Relationships
-    document = relationship("Document", back_populates="document_tags", overlaps="tags,documents")
+    document = relationship("Document", back_populates="document_tags", overlaps="documents,tags")
     tag = relationship("Tag", back_populates="document_tags", overlaps="documents,tags")
 
     # Unique constraint

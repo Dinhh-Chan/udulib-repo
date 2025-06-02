@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronRight, FileText } from "lucide-react"
+import React from "react"
 
 interface Major {
   major_id: number;
@@ -19,7 +20,8 @@ interface Subject {
   description: string;
 }
 
-export default function DepartmentPage({ params }: { params: { slug: string } }) {
+export default function DepartmentPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = React.use(params);
   const [major, setMajor] = useState<Major | null>(null)
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [selectedYear, setSelectedYear] = useState<number>(1)
@@ -27,7 +29,7 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
   const [documentCounts, setDocumentCounts] = useState<{ [subject_id: number]: number }>({})
 
   useEffect(() => {
-    let majorIdFromUrl = Number(params.slug)
+    let majorIdFromUrl = Number(slug)
     let foundMajor: Major | null = null
 
     async function fetchMajor() {
@@ -39,7 +41,7 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
       if (!isNaN(majorIdFromUrl)) {
         foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl)
       } else {
-        foundMajor = data.find((m: Major) => m.slug === params.slug)
+        foundMajor = data.find((m: Major) => m.slug === slug)
       }
       setMajor(foundMajor || null)
       if (foundMajor) {
@@ -58,7 +60,7 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
         fetchMajor()
       }
     }
-  }, [params.slug])
+  }, [slug])
 
   useEffect(() => {
     if (!selectedYear || !major) return
@@ -132,7 +134,7 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
                       </CardContent>
                       <CardFooter>
                         <Button variant="outline" asChild className="w-full">
-                          <Link href={`/departments/${params.slug}/courses/${subject.subject_id}`}>Xem tài liệu</Link>
+                          <Link href={`/departments/${slug}/courses/${subject.subject_id}`}>Xem tài liệu</Link>
                         </Button>
                       </CardFooter>
                     </Card>

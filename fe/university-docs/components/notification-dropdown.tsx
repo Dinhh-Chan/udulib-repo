@@ -18,6 +18,7 @@ export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
   const { isAuthenticated } = useAuth()
+  const [mounted, setMounted] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -36,6 +37,8 @@ export default function NotificationDropdown() {
       return () => clearInterval(interval)
     }
   }, [isAuthenticated])
+
+  useEffect(() => { setMounted(true); }, []);
 
   const handleMarkAllAsRead = async () => {
     try {
@@ -60,7 +63,7 @@ export default function NotificationDropdown() {
     }
   }
 
-  if (!isAuthenticated) return null
+  if (!mounted) return null;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
