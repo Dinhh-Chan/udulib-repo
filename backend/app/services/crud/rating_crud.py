@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.rating import Rating
+from app.models.document import Document
 from app.schemas.rating import RatingCreate, RatingUpdate
 
 class RatingCRUD:
@@ -13,7 +14,12 @@ class RatingCRUD:
     async def get_by_id(self, id: int) -> Optional[Rating]:
         result = await self.db.execute(
             select(Rating)
-            .options(selectinload(Rating.user))
+            .options(
+                selectinload(Rating.user),
+                selectinload(Rating.document).selectinload(Document.subject),
+                selectinload(Rating.document).selectinload(Document.user),
+                selectinload(Rating.document).selectinload(Document.tags)
+            )
             .where(Rating.rating_id == id)
         )
         return result.scalar_one_or_none()
@@ -21,7 +27,12 @@ class RatingCRUD:
     async def get_by_user_and_document(self, user_id: int, document_id: int) -> Optional[Rating]:
         result = await self.db.execute(
             select(Rating)
-            .options(selectinload(Rating.user))
+            .options(
+                selectinload(Rating.user),
+                selectinload(Rating.document).selectinload(Document.subject),
+                selectinload(Rating.document).selectinload(Document.user),
+                selectinload(Rating.document).selectinload(Document.tags)
+            )
             .where(Rating.user_id == user_id)
             .where(Rating.document_id == document_id)
         )
@@ -35,7 +46,12 @@ class RatingCRUD:
         document_id: Optional[int] = None,
         user_id: Optional[int] = None
     ) -> List[Rating]:
-        query = select(Rating).options(selectinload(Rating.user))
+        query = select(Rating).options(
+            selectinload(Rating.user),
+            selectinload(Rating.document).selectinload(Document.subject),
+            selectinload(Rating.document).selectinload(Document.user),
+            selectinload(Rating.document).selectinload(Document.tags)
+        )
         
         if document_id is not None:
             query = query.where(Rating.document_id == document_id)

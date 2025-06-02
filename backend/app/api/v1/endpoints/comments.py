@@ -18,10 +18,17 @@ async def read_comments(
     per_page: int = Query(20, ge=1, le=100),
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
+<<<<<<< HEAD
+=======
+    parent_comment_id: Optional[int] = None,
+    include_replies: bool = Query(False, description="Bao gồm cả replies nếu true"),
+>>>>>>> 566c39abc2183f7d94abb95eaca35aec3dbfa36c
     current_user: User = Depends(get_current_user)
 ):
     """
     Retrieve comments.
+    Nếu parent_comment_id được chỉ định, sẽ trả về replies của comment đó.
+    Nếu include_replies=False (mặc định), chỉ trả về top-level comments.
     """
     crud = CommentCRUD(db)
     skip = (page - 1) * per_page
@@ -29,7 +36,9 @@ async def read_comments(
         skip=skip, 
         limit=per_page,
         document_id=document_id,
-        user_id=user_id
+        user_id=user_id,
+        parent_comment_id=parent_comment_id,
+        include_replies=include_replies
     )
     return comments
 
@@ -42,10 +51,22 @@ async def create_comment(
 ):
     """
     Create new comment.
+    Có thể tạo comment mới hoặc reply comment bằng cách chỉ định parent_comment_id.
     """
     crud = CommentCRUD(db)
+<<<<<<< HEAD
     comment = await crud.create(obj_in=comment_in, user_id=current_user.user_id)
     return comment
+=======
+    try:
+        comment = await crud.create(obj_in=comment_in, user_id=1)
+        return comment
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+>>>>>>> 566c39abc2183f7d94abb95eaca35aec3dbfa36c
 
 @router.put("/{comment_id}", response_model=Comment)
 async def update_comment(
@@ -78,19 +99,52 @@ async def read_comment(
     *,
     db: AsyncSession = Depends(get_db),
     comment_id: int,
+    include_replies: bool = Query(False, description="Bao gồm tất cả replies của comment này"),
     current_user: User = Depends(get_current_user)
 ):
     """
     Get comment by ID.
+    Có thể bao gồm tất cả replies bằng cách set include_replies=true.
     """
     crud = CommentCRUD(db)
-    comment = await crud.get_by_id(id=comment_id)
+    comment = await crud.get_by_id(id=comment_id, include_replies=include_replies)
     if not comment:
         raise HTTPException(
             status_code=404,
             detail="Comment not found"
         )
     return comment
+
+@router.get("/{comment_id}/replies", response_model=List[Comment])
+async def get_comment_replies(
+    *,
+    db: AsyncSession = Depends(get_db),
+    comment_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all replies of a specific comment.
+    Lấy tất cả replies của một comment cụ thể.
+    """
+    crud = CommentCRUD(db)
+    skip = (page - 1) * per_page
+    
+    # Kiểm tra parent comment có tồn tại không
+    parent_comment = await crud.get_by_id(id=comment_id)
+    if not parent_comment:
+        raise HTTPException(
+            status_code=404,
+            detail="Parent comment not found"
+        )
+    
+    replies = await crud.get_replies(
+        parent_comment_id=comment_id,
+        skip=skip,
+        limit=per_page
+    )
+    return replies
 
 @router.delete("/{comment_id}")
 async def delete_comment(
@@ -101,6 +155,7 @@ async def delete_comment(
 ):
     """
     Delete a comment.
+    Lưu ý: Xóa comment sẽ tự động xóa tất cả replies (do CASCADE).
     """
     crud = CommentCRUD(db)
     try:
@@ -110,7 +165,7 @@ async def delete_comment(
                 status_code=404,
                 detail="Comment not found"
             )
-        return {"status": "success"}
+        return {"status": "success", "message": "Comment và tất cả replies đã được xóa"}
     except ValueError as e:
         raise HTTPException(
             status_code=403,

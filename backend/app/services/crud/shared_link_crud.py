@@ -19,6 +19,7 @@ class SharedLinkCRUD:
             .options(
                 selectinload(SharedLink.user),
                 selectinload(SharedLink.document).selectinload(Document.subject),
+                selectinload(SharedLink.document).selectinload(Document.user),
                 selectinload(SharedLink.document).selectinload(Document.tags)
             )
             .where(SharedLink.link_id == id)
@@ -31,6 +32,7 @@ class SharedLinkCRUD:
             .options(
                 selectinload(SharedLink.user),
                 selectinload(SharedLink.document).selectinload(Document.subject),
+                selectinload(SharedLink.document).selectinload(Document.user),
                 selectinload(SharedLink.document).selectinload(Document.tags)
             )
             .where(SharedLink.share_token == token)
@@ -48,6 +50,7 @@ class SharedLinkCRUD:
         query = select(SharedLink).options(
             selectinload(SharedLink.user),
             selectinload(SharedLink.document).selectinload(Document.subject),
+            selectinload(SharedLink.document).selectinload(Document.user),
             selectinload(SharedLink.document).selectinload(Document.tags)
         )
         
@@ -84,6 +87,7 @@ class SharedLinkCRUD:
             .options(
                 selectinload(SharedLink.user),
                 selectinload(SharedLink.document).selectinload(Document.subject),
+                selectinload(SharedLink.document).selectinload(Document.user),
                 selectinload(SharedLink.document).selectinload(Document.tags)
             )
             .where(SharedLink.link_id == db_obj.link_id)
@@ -110,6 +114,7 @@ class SharedLinkCRUD:
             .options(
                 selectinload(SharedLink.user),
                 selectinload(SharedLink.document).selectinload(Document.subject),
+                selectinload(SharedLink.document).selectinload(Document.user),
                 selectinload(SharedLink.document).selectinload(Document.tags)
             )
             .where(SharedLink.link_id == db_obj.link_id)
