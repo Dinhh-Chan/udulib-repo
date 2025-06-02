@@ -10,6 +10,13 @@ from app.models.user import User as UserModel
 
 router = APIRouter()
 
+@router.get("/me", response_model=User)
+async def read_current_user(current_user: UserModel = Depends(get_current_user)):
+    """
+    Lấy thông tin người dùng hiện tại.
+    """
+    return current_user
+
 @router.get("/", response_model=List[User])
 async def read_users(
     db: AsyncSession = Depends(get_db),
