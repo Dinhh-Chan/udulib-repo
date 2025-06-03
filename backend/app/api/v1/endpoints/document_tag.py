@@ -5,7 +5,8 @@ from app.models.base import get_db
 from app.services.crud.document import document
 from app.services.crud.tag_crud import tag_crud
 from app.services.crud.document_tag_crud import document_tag_crud
-from app.schemas.document_tag import DocumentTagList
+from app.schemas.document_tag import DocumentTagList, DocumentTagCreate
+from app.schemas.tag import TagCreate
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 
@@ -26,7 +27,6 @@ async def add_document_tags(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Kiểm tra quyền sở hữu
     if doc.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
@@ -38,16 +38,21 @@ async def add_document_tags(
         # Lấy hoặc tạo tag
         tag = await tag_crud.get_by_name(db, tag_name=tag_name)
         if not tag:
-            tag = await tag_crud.create(db, obj_in={"tag_name": tag_name})
+            tag_create = TagCreate(tag_name=tag_name)
+            tag = await tag_crud.create(db, obj_in=tag_create)
         
-        # Tạo document_tag
-        await document_tag_crud.create(
-            db,
-            obj_in={
-                "document_id": document_id,
-                "tag_id": tag.tag_id
-            }
-        )
+        # Tạo document_tag (skip nếu đã tồn tại)
+        try:
+            document_tag_create = DocumentTagCreate(
+                document_id=document_id,
+                tag_id=tag.tag_id
+            )
+            await document_tag_crud.create(db, obj_in=document_tag_create)
+        except HTTPException as e:
+            # Skip nếu document_tag đã tồn tại
+            if e.status_code == 400:
+                continue
+            raise e
     
     # Lấy danh sách tags sau khi thêm
     tag_names = await document_tag_crud.get_document_tag_names(
@@ -71,7 +76,6 @@ async def remove_document_tag(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Kiểm tra quyền sở hữu
     if doc.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
