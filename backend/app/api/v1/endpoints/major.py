@@ -88,16 +88,14 @@ async def create_major(
         )
     
     crud = MajorCRUD(db)
-    # Kiểm tra xem mã ngành đã tồn tại chưa
-    existing_major = await crud.get_by_code(major_in.major_code)
-    if existing_major:
+    try:
+        major = await crud.create(major_in)
+        return major
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mã ngành đã tồn tại"
+            detail=str(e)
         )
-    
-    major = await crud.create(major_in)
-    return major
 
 @router.put("/{major_id}", response_model=Major)
 async def update_major(
@@ -125,8 +123,14 @@ async def update_major(
             detail="Không tìm thấy ngành học"
         )
     
-    major = await crud.update(major_id, major_in)
-    return major
+    try:
+        major = await crud.update(major_id, major_in)
+        return major
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 @router.delete("/{major_id}")
 async def delete_major(

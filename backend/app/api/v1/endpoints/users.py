@@ -55,6 +55,14 @@ async def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email đã tồn tại"
         )
+    
+    user = await user_crud.get_by_username(db=db, username=user_in.username)
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tên đăng nhập đã tồn tại"
+        )
+    
     user = await user_crud.create(db=db, obj_in=user_in)
     return user
 
@@ -93,6 +101,25 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy người dùng"
         )
+    
+    # Nếu có cập nhật email, kiểm tra email không trùng
+    if user_in.email and user_in.email != user.email:
+        existing_user = await user_crud.get_by_email(db=db, email=user_in.email)
+        if existing_user and existing_user.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email đã tồn tại"
+            )
+    
+    # Nếu có cập nhật username, kiểm tra username không trùng
+    if user_in.username and user_in.username != user.username:
+        existing_user = await user_crud.get_by_username(db=db, username=user_in.username)
+        if existing_user and existing_user.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tên đăng nhập đã tồn tại"
+            )
+    
     user = await user_crud.update(db=db, db_obj=user, obj_in=user_in)
     return user
 

@@ -96,6 +96,11 @@ class SubjectCRUD:
 
     async def create(self, obj_in: SubjectCreate) -> Dict[str, Any]:
         try:
+            # Kiểm tra subject_code đã tồn tại chưa
+            existing_subject = await self.get_by_code(obj_in.subject_code)
+            if existing_subject:
+                raise ValueError(f"Mã môn học '{obj_in.subject_code}' đã tồn tại")
+            
             subject = Subject(**obj_in.dict())
             self.db.add(subject)
             await self.db.commit()
@@ -111,6 +116,10 @@ class SubjectCRUD:
                 "created_at": subject.created_at,
                 "updated_at": subject.updated_at
             }
+        except ValueError:
+            # Re-raise ValueError để endpoint có thể catch và trả về lỗi 400
+            await self.db.rollback()
+            raise
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Error in create subject: {str(e)}")
@@ -126,6 +135,13 @@ class SubjectCRUD:
                 return None
 
             update_data = obj_in.dict(exclude_unset=True)
+            
+            # Nếu có cập nhật subject_code, kiểm tra không trùng
+            if "subject_code" in update_data and update_data["subject_code"] != subject.subject_code:
+                existing_subject = await self.get_by_code(update_data["subject_code"])
+                if existing_subject and existing_subject["subject_id"] != id:
+                    raise ValueError(f"Mã môn học '{update_data['subject_code']}' đã tồn tại")
+            
             for field, value in update_data.items():
                 setattr(subject, field, value)
 
@@ -142,6 +158,10 @@ class SubjectCRUD:
                 "created_at": subject.created_at,
                 "updated_at": subject.updated_at
             }
+        except ValueError:
+            # Re-raise ValueError để endpoint có thể catch và trả về lỗi 400
+            await self.db.rollback()
+            raise
         except Exception as e:
             await self.db.rollback()
             logger.error(f"Error in update subject: {str(e)}")
