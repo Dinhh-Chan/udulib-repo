@@ -12,7 +12,8 @@ import {
   Users,
   Settings,
   ChevronLeft,
-  Home
+  Home,
+  Bell
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
@@ -47,13 +48,6 @@ const routes = [
     bgColor: "bg-orange-700/10"
   },
   {
-    label: "Bình luận",
-    icon: MessageSquare,
-    href: "/admin/comments",
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-500/10"
-  },
-  {
     label: "Diễn đàn",
     icon: MessageSquare,
     href: "/admin/forum",
@@ -66,6 +60,13 @@ const routes = [
     href: "/admin/users",
     color: "text-green-700",
     bgColor: "bg-green-700/10"
+  },
+  {
+    label: "Thông báo",
+    icon: Bell,
+    href: "/admin/notifications",
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-600/10"
   },
   {
     label: "Cài đặt",

@@ -5,6 +5,7 @@ import { FileText, Users, BookOpen, GraduationCap, Eye, Download, MessageSquare,
 import { useEffect, useState, Suspense } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import {
   getOverviewStatistics,
   getDocumentsByStatus,
@@ -102,6 +103,37 @@ function DashboardContent() {
     )
   }
 
+  const stats = [
+    {
+      title: "Tổng số tài liệu",
+      value: overview?.total_documents,
+      icon: FileText,
+      color: "text-blue-500",
+      bgColor: "bg-blue-50",
+    },
+    {
+      title: "Lượt xem",
+      value: overview?.total_views,
+      icon: Eye,
+      color: "text-green-500",
+      bgColor: "bg-green-50",
+    },
+    {
+      title: "Lượt tải",
+      value: overview?.total_downloads,
+      icon: Download,
+      color: "text-purple-500",
+      bgColor: "bg-purple-50",
+    },
+    {
+      title: "Người dùng",
+      value: overview?.total_users,
+      icon: Users,
+      color: "text-orange-500",
+      bgColor: "bg-orange-50",
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -112,63 +144,35 @@ function DashboardContent() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng số tài liệu</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.total_documents}</div>
-            <p className="text-xs text-muted-foreground">
-              Tài liệu trong hệ thống
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lượt xem</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.total_views}</div>
-            <p className="text-xs text-muted-foreground">
-              Tổng lượt xem tài liệu
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lượt tải</CardTitle>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.total_downloads}</div>
-            <p className="text-xs text-muted-foreground">
-              Tổng lượt tải tài liệu
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Người dùng</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.total_users}</div>
-            <p className="text-xs text-muted-foreground">
-              Người dùng đã đăng ký
-            </p>
-          </CardContent>
-        </Card>
+        {stats.map((stat) => (
+          <Card key={stat.title} className="overflow-hidden">
+            <CardHeader className={cn("flex flex-row items-center justify-between space-y-0 pb-2", stat.bgColor)}>
+              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+              <stat.icon className={cn("h-4 w-4", stat.color)} />
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className={cn("text-2xl font-bold", stat.color)}>{stat.value}</div>
+              <p className="text-xs text-muted-foreground">
+                {stat.title === "Tổng số tài liệu" && "Tài liệu trong hệ thống"}
+                {stat.title === "Lượt xem" && "Tổng lượt xem tài liệu"}
+                {stat.title === "Lượt tải" && "Tổng lượt tải tài liệu"}
+                {stat.title === "Người dùng" && "Người dùng đã đăng ký"}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-1">
+        <Card className="col-span-1 border-t-4 border-t-blue-500">
           <CardHeader>
-            <CardTitle>Trạng thái tài liệu</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-500" />
+              Trạng thái tài liệu
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-4">
               {documentStatus.map((status) => (
                 <div key={status.status} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -176,6 +180,10 @@ function DashboardContent() {
                       status.status === "approved" ? "default" :
                       status.status === "pending" ? "secondary" :
                       "destructive"
+                    } className={
+                      status.status === "approved" ? "bg-green-100 text-green-700 hover:bg-green-100" :
+                      status.status === "pending" ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-100" :
+                      "bg-red-100 text-red-700 hover:bg-red-100"
                     }>
                       {status.status === "approved" ? "Đã duyệt" :
                        status.status === "pending" ? "Chờ duyệt" :
@@ -189,16 +197,21 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-2">
+        <Card className="col-span-2 border-t-4 border-t-purple-500">
           <CardHeader>
-            <CardTitle>Top môn học có nhiều tài liệu</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-purple-500" />
+              Top môn học có nhiều tài liệu
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-4">
               {topSubjects.map((subject) => (
                 <div key={subject.subject_name} className="flex items-center justify-between">
                   <span className="font-medium">{subject.subject_name}</span>
-                  <Badge variant="secondary">{subject.count} tài liệu</Badge>
+                  <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                    {subject.count} tài liệu
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -207,25 +220,28 @@ function DashboardContent() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-t-4 border-t-green-500">
           <CardHeader>
-            <CardTitle>Tài liệu xem nhiều nhất</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-green-500" />
+              Tài liệu xem nhiều nhất
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="hover:bg-green-50">
                   <TableHead>Tên tài liệu</TableHead>
                   <TableHead>Môn học</TableHead>
                   <TableHead className="text-right">Lượt xem</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mostViewed.map((doc) => (
-                  <TableRow key={doc.document_id}>
+                {mostViewed.map((doc, index) => (
+                  <TableRow key={`viewed-${doc.title}-${index}`} className="hover:bg-green-50">
                     <TableCell>{doc.title}</TableCell>
                     <TableCell>{doc.subject_name}</TableCell>
-                    <TableCell className="text-right">{doc.views}</TableCell>
+                    <TableCell className="text-right font-medium text-green-600">{doc.views}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -233,25 +249,28 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-t-4 border-t-orange-500">
           <CardHeader>
-            <CardTitle>Tài liệu tải nhiều nhất</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-orange-500" />
+              Tài liệu tải nhiều nhất
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="hover:bg-orange-50">
                   <TableHead>Tên tài liệu</TableHead>
                   <TableHead>Môn học</TableHead>
                   <TableHead className="text-right">Lượt tải</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mostDownloaded.map((doc) => (
-                  <TableRow key={doc.document_id}>
+                {mostDownloaded.map((doc, index) => (
+                  <TableRow key={`downloaded-${doc.title}-${index}`} className="hover:bg-orange-50">
                     <TableCell>{doc.title}</TableCell>
                     <TableCell>{doc.subject_name}</TableCell>
-                    <TableCell className="text-right">{doc.downloads}</TableCell>
+                    <TableCell className="text-right font-medium text-orange-600">{doc.downloads}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -260,14 +279,17 @@ function DashboardContent() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="border-t-4 border-t-indigo-500">
         <CardHeader>
-          <CardTitle>Hoạt động 7 ngày qua</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-indigo-500" />
+            Hoạt động 7 ngày qua
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="hover:bg-indigo-50">
                 <TableHead>Ngày</TableHead>
                 <TableHead className="text-right">Tài liệu mới</TableHead>
                 <TableHead className="text-right">Bình luận</TableHead>
@@ -275,12 +297,12 @@ function DashboardContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentActivity.map((activity) => (
-                <TableRow key={activity.date}>
+              {recentActivity.map((activity, index) => (
+                <TableRow key={`activity-${activity.date}-${index}`} className="hover:bg-indigo-50">
                   <TableCell>{new Date(activity.date).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">{activity.uploads}</TableCell>
-                  <TableCell className="text-right">{activity.comments}</TableCell>
-                  <TableCell className="text-right">{activity.ratings}</TableCell>
+                  <TableCell className="text-right font-medium text-blue-600">{activity.uploads}</TableCell>
+                  <TableCell className="text-right font-medium text-purple-600">{activity.comments}</TableCell>
+                  <TableCell className="text-right font-medium text-indigo-600">{activity.ratings}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

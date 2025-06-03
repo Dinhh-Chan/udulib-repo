@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Bell, User, LogOut } from "lucide-react"
+import { Menu, User, LogOut } from "lucide-react"
 import Link from "next/link"
 import { AdminSidebar } from "./admin-sidebar"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { NotificationDropdown } from "./notification-dropdown"
 
 export function AdminHeader() {
   const { user, logout } = useAuth()
@@ -47,17 +48,7 @@ export function AdminHeader() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={() => toast.info("Tính năng đang phát triển")}
-            >
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
-                3
-              </span>
-            </Button>
+            <NotificationDropdown />
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted">

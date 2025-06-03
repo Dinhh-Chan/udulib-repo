@@ -1,7 +1,8 @@
 {
-  "/admin/majors/page": "app/admin/majors/page.js",
-  "/admin/documents/page": "app/admin/documents/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/courses/page": "app/admin/courses/page.js",
-  "/admin/forum/page": "app/admin/forum/page.js"
+  "/admin/forum/page": "app/admin/forum/page.js",
+  "/admin/forum/[id]/page": "app/admin/forum/[id]/page.js",
+  "/admin/forum/post/[id]/page": "app/admin/forum/post/[id]/page.js",
+  "/admin/notifications/page": "app/admin/notifications/page.js"
 }
