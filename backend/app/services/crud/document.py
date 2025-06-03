@@ -15,6 +15,21 @@ from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentFilterR
 from app.services.crud.base_crud import CRUDBase
 
 class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
+    async def get(self, db: AsyncSession, id: Any) -> Optional[Document]:
+        """Override để load relationships cho Document"""
+        stmt = (
+            select(self.model)
+            .options(
+                joinedload(Document.subject).joinedload(Subject.major),
+                joinedload(Document.subject).joinedload(Subject.academic_year),
+                joinedload(Document.user),
+                selectinload(Document.tags)
+            )
+            .where(Document.document_id == id)
+        )
+        result = await db.execute(stmt)
+        return result.unique().scalar_one_or_none()
+
     async def create_with_tags(
         self, db: AsyncSession, *, obj_in: DocumentCreate, user_id: int
     ) -> Document:

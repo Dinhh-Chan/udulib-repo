@@ -7,8 +7,16 @@ from app.services.crud.forum_post_crud import ForumPostCRUD
 from app.schemas.forum import ForumPost, ForumPostCreate, ForumPostUpdate
 from app.dependencies.auth import get_current_user
 from app.models.user import User
+from pydantic import BaseModel
 
 router = APIRouter()
+
+class ForumPostSearchRequest(BaseModel):
+    page: int = 1
+    per_page: int = 20
+    forum_id: Optional[int] = None
+    user_id: Optional[int] = None
+    status: Optional[str] = None
 
 @router.get("/", response_model=List[ForumPost])
 async def read_forum_posts(
@@ -17,11 +25,12 @@ async def read_forum_posts(
     per_page: int = Query(20, ge=1, le=100),
     forum_id: Optional[int] = None,
     user_id: Optional[int] = None,
-    status: Optional[str] = None,
-    # current_user: User = Depends(get_current_user)
+    # Loại bỏ status khỏi query parameters để tăng bảo mật
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Lấy danh sách forum posts.
+    Lấy danh sách forum posts (cơ bản, không bao gồm status filter).
+    Để filter theo status, sử dụng POST /search endpoint.
     """
     crud = ForumPostCRUD(db)
     skip = (page - 1) * per_page
@@ -30,7 +39,43 @@ async def read_forum_posts(
         limit=per_page,
         forum_id=forum_id,
         user_id=user_id,
-        status=status
+        status=None  # Không cho phép filter status qua GET
+    )
+    return posts
+
+@router.post("/search", response_model=List[ForumPost])
+async def search_forum_posts(
+    *,
+    db: AsyncSession = Depends(get_db),
+    search_request: ForumPostSearchRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Tìm kiếm forum posts với các bộ lọc phức tạp (bao gồm status).
+    Sử dụng POST để bảo mật thông tin filter.
+    """
+    # Validate pagination
+    if search_request.page < 1:
+        search_request.page = 1
+    if search_request.per_page < 1 or search_request.per_page > 100:
+        search_request.per_page = 20
+    
+    # Validate status values nếu cần
+    allowed_statuses = ["draft", "published", "pending", "rejected", "archived"]
+    if search_request.status and search_request.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Allowed values: {allowed_statuses}"
+        )
+    
+    crud = ForumPostCRUD(db)
+    skip = (search_request.page - 1) * search_request.per_page
+    posts = await crud.get_all(
+        skip=skip,
+        limit=search_request.per_page,
+        forum_id=search_request.forum_id,
+        user_id=search_request.user_id,
+        status=search_request.status
     )
     return posts
 

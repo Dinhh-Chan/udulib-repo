@@ -72,14 +72,14 @@ async def create_subject(
     Tạo môn học mới.
     """
     crud = SubjectCRUD(db)
-    subject = await crud.get_by_code(code=subject_in.subject_code)
-    if subject:
+    try:
+        subject = await crud.create(obj_in=subject_in)
+        return subject
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Môn học với mã này đã tồn tại"
+            detail=str(e)
         )
-    subject = await crud.create(obj_in=subject_in)
-    return subject
 
 @router.get("/{subject_id}", response_model=Subject)
 async def read_subject(
@@ -89,14 +89,14 @@ async def read_subject(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get subject by ID.
+    Lấy thông tin chi tiết của một môn học.
     """
     crud = SubjectCRUD(db)
     subject = await crud.get_by_id(id=subject_id)
     if not subject:
         raise HTTPException(
-            status_code=404,
-            detail="Subject not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy môn học"
         )
     return subject
 
@@ -118,27 +118,15 @@ async def update_subject(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy môn học"
         )
-    subject = await crud.update(id=subject_id, obj_in=subject_in)
-    return subject
-
-@router.get("/{subject_id}", response_model=Subject)
-async def read_subject(
-    *,
-    db: AsyncSession = Depends(get_db),
-    subject_id: int,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Lấy thông tin chi tiết của một môn học.
-    """
-    crud = SubjectCRUD(db)
-    subject = await crud.get_by_id(id=subject_id)
-    if not subject:
+    
+    try:
+        subject = await crud.update(id=subject_id, obj_in=subject_in)
+        return subject
+    except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy môn học"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
-    return subject
 
 @router.delete("/{subject_id}")
 async def delete_subject(
