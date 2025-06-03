@@ -495,7 +495,9 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           <div className="flex flex-wrap gap-4 mt-2">
             <div className="flex items-center gap-1 text-sm">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{document.file_type.split('/')[1].toUpperCase()}</span>
+              <span className="text-muted-foreground">
+                {document.file_type?.split('/')?.[1]?.toUpperCase() || document.file_type?.toUpperCase() || 'UNKNOWN'}
+              </span>
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
               <span className="text-muted-foreground">•</span>
