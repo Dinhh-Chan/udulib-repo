@@ -4,7 +4,19 @@ import { getAuthToken } from "./auth"
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 // User APIs
-export async function getUser(id: number): Promise<{ user_id: number; username: string; avatar_url?: string }> {
+export async function getUser(id: number): Promise<{
+  user_id: number
+  username: string
+  full_name: string
+  email: string
+  university_id: string
+  role: string
+  status: string
+  created_at: string
+  updated_at: string
+  last_login: string | null
+  google_id: string | null
+}> {
   const token = getAuthToken()
   if (!token) throw new Error("Unauthorized")
 
@@ -153,7 +165,15 @@ export async function getForumPosts(forumId: number): Promise<ForumPost[]> {
             author: {
               user_id: author.user_id,
               username: author.username,
-              avatar_url: author.avatar_url
+              full_name: author.full_name,
+              email: author.email,
+              university_id: author.university_id,
+              role: author.role,
+              status: author.status,
+              created_at: author.created_at,
+              updated_at: author.updated_at,
+              last_login: author.last_login,
+              google_id: author.google_id
             }
           }
         } catch (error) {
@@ -163,7 +183,15 @@ export async function getForumPosts(forumId: number): Promise<ForumPost[]> {
             author: {
               user_id: post.user_id,
               username: "Người dùng",
-              avatar_url: undefined
+              full_name: "Người dùng",
+              email: "",
+              university_id: "",
+              role: "user",
+              status: "inactive",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              last_login: null,
+              google_id: null
             }
           }
         }
@@ -201,7 +229,15 @@ export async function getForumPost(id: number): Promise<ForumPost> {
         author: {
           user_id: author.user_id,
           username: author.username,
-          avatar_url: author.avatar_url
+          full_name: author.full_name,
+          email: author.email,
+          university_id: author.university_id,
+          role: author.role,
+          status: author.status,
+          created_at: author.created_at,
+          updated_at: author.updated_at,
+          last_login: author.last_login,
+          google_id: author.google_id
         }
       }
     } catch (error) {
@@ -211,7 +247,15 @@ export async function getForumPost(id: number): Promise<ForumPost> {
         author: {
           user_id: post.user_id,
           username: "Người dùng",
-          avatar_url: undefined
+          full_name: "Người dùng",
+          email: "",
+          university_id: "",
+          role: "user",
+          status: "inactive",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          last_login: null,
+          google_id: null
         }
       }
     }
@@ -222,12 +266,12 @@ export async function getForumPost(id: number): Promise<ForumPost> {
 }
 
 // Forum Reply APIs
-export async function getForumReplies(postId: number): Promise<ForumReply[]> {
+export async function getForumReplies(postId: number, page: number = 1, perPage: number = 5): Promise<{replies: ForumReply[], total: number}> {
   const token = getAuthToken()
   if (!token) throw new Error("Unauthorized")
 
   try {
-    const response = await fetch(`${API_URL}/forum-replies?post_id=${postId}`, {
+    const response = await fetch(`${API_URL}/forum-replies?post_id=${postId}&page=${page}&per_page=${perPage}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -248,7 +292,15 @@ export async function getForumReplies(postId: number): Promise<ForumReply[]> {
             author: {
               user_id: author.user_id,
               username: author.username,
-              avatar_url: author.avatar_url
+              full_name: author.full_name,
+              email: author.email,
+              university_id: author.university_id,
+              role: author.role,
+              status: author.status,
+              created_at: author.created_at,
+              updated_at: author.updated_at,
+              last_login: author.last_login,
+              google_id: author.google_id
             }
           }
         } catch (error) {
@@ -258,16 +310,103 @@ export async function getForumReplies(postId: number): Promise<ForumReply[]> {
             author: {
               user_id: reply.user_id,
               username: "Người dùng",
-              avatar_url: undefined
+              full_name: "Người dùng",
+              email: "",
+              university_id: "",
+              role: "user",
+              status: "inactive",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              last_login: null,
+              google_id: null
             }
           }
         }
       })
     )
     
-    return repliesWithAuthors
+    // Lấy tổng số bình luận
+    const totalResponse = await fetch(`${API_URL}/forum-replies?post_id=${postId}&page=1&per_page=1`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    const totalData = await totalResponse.json()
+    const total = totalData.length > 0 ? totalData[0].total_count : 0
+    
+    return {
+      replies: repliesWithAuthors,
+      total
+    }
   } catch (error) {
     console.error("Error fetching forum replies:", error)
+    throw error
+  }
+}
+
+export async function createForumReply(data: {
+  post_id: number
+  content: string
+  parent_id?: number | null
+}): Promise<ForumReply> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-replies`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể tạo bình luận")
+    }
+    const reply = await response.json()
+    
+    // Lấy thông tin người bình luận
+    try {
+      const author = await getUser(reply.user_id)
+      return {
+        ...reply,
+        author: {
+          user_id: author.user_id,
+          username: author.username,
+          full_name: author.full_name,
+          email: author.email,
+          university_id: author.university_id,
+          role: author.role,
+          status: author.status,
+          created_at: author.created_at,
+          updated_at: author.updated_at,
+          last_login: author.last_login,
+          google_id: author.google_id
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching author for reply ${reply.reply_id}:`, error)
+      return {
+        ...reply,
+        author: {
+          user_id: reply.user_id,
+          username: "Người dùng",
+          full_name: "Người dùng",
+          email: "",
+          university_id: "",
+          role: "user",
+          status: "inactive",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          last_login: null,
+          google_id: null
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error creating forum reply:", error)
     throw error
   }
 } 

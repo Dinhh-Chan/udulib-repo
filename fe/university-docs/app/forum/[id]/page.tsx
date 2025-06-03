@@ -107,7 +107,7 @@ export default function ForumDetailPage({ params }: { params: Promise<{ id: stri
                     <div className="flex items-center gap-1">
                       <Avatar className="h-8 w-8">
                         <AvatarImage 
-                          src={post.author?.avatar_url || "/placeholder.svg"} 
+                          src={"/placeholder.svg"} 
                           alt={post.author?.username || "Người dùng"} 
                         />
                         <AvatarFallback>
