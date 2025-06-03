@@ -25,23 +25,26 @@ import { getSubject } from "@/lib/api/subject"
 import { type Subject } from "@/types/subject"
 import { AddForumDialog } from "./add-forum-dialog"
 import { EditForumDialog } from "./edit-forum-dialog"
+import { formatDate } from "@/lib/utils"
 
-interface ForumsTableProps {
+export interface ForumsTableProps {
   page?: number
   per_page?: number
   onReload?: () => void
   subjectId?: number
+  searchQuery?: string
 }
 
 interface ForumWithSubject extends Forum {
   subjectData?: Subject
 }
 
-export function ForumsTable({ page = 1, per_page = 20, onReload, subjectId }: ForumsTableProps) {
+export function ForumsTable({ page = 1, per_page = 20, onReload, subjectId, searchQuery = "" }: ForumsTableProps) {
   const router = useRouter()
   const [forums, setForums] = useState<ForumWithSubject[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedForum, setSelectedForum] = useState<ForumWithSubject | null>(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
   const fetchForums = async () => {
     try {
@@ -53,9 +56,19 @@ export function ForumsTable({ page = 1, per_page = 20, onReload, subjectId }: Fo
           return { ...forum, subjectData: subject || undefined }
         })
       )
-      const filteredData = subjectId 
+      let filteredData = subjectId 
         ? forumsWithSubject.filter(forum => forum.subject_id === subjectId)
         : forumsWithSubject
+      
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase()
+        filteredData = filteredData.filter(forum => 
+          forum.subjectData?.subject_name?.toLowerCase().includes(query) ||
+          forum.subjectData?.subject_code?.toLowerCase().includes(query) ||
+          forum.description?.toLowerCase().includes(query)
+        )
+      }
+      
       setForums(filteredData)
     } catch (error) {
       console.error("Error fetching forums:", error)
@@ -67,7 +80,7 @@ export function ForumsTable({ page = 1, per_page = 20, onReload, subjectId }: Fo
 
   useEffect(() => {
     fetchForums()
-  }, [page, per_page])
+  }, [page, per_page, subjectId, searchQuery])
 
   const handleView = (id: number) => {
     router.push(`/admin/forum/${id}`)
@@ -87,32 +100,32 @@ export function ForumsTable({ page = 1, per_page = 20, onReload, subjectId }: Fo
     }
   }
 
-  const filteredForums = forums.filter(forum => {
-    if (!forum) return false
-    const subjectName = forum.subjectData?.subject_name || ""
-    const subjectCode = forum.subjectData?.subject_code || ""
-    const description = forum.description || ""
-    const searchTermLower = searchTerm.toLowerCase()
-    
-    return subjectName.toLowerCase().includes(searchTermLower) ||
-           subjectCode.toLowerCase().includes(searchTermLower) ||
-           description.toLowerCase().includes(searchTermLower)
-  })
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Đang tải...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (forums.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-muted-foreground">Không tìm thấy diễn đàn nào</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Tìm kiếm theo tên môn học, mã môn học..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
         {subjectId !== undefined && (
-          <AddForumDialog subjectId={subjectId} onSuccess={fetchForums} />
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            + Thêm diễn đàn
+          </Button>
         )}
       </div>
 
@@ -128,68 +141,66 @@ export function ForumsTable({ page = 1, per_page = 20, onReload, subjectId }: Fo
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  Đang tải...
+            {forums.map((forum) => (
+              <TableRow key={forum.forum_id}>
+                <TableCell className="font-medium">
+                  {forum.subjectData?.subject_name || "Không có tên"}
+                </TableCell>
+                <TableCell>{forum.subjectData?.subject_code || "Không có mã"}</TableCell>
+                <TableCell className="max-w-xs truncate">{forum.description}</TableCell>
+                <TableCell>{formatDate(forum.created_at)}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Mở menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleView(forum.forum_id)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        <span>Xem chi tiết</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setSelectedForum(forum)}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Chỉnh sửa</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(forum.forum_id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Xóa</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ) : filteredForums.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  Không có diễn đàn nào
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredForums.map((forum) => (
-                <TableRow key={forum.forum_id}>
-                  <TableCell className="font-medium">
-                    {forum.subjectData?.subject_name || "Không có tên"}
-                  </TableCell>
-                  <TableCell>{forum.subjectData?.subject_code || "Không có mã"}</TableCell>
-                  <TableCell>{forum.description}</TableCell>
-                  <TableCell>{new Date(forum.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Mở menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleView(forum.forum_id)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          <span>Xem chi tiết</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <EditForumDialog
-                            forum={forum}
-                            onSuccess={fetchForums}
-                            trigger={
-                              <div className="flex items-center">
-                                <Pencil className="mr-2 h-4 w-4" />
-                                <span>Chỉnh sửa</span>
-                              </div>
-                            }
-                          />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(forum.forum_id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Xóa</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
+
+      {selectedForum && (
+        <EditForumDialog
+          forum={selectedForum}
+          open={!!selectedForum}
+          onOpenChange={(open) => !open && setSelectedForum(null)}
+          onSuccess={fetchForums}
+        />
+      )}
+
+      {subjectId !== undefined && (
+        <AddForumDialog
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          onSuccess={fetchForums}
+          subjectId={subjectId}
+        />
+      )}
     </div>
   )
 } 
