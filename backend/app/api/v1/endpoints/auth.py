@@ -6,11 +6,17 @@ from jose import jwt
 from app.models.base import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.user import UserCreate
+from pydantic import BaseModel
 
 from app.services.crud.user_crud import user_crud
 from app.core.config import settings
 from app.schemas.common import LoginResponse
 from app.schemas.auth import RegisterRequest 
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 def create_access_token(data: dict, expires_delta: timedelta = None):
     """Create JWT access token"""
     to_encode = data.copy()
@@ -28,8 +34,12 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     )
     return encoded_jwt
 router = APIRouter()
+
 @router.post("/login", response_model=LoginResponse)
-async def login(username: str, password: str, db: AsyncSession = Depends(get_db)):
+async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+    username = request.username
+    password = request.password
+    
     user = await user_crud.get_by_username(db=db, username=username)
 
     if not user:

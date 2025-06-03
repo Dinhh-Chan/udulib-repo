@@ -1,3 +1,4 @@
+import { apiClient } from "./client"
 import { toast } from "sonner"
 
 export interface Document {
@@ -31,12 +32,8 @@ export interface Document {
 
 export async function getDocuments() {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/`)
-    if (!response.ok) {
-      throw new Error("Không thể tải danh sách tài liệu")
-    }
-    const data = await response.json()
-    return data.documents
+    const response = await apiClient.get<{ documents: Document[] }>("/documents/")
+    return response.documents
   } catch (error) {
     console.error("Error fetching documents:", error)
     toast.error("Không thể tải danh sách tài liệu")
@@ -46,12 +43,8 @@ export async function getDocuments() {
 
 export async function getDocument(id: number) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`)
-    if (!response.ok) {
-      throw new Error("Không thể tải thông tin tài liệu")
-    }
-    const data = await response.json()
-    return data
+    const response = await apiClient.get<Document>(`/documents/${id}`)
+    return response
   } catch (error) {
     console.error("Error fetching document:", error)
     toast.error("Không thể tải thông tin tài liệu")
@@ -61,18 +54,13 @@ export async function getDocument(id: number) {
 
 export async function createDocument(formData: FormData) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/`, {
-      method: "POST",
-      body: formData,
+    const response = await apiClient.post<Document>("/documents/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     })
-
-    if (!response.ok) {
-      throw new Error("Không thể tạo tài liệu mới")
-    }
-
-    const data = await response.json()
     toast.success("Tạo tài liệu thành công")
-    return data
+    return response
   } catch (error) {
     console.error("Error creating document:", error)
     toast.error("Không thể tạo tài liệu mới")
@@ -82,21 +70,9 @@ export async function createDocument(formData: FormData) {
 
 export async function updateDocument(id: number, data: Partial<Document>) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    })
-
-    if (!response.ok) {
-      throw new Error("Không thể cập nhật tài liệu")
-    }
-
-    const responseData = await response.json()
+    const response = await apiClient.put<Document>(`/documents/${id}`, data)
     toast.success("Cập nhật tài liệu thành công")
-    return responseData
+    return response
   } catch (error) {
     console.error("Error updating document:", error)
     toast.error("Không thể cập nhật tài liệu")
@@ -106,14 +82,7 @@ export async function updateDocument(id: number, data: Partial<Document>) {
 
 export async function deleteDocument(id: number) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`, {
-      method: "DELETE",
-    })
-
-    if (!response.ok) {
-      throw new Error("Không thể xóa tài liệu")
-    }
-
+    await apiClient.delete(`/documents/${id}`)
     toast.success("Xóa tài liệu thành công")
     return true
   } catch (error) {
@@ -121,4 +90,15 @@ export async function deleteDocument(id: number) {
     toast.error("Không thể xóa tài liệu")
     return false
   }
-} 
+}
+
+export async function getDocumentCount(): Promise<number> {
+  try {
+    const response = await apiClient.get<number>("/documents/count-document")
+    return response
+  } catch (error) {
+    console.error("Error fetching document count:", error)
+    toast.error("Không thể lấy số lượng tài liệu")
+    return 0
+  }
+}

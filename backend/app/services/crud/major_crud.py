@@ -5,7 +5,7 @@ from app.schemas.major import MajorCreate, MajorUpdate
 from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime
-
+from sqlalchemy import func
 logger = logging.getLogger(__name__)
 
 class MajorCRUD:
@@ -146,3 +146,12 @@ class MajorCRUD:
             await self.db.rollback()
             logger.error(f"Error in delete major: {str(e)}")
             raise 
+    async def count_major(self) -> int:
+        try:
+            query = select(func.count(Major.major_id))
+            result = await self.db.execute(query)
+            count = result.scalar()
+            return count
+        except Exception as e:
+            logger.error(f"Error in count majors: {str(e)}")
+            raise

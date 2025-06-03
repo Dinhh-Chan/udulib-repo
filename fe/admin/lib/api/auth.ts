@@ -1,4 +1,5 @@
-import { apiClient } from "./client"
+import { apiClientAxios as apiClient } from "./client"
+import { AxiosResponse } from "axios"
 import { User } from "@/types/user"
 
 interface LoginResponse {
@@ -8,12 +9,24 @@ interface LoginResponse {
 }
 
 export async function login(username: string, password: string): Promise<LoginResponse> {
-  const response = await apiClient.post<LoginResponse>(`/auth/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`)
-  return response
+  const formData = new URLSearchParams();
+  formData.append("username", username);
+  formData.append("password", password);
+  
+  const response: AxiosResponse<LoginResponse> = await apiClient.post(
+    "/auth/login", 
+    formData.toString(),
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    }
+  )
+  return response.data
 }
 
 export async function logout(): Promise<void> {
-  await apiClient.post("/auth/logout")
+  await apiClient.post("/auth/logout", {})
 }
 
 export const getAuthToken = () => {

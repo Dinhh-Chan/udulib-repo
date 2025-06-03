@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.models.base import get_db
@@ -8,6 +8,17 @@ from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User
 
 router = APIRouter()
+@router.get("/count-major")
+async def count_major(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Đếm số lượng ngành học.
+    """
+    crud = MajorCRUD(db)
+    count = await crud.count_major()
+    return {"count": count}
 
 @router.get("/", response_model=List[Major])
 async def get_majors(
@@ -36,7 +47,10 @@ async def get_major(
     crud = MajorCRUD(db)
     major = await crud.get_by_id(major_id)
     if not major:
-        raise HTTPException(status_code=404, detail="Major not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ngành học"
+        )
     return major
 
 @router.get("/code/{major_code}", response_model=Major)
@@ -51,7 +65,10 @@ async def get_major_by_code(
     crud = MajorCRUD(db)
     major = await crud.get_by_code(major_code)
     if not major:
-        raise HTTPException(status_code=404, detail="Major not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ngành học"
+        )
     return major
 
 @router.post("/", response_model=Major)
@@ -66,8 +83,8 @@ async def create_major(
     """
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
         )
     
     crud = MajorCRUD(db)
@@ -75,8 +92,8 @@ async def create_major(
     existing_major = await crud.get_by_code(major_in.major_code)
     if existing_major:
         raise HTTPException(
-            status_code=400,
-            detail="Major code already exists"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mã ngành đã tồn tại"
         )
     
     major = await crud.create(major_in)
@@ -95,14 +112,20 @@ async def update_major(
     """
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
         )
     
     crud = MajorCRUD(db)
+    # Kiểm tra ngành học có tồn tại không trước khi cập nhật
+    existing_major = await crud.get_by_id(major_id)
+    if not existing_major:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ngành học"
+        )
+    
     major = await crud.update(major_id, major_in)
-    if not major:
-        raise HTTPException(status_code=404, detail="Major not found")
     return major
 
 @router.delete("/{major_id}")
@@ -117,12 +140,23 @@ async def delete_major(
     """
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
         )
     
     crud = MajorCRUD(db)
+    # Kiểm tra ngành học có tồn tại không trước khi xóa
+    existing_major = await crud.get_by_id(major_id)
+    if not existing_major:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ngành học"
+        )
+    
     success = await crud.delete(major_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Major not found")
-    return {"message": "Major deleted successfully"} 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi xóa ngành học"
+        )
+    return {"status": "success", "message": "Ngành học đã được xóa thành công"} 

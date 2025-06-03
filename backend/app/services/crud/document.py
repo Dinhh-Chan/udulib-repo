@@ -309,5 +309,8 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         await db.commit()
         
         return True
+    async def count_document(self, db: AsyncSession):
+        documents= await db.execute(select(func.count()).select_from(self.model))
+        return documents.scalar_one()
 
 document = CRUDDocument(Document) 

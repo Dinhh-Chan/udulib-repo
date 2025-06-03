@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
@@ -9,6 +9,13 @@ from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User as UserModel
 
 router = APIRouter()
+
+@router.get("/me", response_model=User)
+async def read_current_user(current_user: UserModel = Depends(get_current_user)):
+    """
+    Lấy thông tin người dùng hiện tại.
+    """
+    return current_user
 
 @router.get("/", response_model=List[User])
 async def read_users(
@@ -45,7 +52,7 @@ async def create_user(
     user = await user_crud.get_by_email(db=db, email=user_in.email)
     if user:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email đã tồn tại"
         )
     user = await user_crud.create(db=db, obj_in=user_in)
@@ -64,7 +71,7 @@ async def read_user(
     user = await user_crud.get_by_id(db=db, id=user_id)
     if not user:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy người dùng"
         )
     return user
@@ -83,7 +90,7 @@ async def update_user(
     user = await user_crud.get_by_id(db=db, id=user_id)
     if not user:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy người dùng"
         )
     user = await user_crud.update(db=db, db_obj=user, obj_in=user_in)
@@ -102,8 +109,8 @@ async def delete_user(
     user = await user_crud.get_by_id(db=db, id=user_id)
     if not user:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy người dùng"
         )
     await user_crud.delete(db=db, id=user_id)
-    return {"status": "success"}
+    return {"status": "success", "message": "Người dùng đã được xóa thành công"}

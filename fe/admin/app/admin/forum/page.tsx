@@ -1,47 +1,66 @@
-import { Button } from "@/components/ui/button"
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ForumPostsTable } from "@/components/admin/forum-posts-table"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter } from "lucide-react"
+import { ForumsTable } from "@/components/admin/forums-table"
+import { Plus, Search } from "lucide-react"
+import { AddForumDialog } from "@/components/admin/add-forum-dialog"
 
 export default function ForumPage() {
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [key, setKey] = useState(0)
+
+  const handleSuccess = () => {
+    setKey((prev) => prev + 1)
+  }
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Quản lý diễn đàn</h1>
-      </div>
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input type="search" placeholder="Tìm kiếm bài viết..." className="pl-8 w-full" />
+    <div className="container mx-auto py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Quản lý diễn đàn</h2>
+          <p className="text-muted-foreground">
+            Thêm, sửa, xóa và quản lý các diễn đàn trong hệ thống
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="active">Hoạt động</SelectItem>
-              <SelectItem value="flagged">Đánh dấu</SelectItem>
-              <SelectItem value="hidden">Ẩn</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" className="gap-1">
-            <Filter className="h-4 w-4" />
-            Lọc
-          </Button>
-        </div>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Thêm diễn đàn
+        </Button>
       </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle>Danh sách bài viết diễn đàn</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle>Danh sách diễn đàn</CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm diễn đàn..."
+                className="pl-8 w-[300px]"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <ForumPostsTable />
+          <ForumsTable 
+            key={key} 
+            searchQuery={searchQuery}
+            onReload={handleSuccess}
+          />
         </CardContent>
       </Card>
+
+      <AddForumDialog 
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSuccess={handleSuccess}
+      />
     </div>
   )
 }
