@@ -85,10 +85,13 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = True
     SMTP_PORT: Optional[int] = 587
     SMTP_HOST: Optional[str] = "smtp.gmail.com"
-    SMTP_USER: Optional[str] = ""
-    SMTP_PASSWORD: Optional[str] = ""
-    EMAILS_FROM_EMAIL: Optional[str] = ""
-    EMAILS_FROM_NAME: Optional[str] = ""
+    SMTP_USER: Optional[str] = "thuvienudu@gmail.com"
+    SMTP_PASSWORD: Optional[str] = "umgm gcuk qvrb kfin"
+    EMAILS_FROM_EMAIL: Optional[str] = "thuvienudu@gmail.com"
+    EMAILS_FROM_NAME: Optional[str] = "Thư viện UDU"
+    
+    # Password reset token expire time (minutes)
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Redis
     REDIS_HOST: str = "localhost"
