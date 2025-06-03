@@ -1,5 +1,9 @@
 from fastapi import APIRouter
+<<<<<<< HEAD
 from app.api.v1.endpoints import auth, users, academic_year, major, documents, tag, document_tag, subjects, comments, ratings, document_history, shared_link, notification, forums, forum_posts, forum_replies, statistics
+=======
+from app.api.v1.endpoints import auth, users, academic_year, major, documents, tag, document_tag, subjects, comments, ratings, document_history, shared_link, notification, forums, forum_posts, forum_replies, statistics, password_reset
+>>>>>>> befe0c218c91e54fcb443113b695f84fa0e5cb5d
 
 api_router = APIRouter()
 
@@ -19,4 +23,9 @@ api_router.include_router(notification.router, prefix="/notifications", tags=["n
 api_router.include_router(forums.router, prefix="/forums", tags=["forums"])
 api_router.include_router(forum_posts.router, prefix="/forum-posts", tags=["forum-posts"])
 api_router.include_router(forum_replies.router, prefix="/forum-replies", tags=["forum-replies"])
+<<<<<<< HEAD
 api_router.include_router(statistics.router, prefix="/statistics", tags=["statistics"])
+=======
+api_router.include_router(statistics.router, prefix="/statistics", tags=["statistics"])
+api_router.include_router(password_reset.router, prefix="/password-reset", tags=["password-reset"])
+>>>>>>> befe0c218c91e54fcb443113b695f84fa0e5cb5d

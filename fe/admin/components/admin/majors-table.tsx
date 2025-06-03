@@ -15,119 +15,145 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { EditMajorDialog } from "@/components/admin/edit-major-dialog"
-import { DeleteMajorDialog } from "@/components/admin/delete-major-dialog"
-import { Major } from "@/types/major"
-import { getMajors, deleteMajor } from "@/lib/api/major"
+import { apiClient } from "@/lib/api/client"
 import { toast } from "sonner"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Search, MoreHorizontal } from "lucide-react"
+import { useDebounce } from "@/hooks/use-debounce"
+import { EditMajorDialog } from "./edit-major-dialog"
+import { Major } from "@/types/major"
 
-export function MajorsTable() {
+interface MajorsResponse {
+  items: Major[]
+  total: number
+  total_pages: number
+  current_page: number
+}
+
+interface MajorsTableProps {
+  page?: number
+  search?: string
+}
+
+export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
   const [majors, setMajors] = useState<Major[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [editingMajor, setEditingMajor] = useState<Major | null>(null)
-  const [deletingMajor, setDeletingMajor] = useState<Major | null>(null)
-
-  const fetchMajors = async () => {
-    try {
-      const data = await getMajors()
-      setMajors(data)
-    } catch (error) {
-      toast.error("Không thể tải danh sách ngành học")
-      console.error(error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const [searchTerm, setSearchTerm] = useState(search)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [selectedMajor, setSelectedMajor] = useState<Major | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const debouncedSearch = useDebounce(searchTerm, 500)
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    fetchMajors()
-  }, [])
-
-  const handleDelete = async (major: Major) => {
-    try {
-      await deleteMajor(major.major_id)
-      toast.success("Xóa ngành học thành công")
-      fetchMajors()
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error(error.message)
-      } else {
-        toast.error("Không thể xóa ngành học")
+    const fetchMajors = async () => {
+      try {
+        setIsLoading(true)
+        const response = await apiClient.get<Major[]>(`/majors?page=${page}&search=${debouncedSearch}`)
+        setMajors(response)
+      } catch (error) {
+        console.error("Error fetching majors:", error)
+        toast.error("Không thể tải danh sách ngành học")
+      } finally {
+        setIsLoading(false)
       }
-      console.error(error)
+    }
+
+    fetchMajors()
+  }, [page, debouncedSearch, reloadKey])
+
+  useEffect(() => {
+    if (debouncedSearch !== search) {
+      const params = new URLSearchParams(searchParams?.toString())
+      params.set("search", debouncedSearch)
+      params.set("page", "1")
+      router.push(`?${params.toString()}`, { scroll: false })
+    }
+  }, [debouncedSearch, router, search, searchParams])
+
+  const handleDelete = async (id: number) => {
+    try {
+      await apiClient.delete(`/majors/${id}`)
+      setReloadKey(key => key + 1)
+      toast.success("Xóa ngành học thành công")
+    } catch (error) {
+      console.error("Error deleting major:", error)
+      toast.error("Không thể xóa ngành học")
     }
   }
 
-  const filteredMajors = majors.filter(
-    (major) =>
-      major.major_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      major.major_code.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleEdit = (major: Major) => {
+    setSelectedMajor(major)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditSuccess = () => {
+    setReloadKey(key => key + 1)
+  }
 
   if (isLoading) {
-    return <div>Đang tải...</div>
+    return <div>Loading...</div>
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Tìm kiếm ngành học..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm"
-        />
+    <div>
+      <div className="flex items-center justify-between mb-4 px-6 py-4">
+        <h2 className="text-2xl font-bold tracking-tight">Danh sách ngành học</h2>
+        <div className="relative flex-1 max-w-[300px]">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm kiếm ngành học..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8 w-full"
+          />
+        </div>
       </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Tên ngành học</TableHead>
               <TableHead>Mã ngành</TableHead>
+              <TableHead>Tên ngành</TableHead>
               <TableHead>Mô tả</TableHead>
-              <TableHead className="text-right">Hành động</TableHead>
+              <TableHead>Ngày tạo</TableHead>
+              <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMajors.length === 0 ? (
+            {majors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
+                <TableCell colSpan={5} className="text-center">
                   Không có dữ liệu
                 </TableCell>
               </TableRow>
             ) : (
-              filteredMajors.map((major) => (
+              majors.map((major) => (
                 <TableRow key={major.major_id}>
-                  <TableCell className="font-medium">{major.major_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{major.major_code}</Badge>
-                  </TableCell>
-                  <TableCell>{major.description || "-"}</TableCell>
+                  <TableCell>{major.major_code}</TableCell>
+                  <TableCell>{major.major_name}</TableCell>
+                  <TableCell>{major.description}</TableCell>
+                  <TableCell>{new Date(major.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Mở menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Hành động</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setEditingMajor(major)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          <span>Chỉnh sửa</span>
+                        <DropdownMenuItem onClick={() => handleEdit(major)}>
+                          Sửa
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDeletingMajor(major)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Xóa</span>
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => handleDelete(major.major_id)}
+                        >
+                          Xóa
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -139,21 +165,12 @@ export function MajorsTable() {
         </Table>
       </div>
 
-      {editingMajor && (
+      {selectedMajor && (
         <EditMajorDialog
-          major={editingMajor}
-          open={!!editingMajor}
-          onOpenChange={(open) => !open && setEditingMajor(null)}
-          onSuccess={fetchMajors}
-        />
-      )}
-
-      {deletingMajor && (
-        <DeleteMajorDialog
-          major={deletingMajor}
-          open={!!deletingMajor}
-          onOpenChange={(open) => !open && setDeletingMajor(null)}
-          onConfirm={() => handleDelete(deletingMajor)}
+          major={selectedMajor}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSuccess={handleEditSuccess}
         />
       )}
     </div>

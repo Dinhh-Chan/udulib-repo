@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "sonner"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -18,10 +19,12 @@ export default function RootLayout({
     <html lang="vi">
       <body className={inter.className}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </Suspense>
+          <Toaster />
         </QueryClientProvider>
       </body>
     </html>

@@ -1,137 +1,121 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios"
 import { toast } from "sonner"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
+
+interface RequestOptions extends RequestInit {
+  params?: Record<string, any>
+}
+
 class ApiClient {
-  private static instance: ApiClient
-  private baseURL: string
+  private baseUrl: string
 
-  private constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1"
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl
   }
 
-  public static getInstance(): ApiClient {
-    if (!ApiClient.instance) {
-      ApiClient.instance = new ApiClient()
-    }
-    return ApiClient.instance
-  }
-
-  private getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    }
-
-    // Lấy token từ localStorage
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token")
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`
-      }
-    }
-
-    return headers
-  }
-
-  private async handleResponse<T>(response: AxiosResponse<T>): Promise<T> {
-    // Kiểm tra status code
-    if (response.status >= 200 && response.status < 300) {
-      return response.data
-    }
-
-    // Xử lý lỗi
-    let errorMessage = "Có lỗi xảy ra"
+  private async request<T>(
+    endpoint: string,
+    options: RequestOptions = {}
+  ): Promise<T> {
+    const { params, ...fetchOptions } = options
     
-    if (response.data && typeof response.data === "object") {
-      // Nếu response.data là object, lấy message từ detail hoặc message
-      const data = response.data as any
-      errorMessage = data.detail || data.message || JSON.stringify(data)
-    } else if (typeof response.data === "string") {
-      errorMessage = response.data
-    }
-
-    throw new Error(errorMessage)
-  }
-
-  private async handleError(error: unknown): Promise<never> {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError
-      
-      // Xử lý lỗi từ response
-      if (axiosError.response) {
-        const response = axiosError.response
-        let errorMessage = "Có lỗi xảy ra"
-
-        if (response.data && typeof response.data === "object") {
-          const data = response.data as any
-          errorMessage = data.detail || data.message || JSON.stringify(data)
-        } else if (typeof response.data === "string") {
-          errorMessage = response.data
+    let url = `${this.baseUrl}${endpoint}`
+    
+    // Xử lý params nếu có
+    if (params) {
+      const queryParams = new URLSearchParams()
+      for (const key in params) {
+        if (params[key] !== undefined && params[key] !== null) {
+          queryParams.append(key, params[key].toString())
         }
-
-        throw new Error(errorMessage)
       }
-
-      // Xử lý lỗi network
-      if (axiosError.request) {
-        throw new Error("Không thể kết nối đến server")
+      const queryString = queryParams.toString()
+      if (queryString) {
+        url += `?${queryString}`
       }
     }
+    
+    const token = localStorage.getItem("token")
 
-    // Xử lý lỗi khác
-    throw error
-  }
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...fetchOptions.headers,
+    }
 
-  public async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const config: RequestInit = {
+      ...fetchOptions,
+      headers,
+    }
+
     try {
-      const response = await axios.get<T>(`${this.baseURL}${url}`, {
-        ...config,
-        headers: this.getHeaders(),
-      })
-      return this.handleResponse(response)
+      const response = await fetch(url, config)
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            const errorMessage = data.detail[0]?.msg || "Validation error"
+            throw new Error(errorMessage)
+          }
+          throw new Error(data.detail)
+        }
+        throw new Error("An error occurred")
+      }
+
+      return data
     } catch (error) {
-      return this.handleError(error)
+      console.error("API request failed:", error)
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error("An unexpected error occurred")
     }
   }
 
-  public async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    try {
-      const response = await axios.post<T>(`${this.baseURL}${url}`, data, {
-        ...config,
-        headers: this.getHeaders(),
-      })
-      return this.handleResponse(response)
-    } catch (error) {
-      return this.handleError(error)
-    }
+  async get<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: "GET" })
   }
 
-  public async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    try {
-      const response = await axios.put<T>(`${this.baseURL}${url}`, data, {
-        ...config,
-        headers: this.getHeaders(),
-      })
-      return this.handleResponse(response)
-    } catch (error) {
-      return this.handleError(error)
-    }
+  async post<T>(endpoint: string, data: any, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "POST",
+      body: JSON.stringify(data),
+    })
   }
 
-  public async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    try {
-      const response = await axios.delete<T>(`${this.baseURL}${url}`, {
-        ...config,
-        headers: this.getHeaders(),
-      })
-      return this.handleResponse(response)
-    } catch (error) {
-      return this.handleError(error)
+  async put<T>(endpoint: string, data: any, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async delete<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: "DELETE" })
+  }
+
+  async postFormData<T>(endpoint: string, formData: FormData, options: RequestOptions = {}): Promise<T> {
+    const token = localStorage.getItem("token")
+    const headers: HeadersInit = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
     }
+
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "POST",
+      headers,
+      body: formData,
+    })
   }
 
   // Utility method to check if user is authenticated
   isAuthenticated(): boolean {
-    return !!localStorage.getItem("access_token")
+    return !!localStorage.getItem("token")
   }
 
   // Utility method to get current user
@@ -147,7 +131,7 @@ class ApiClient {
   // Test connection method
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseURL}/health`, {
+      const response = await fetch(`${this.baseUrl}/health`, {
         method: "GET",
         headers: { "Content-Type": "application/json" }
       })
@@ -158,4 +142,50 @@ class ApiClient {
   }
 }
 
-export const apiClient = ApiClient.getInstance()
+export const apiClient = new ApiClient(API_URL)
+
+export const apiClientAxios = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+  headers: {
+    "Content-Type": "application/json",
+  },
+})
+
+// Thêm interceptor để xử lý token
+apiClientAxios.interceptors.request.use((config) => {
+  // Kiểm tra cả hai nơi lưu token để đảm bảo tương thích
+  const token = localStorage.getItem("access_token") || localStorage.getItem("token")
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Thêm interceptor để xử lý response
+apiClientAxios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error.response?.data || error.message)
+    
+    // Nếu status là 401 thì đăng xuất và chuyển đến trang login
+    if (error.response?.status === 401) {
+      localStorage.removeItem("access_token")
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      window.location.href = "/login"
+    }
+    
+    // Hiển thị thông báo lỗi
+    if (error.response?.data?.detail) {
+      if (typeof error.response.data.detail === 'string') {
+        toast.error(error.response.data.detail)
+      } else if (Array.isArray(error.response.data.detail)) {
+        toast.error(error.response.data.detail[0]?.msg || "Validation error")
+      }
+    } else {
+      toast.error("Có lỗi xảy ra, vui lòng thử lại sau")
+    }
+    
+    return Promise.reject(error)
+  }
+)

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
 from app.services.crud.forum_crud import ForumCRUD
-from app.schemas.forum import Forum, ForumCreate
+from app.schemas.forum import Forum, ForumCreate, ForumUpdate
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 
@@ -109,6 +109,74 @@ async def create_forum(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Lỗi khi tạo forum. Vui lòng kiểm tra lại thông tin môn học."
         )
+<<<<<<< HEAD
+=======
+
+@router.put("/{forum_id}", response_model=Forum)
+async def update_forum(
+    *,
+    db: AsyncSession = Depends(get_db),
+    forum_id: int,
+    forum_update: ForumUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cập nhật thông tin forum.
+    Admin có thể cập nhật tất cả field.
+    Lecturer có thể cập nhật description của forum thuộc môn học mình dạy.
+    """
+    crud = ForumCRUD(db)
+    
+    # Kiểm tra forum có tồn tại không
+    forum = await crud.get_by_id(id=forum_id)
+    if not forum:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy forum"
+        )
+    
+    # Kiểm tra quyền
+    if current_user.role == "admin":
+        # Admin có thể cập nhật tất cả
+        pass
+    elif current_user.role == "lecturer":
+        # Lecturer chỉ có thể cập nhật description và phải là môn học của mình
+        # TODO: Cần kiểm tra lecturer có dạy môn học này không
+        if forum_update.subject_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn chỉ có thể cập nhật mô tả forum, không thể thay đổi môn học"
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền cập nhật forum"
+        )
+    
+    try:
+        # Nếu muốn thay đổi subject_id, kiểm tra không bị trùng
+        if forum_update.subject_id and forum_update.subject_id != forum.subject_id:
+            existing_forum = await crud.get_by_subject_id(forum_update.subject_id)
+            if existing_forum and existing_forum.forum_id != forum_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Forum cho môn học này đã tồn tại"
+                )
+        
+        updated_forum = await crud.update(obj_id=forum_id, obj_in=forum_update)
+        return updated_forum
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dữ liệu không hợp lệ: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi cập nhật forum"
+        )
+>>>>>>> befe0c218c91e54fcb443113b695f84fa0e5cb5d
 
 @router.delete("/{forum_id}")
 async def delete_forum(

@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -10,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,73 +21,60 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-
-interface Document {
-  document_id: number
-  title: string
-  description: string | null
-  file_path: string
-  file_size: number
-  file_type: string
-  subject_id: number
-  user_id: number
-  status: "approved" | "pending" | "rejected"
-  view_count: number
-  download_count: number
-  created_at: string
-  updated_at: string | null
-  subject: {
-    subject_id: number
-    subject_name: string
-  } | null
-  user: {
-    user_id: number
-    username: string
-  } | null
-  tags: Array<{
-    tag_id: number
-    tag_name: string
-  }>
-  average_rating: number
-}
+import { apiClient } from "@/lib/api/client"
+import { Document } from "@/app/admin/documents/columns"
 
 interface EditDocumentDialogProps {
-  document: Document
+  documentId: number
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-export function EditDocumentDialog({ document, open, onOpenChange, onSuccess }: EditDocumentDialogProps) {
+export function EditDocumentDialog({ documentId, open, onOpenChange, onSuccess }: EditDocumentDialogProps) {
+  const [document, setDocument] = useState<Document | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [status, setStatus] = useState<string>("")
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (open && documentId) {
+      fetchDocument()
+    }
+  }, [open, documentId])
+
+  const fetchDocument = async () => {
+    try {
+      setIsFetching(true)
+      const response = await apiClient.get<Document>(`/documents/${documentId}`)
+      setDocument(response)
+      setTitle(response.title)
+      setDescription(response.description || "")
+      setStatus(response.status)
+    } catch (error) {
+      console.error("Error fetching document:", error)
+      toast.error("Không thể tải thông tin tài liệu")
+    } finally {
+      setIsFetching(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const formData = new FormData(e.currentTarget)
-      const data = {
-        title: formData.get("title"),
-        description: formData.get("description"),
-        status: formData.get("status"),
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${document.document_id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+      await apiClient.put(`/documents/${documentId}`, {
+        title,
+        description: description || undefined,
+        status,
       })
-
-      if (!response.ok) {
-        throw new Error("Không thể cập nhật tài liệu")
-      }
-
+      
       toast.success("Cập nhật tài liệu thành công")
-      onOpenChange(false)
       onSuccess?.()
+      onOpenChange(false)
     } catch (error) {
       console.error("Error updating document:", error)
       toast.error("Không thể cập nhật tài liệu")
@@ -96,46 +83,74 @@ export function EditDocumentDialog({ document, open, onOpenChange, onSuccess }: 
     }
   }
 
+  if (isFetching) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Đang tải...</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  if (!document) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Lỗi</DialogTitle>
+            <DialogDescription>
+              Không thể tải thông tin tài liệu
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Chỉnh sửa tài liệu</DialogTitle>
           <DialogDescription>
-            Cập nhật thông tin tài liệu. Nhấn Lưu khi hoàn tất.
+            Chỉnh sửa thông tin của tài liệu này
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                Tên tài liệu
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="title">Tiêu đề</Label>
               <Input
                 id="title"
-                name="title"
-                className="col-span-3"
-                defaultValue={document.title}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Mô tả
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Mô tả</Label>
               <Textarea
                 id="description"
-                name="description"
-                className="col-span-3"
-                defaultValue={document.description || ""}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={isLoading}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Trạng thái
-              </Label>
-              <Select name="status" defaultValue={document.status}>
-                <SelectTrigger className="col-span-3">
+            <div className="grid gap-2">
+              <Label htmlFor="status">Trạng thái</Label>
+              <Select
+                value={status}
+                onValueChange={setStatus}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
                   <SelectValue placeholder="Chọn trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -147,8 +162,11 @@ export function EditDocumentDialog({ document, open, onOpenChange, onSuccess }: 
             </div>
           </div>
           <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+              Hủy
+            </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Đang lưu..." : "Lưu"}
+              {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
           </DialogFooter>
         </form>

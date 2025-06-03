@@ -1,17 +1,11 @@
 import { Year, YearCreate, YearUpdate } from "@/types/year"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { apiClient } from "./client"
+import { toast } from "sonner"
 
 export async function getYears(): Promise<Year[]> {
   try {
-    const response = await fetch(`${API_URL}/academic-years`)
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || "Không thể lấy danh sách năm học")
-    }
-    const data = await response.json()
-    // Đảm bảo dữ liệu trả về đúng format
-    return data.map((year: any) => ({
+    const response = await apiClient.get<Year[]>("/academic-years")
+    return response.map((year: any) => ({
       ...year,
       year_order: year.year_order || 1,
       created_at: year.created_at || new Date().toISOString(),
@@ -19,92 +13,65 @@ export async function getYears(): Promise<Year[]> {
     }))
   } catch (error) {
     console.error("Error fetching years:", error)
-    throw error
+    toast.error("Không thể lấy danh sách năm học")
+    return []
   }
 }
 
-export async function getYear(id: number): Promise<Year> {
+export async function getYear(id: number): Promise<Year | null> {
   try {
-    const response = await fetch(`${API_URL}/academic-years/${id}`)
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || "Không thể lấy thông tin năm học")
-    }
-    const data = await response.json()
+    const response = await apiClient.get<Year>(`/academic-years/${id}`)
     return {
-      ...data,
-      year_order: data.year_order || 1,
-      created_at: data.created_at || new Date().toISOString(),
-      updated_at: data.updated_at || null
+      ...response,
+      year_order: response.year_order || 1,
+      created_at: response.created_at || new Date().toISOString(),
+      updated_at: response.updated_at || null
     }
   } catch (error) {
     console.error("Error fetching year:", error)
-    throw error
+    toast.error("Không thể lấy thông tin năm học")
+    return null
   }
 }
 
-export async function createYear(data: YearCreate): Promise<Year> {
+export async function createYear(data: YearCreate): Promise<Year | null> {
   try {
-    const response = await fetch(`${API_URL}/academic-years`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...data,
-        year_order: data.year_order || 1
-      }),
+    const response = await apiClient.post<Year>("/academic-years", {
+      ...data,
+      year_order: data.year_order || 1
     })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || "Không thể thêm năm học")
-    }
-
-    return response.json()
+    toast.success("Thêm năm học thành công")
+    return response
   } catch (error) {
     console.error("Error creating year:", error)
-    throw error
+    toast.error("Không thể thêm năm học")
+    return null
   }
 }
 
-export async function updateYear(id: number, data: YearUpdate): Promise<Year> {
+export async function updateYear(id: number, data: YearUpdate): Promise<Year | null> {
   try {
-    const response = await fetch(`${API_URL}/academic-years/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...data,
-        year_order: data.year_order || 1
-      }),
+    const response = await apiClient.put<Year>(`/academic-years/${id}`, {
+      ...data,
+      year_order: data.year_order || 1
     })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || "Không thể cập nhật năm học")
-    }
-
-    return response.json()
+    toast.success("Cập nhật năm học thành công")
+    return response
   } catch (error) {
     console.error("Error updating year:", error)
-    throw error
+    toast.error("Không thể cập nhật năm học")
+    return null
   }
 }
 
-export async function deleteYear(id: number): Promise<void> {
+export async function deleteYear(id: number): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/academic-years/${id}`, {
-      method: "DELETE",
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || "Không thể xóa năm học")
-    }
+    await apiClient.delete(`/academic-years/${id}`)
+    toast.success("Xóa năm học thành công")
+    return true
   } catch (error) {
     console.error("Error deleting year:", error)
-    throw error
+    toast.error("Không thể xóa năm học")
+    return false
   }
 } 

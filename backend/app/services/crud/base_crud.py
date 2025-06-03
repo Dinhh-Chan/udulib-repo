@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.inspection import inspect
 
 from app.models.subject import Subject
 from app.models.major import Major
@@ -24,35 +25,24 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.model = model
 
     async def get(self, db: AsyncSession, id: Any) -> Optional[ModelType]:
-        stmt = (
-            select(self.model)
-            .options(
-                joinedload(self.model.subject).joinedload(Subject.major),
-                joinedload(self.model.subject).joinedload(Subject.academic_year),
-                joinedload(self.model.user),
-                selectinload(self.model.tags)
-            )
-            .where(self.model.document_id == id)
-        )
+        # Lấy primary key column name
+        pk_columns = inspect(self.model).primary_key
+        if len(pk_columns) == 1:
+            pk_column = pk_columns[0]
+            stmt = select(self.model).where(pk_column == id)
+        else:
+            # Fallback cho composite keys
+            stmt = select(self.model).where(self.model.id == id)
+        
         result = await db.execute(stmt)
-        return result.unique().scalar_one_or_none()
+        return result.scalar_one_or_none()
 
     async def get_multi(
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
-        stmt = (
-            select(self.model)
-            .options(
-                joinedload(self.model.subject).joinedload(Subject.major),
-                joinedload(self.model.subject).joinedload(Subject.academic_year),
-                joinedload(self.model.user),
-                selectinload(self.model.tags)
-            )
-            .offset(skip)
-            .limit(limit)
-        )
+        stmt = select(self.model).offset(skip).limit(limit)
         result = await db.execute(stmt)
-        return result.unique().scalars().all()
+        return result.scalars().all()
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         obj_in_data = jsonable_encoder(obj_in)
@@ -98,26 +88,16 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, db: AsyncSession, *, filter_condition: Any, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
         """Get records by a filter condition"""
-        stmt = (
-            select(self.model)
-            .options(
-                joinedload(self.model.subject).joinedload(Subject.major),
-                joinedload(self.model.subject).joinedload(Subject.academic_year),
-                joinedload(self.model.user),
-                selectinload(self.model.tags)
-            )
-            .filter(filter_condition)
-            .offset(skip)
-            .limit(limit)
-        )
+        stmt = select(self.model).filter(filter_condition).offset(skip).limit(limit)
         result = await db.execute(stmt)
-        return result.unique().scalars().all()
+        return result.scalars().all()
 
     async def count_by_filter(self, db: AsyncSession, *, filter_condition: Any) -> int:
         """Count records by a filter condition"""
         stmt = select(self.model).filter(filter_condition).count()
         result = await db.execute(stmt)
         return result.scalar()
+        
     async def get_by_id(self, db: AsyncSession, *, id: Any, pk_field: str = "id") -> Optional[ModelType]:
         """Truy vấn bản ghi theo khóa chính (có thể tùy chỉnh tên field)."""
         stmt = select(self.model).where(getattr(self.model, pk_field) == id)
