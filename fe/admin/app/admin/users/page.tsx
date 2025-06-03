@@ -39,7 +39,9 @@ export default function UsersPage() {
     setLoading(true)
     try {
       const data = await getUsers({ search: searchQuery })
-      setUsers(data)
+      // Sắp xếp người dùng theo ID tăng dần
+      const sortedUsers = [...data].sort((a, b) => a.user_id - b.user_id)
+      setUsers(sortedUsers)
     } catch (error) {
       console.error("Error loading users:", error)
       toast.error("Không thể tải danh sách người dùng")

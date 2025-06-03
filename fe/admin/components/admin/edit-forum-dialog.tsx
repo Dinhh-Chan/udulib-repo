@@ -42,13 +42,20 @@ export function EditForumDialog({ forum, open, onOpenChange, onSuccess }: EditFo
     setIsLoading(true)
 
     try {
+      console.log("Updating forum with ID:", forum.forum_id)
+      console.log("Description data:", { description })
       await updateForum(forum.forum_id, { description })
       toast.success("Cập nhật diễn đàn thành công")
       onOpenChange(false)
       onSuccess?.()
     } catch (error) {
       console.error("Error updating forum:", error)
-      toast.error("Không thể cập nhật diễn đàn")
+      if (error instanceof Error) {
+        console.error("Error message:", error.message)
+        toast.error(`Không thể cập nhật diễn đàn: ${error.message}`)
+      } else {
+        toast.error("Không thể cập nhật diễn đàn: Lỗi không xác định")
+      }
     } finally {
       setIsLoading(false)
     }

@@ -1,4 +1,4 @@
-import { apiClient } from "./client"
+import { apiClient, apiClientAxios } from "./client"
 
 export interface Forum {
   forum_id: number
@@ -103,7 +103,8 @@ export async function createForum(data: ForumCreate): Promise<Forum> {
 }
 
 export async function updateForum(id: number, data: ForumUpdate): Promise<Forum> {
-  return apiClient.put<Forum>(`/forums/${id}`, data)
+  const response = await apiClientAxios.put<Forum>(`/forums/${id}`, data)
+  return response.data
 }
 
 export async function deleteForum(id: number): Promise<void> {
@@ -124,7 +125,8 @@ export async function createForumPost(data: ForumPostCreate): Promise<ForumPost>
 }
 
 export async function updateForumPost(id: number, data: Partial<ForumPostCreate> & { status?: string }): Promise<ForumPost> {
-  return apiClient.put<ForumPost>(`/forum-posts/${id}`, data)
+  const response = await apiClientAxios.put<ForumPost>(`/forum-posts/${id}`, data)
+  return response.data
 }
 
 export async function deleteForumPost(id: number): Promise<void> {
@@ -145,7 +147,8 @@ export async function createForumReply(data: ForumReplyCreate): Promise<ForumRep
 }
 
 export async function updateForumReply(id: number, data: Partial<ForumReplyCreate> & { status?: string }): Promise<ForumReply> {
-  return apiClient.put<ForumReply>(`/forum-replies/${id}`, data)
+  const response = await apiClientAxios.put<ForumReply>(`/forum-replies/${id}`, data)
+  return response.data
 }
 
 export async function deleteForumReply(id: number): Promise<void> {

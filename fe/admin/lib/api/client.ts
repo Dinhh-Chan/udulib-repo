@@ -50,10 +50,15 @@ class ApiClient {
     }
 
     try {
+      console.log(`API Request: ${options.method || 'GET'} ${url}`, config.body ? JSON.parse(config.body as string) : null)
       const response = await fetch(url, config)
       const data = await response.json()
+      console.log(`API Response: ${response.status}`, data)
 
       if (!response.ok) {
+        if (response.status === 405) {
+          throw new Error(`Method ${options.method} Not Allowed for endpoint ${endpoint}`)
+        }
         if (data.detail) {
           if (Array.isArray(data.detail)) {
             const errorMessage = data.detail[0]?.msg || "Validation error"
@@ -61,7 +66,7 @@ class ApiClient {
           }
           throw new Error(data.detail)
         }
-        throw new Error("An error occurred")
+        throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
       }
 
       return data
@@ -90,6 +95,14 @@ class ApiClient {
     return this.request<T>(endpoint, {
       ...options,
       method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async patch<T>(endpoint: string, data: any, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "PATCH",
       body: JSON.stringify(data),
     })
   }

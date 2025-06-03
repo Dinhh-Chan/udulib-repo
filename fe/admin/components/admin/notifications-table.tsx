@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Bell, Check, Trash2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { MoreHorizontal, Bell, Check, Trash2, Search } from "lucide-react"
 import { toast } from "sonner"
 import {
   getNotifications,
@@ -35,13 +36,17 @@ interface NotificationsTableProps {
 
 export function NotificationsTable({ page = 1, per_page = 20, onReload }: NotificationsTableProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const fetchNotifications = async () => {
     try {
       setIsLoading(true)
       const data = await getNotifications({ page, per_page })
-      setNotifications(Array.isArray(data) ? data : [])
+      const notificationsArray = Array.isArray(data) ? data : []
+      setNotifications(notificationsArray)
+      setFilteredNotifications(notificationsArray)
     } catch (error) {
       console.error("Error fetching notifications:", error)
       toast.error("Không thể tải danh sách thông báo")
@@ -53,6 +58,20 @@ export function NotificationsTable({ page = 1, per_page = 20, onReload }: Notifi
   useEffect(() => {
     fetchNotifications()
   }, [page, per_page])
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredNotifications(notifications)
+    } else {
+      const query = searchQuery.toLowerCase()
+      const filtered = notifications.filter(
+        notification => 
+          notification.title.toLowerCase().includes(query) || 
+          notification.content.toLowerCase().includes(query)
+      )
+      setFilteredNotifications(filtered)
+    }
+  }, [searchQuery, notifications])
 
   const handleMarkAsRead = async (id: number) => {
     try {
@@ -96,7 +115,16 @@ export function NotificationsTable({ page = 1, per_page = 20, onReload }: Notifi
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="relative w-80">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm kiếm thông báo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
         <Button variant="outline" onClick={handleMarkAllAsRead}>
           <Check className="mr-2 h-4 w-4" />
           Đánh dấu tất cả là đã đọc
@@ -116,14 +144,14 @@ export function NotificationsTable({ page = 1, per_page = 20, onReload }: Notifi
             </TableRow>
           </TableHeader>
           <TableBody>
-            {notifications.length === 0 ? (
+            {filteredNotifications.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center">
-                  Không có thông báo nào
+                  {searchQuery ? "Không tìm thấy thông báo phù hợp" : "Không có thông báo nào"}
                 </TableCell>
               </TableRow>
             ) : (
-              notifications.map((notification) => (
+              filteredNotifications.map((notification) => (
                 <TableRow key={notification.notification_id} className={notification.is_read ? "" : "bg-blue-50"}>
                   <TableCell className="font-medium">{notification.title}</TableCell>
                   <TableCell>{notification.content}</TableCell>
