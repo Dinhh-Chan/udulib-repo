@@ -109,8 +109,6 @@ async def create_forum(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Lỗi khi tạo forum. Vui lòng kiểm tra lại thông tin môn học."
         )
-<<<<<<< HEAD
-=======
 
 @router.put("/{forum_id}", response_model=Forum)
 async def update_forum(
@@ -176,7 +174,6 @@ async def update_forum(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Lỗi khi cập nhật forum"
         )
->>>>>>> befe0c218c91e54fcb443113b695f84fa0e5cb5d
 
 @router.delete("/{forum_id}")
 async def delete_forum(
