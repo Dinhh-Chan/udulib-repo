@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
@@ -20,7 +20,7 @@ async def read_notifications(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Lấy danh sách notifications của user hiện tại.
+    Lấy danh sách thông báo của người dùng hiện tại.
     """
     crud = NotificationCRUD(db)
     skip = (page - 1) * per_page
@@ -41,11 +41,63 @@ async def create_notification(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Tạo notification mới.
+    Tạo thông báo mới cho người dùng hiện tại.
     """
     crud = NotificationCRUD(db)
-    notification = await crud.create(obj_in=notification_in, user_id=current_user.user_id)
-    return notification
+    try:
+        notification = await crud.create(obj_in=notification_in, user_id=current_user.user_id)
+        return notification
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dữ liệu không hợp lệ: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi tạo thông báo"
+        )
+
+@router.post("/admin", response_model=Notification)
+async def create_notification_for_user(
+    *,
+    db: AsyncSession = Depends(get_db),
+    notification_in: NotificationCreate,
+    target_user_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Tạo thông báo cho user_id cụ thể.
+    Chỉ admin mới có quyền sử dụng API này.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
+        )
+    
+    if not target_user_id or target_user_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id phải là số nguyên dương"
+        )
+    
+    crud = NotificationCRUD(db)
+    
+    try:
+        notification = await crud.create(obj_in=notification_in, user_id=target_user_id)
+        return notification
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dữ liệu không hợp lệ: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi tạo thông báo. Vui lòng kiểm tra lại thông tin người dùng."
+        )
 
 @router.get("/{notification_id}", response_model=Notification)
 async def read_notification(
@@ -55,19 +107,19 @@ async def read_notification(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Lấy thông tin chi tiết của một notification.
+    Lấy thông tin chi tiết của một thông báo.
     """
     crud = NotificationCRUD(db)
     notification = await crud.get_by_id(id=notification_id)
     if not notification:
         raise HTTPException(
-            status_code=404,
-            detail="Notification not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy thông báo"
         )
     if notification.user_id != current_user.user_id and current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền truy cập thông báo này"
         )
     return notification
 
@@ -80,22 +132,28 @@ async def update_notification(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Cập nhật thông tin của một notification.
+    Cập nhật thông tin của một thông báo.
     """
     crud = NotificationCRUD(db)
     notification = await crud.get_by_id(id=notification_id)
     if not notification:
         raise HTTPException(
-            status_code=404,
-            detail="Notification not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy thông báo"
         )
     if notification.user_id != current_user.user_id and current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền cập nhật thông báo này"
         )
-    notification = await crud.update(db_obj=notification, obj_in=notification_in)
-    return notification
+    try:
+        notification = await crud.update(db_obj=notification, obj_in=notification_in)
+        return notification
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi cập nhật thông báo"
+        )
 
 @router.delete("/{notification_id}")
 async def delete_notification(
@@ -105,27 +163,34 @@ async def delete_notification(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Xóa một notification.
+    Xóa một thông báo.
     """
     crud = NotificationCRUD(db)
     notification = await crud.get_by_id(id=notification_id)
     if not notification:
         raise HTTPException(
-            status_code=404,
-            detail="Notification not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy thông báo"
         )
     if notification.user_id != current_user.user_id and current_user.role != "admin":
         raise HTTPException(
-            status_code=403,
-            detail="Not enough permissions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền xóa thông báo này"
         )
-    success = await crud.delete(id=notification_id)
-    if not success:
+    
+    try:
+        success = await crud.delete(id=notification_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Lỗi khi xóa thông báo"
+            )
+        return {"status": "success", "message": "Thông báo đã được xóa thành công"}
+    except Exception as e:
         raise HTTPException(
-            status_code=404,
-            detail="Notification not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi xóa thông báo"
         )
-    return {"status": "success"}
 
 @router.post("/mark-all-read")
 async def mark_all_notifications_as_read(
@@ -134,8 +199,14 @@ async def mark_all_notifications_as_read(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Đánh dấu tất cả notifications của user hiện tại là đã đọc.
+    Đánh dấu tất cả thông báo của người dùng hiện tại là đã đọc.
     """
     crud = NotificationCRUD(db)
-    success = await crud.mark_all_as_read(user_id=current_user.user_id)
-    return {"status": "success"} 
+    try:
+        success = await crud.mark_all_as_read(user_id=current_user.user_id)
+        return {"status": "success", "message": "Đã đánh dấu tất cả thông báo là đã đọc"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi cập nhật trạng thái thông báo"
+        ) 
