@@ -12,3 +12,4 @@ from app.api.v1.endpoints import document_history
 from app.api.v1.endpoints import forums
 from app.api.v1.endpoints import forum_posts
 from app.api.v1.endpoints import forum_replies
+from app.api.v1.endpoints import password_reset
