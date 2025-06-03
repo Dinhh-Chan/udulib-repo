@@ -56,13 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const urlParams = new URLSearchParams(window.location.search)
     const callbackUrl = urlParams.get("callbackUrl")
     
-<<<<<<< HEAD
-=======
-    toast.success("Đăng nhập thành công", {
-      duration: 2000,
-      position: "top-center"
-    })
->>>>>>> 1d4cea5 (Merge branch 'sangne' of https://github.com/Dinhh-Chan/udulib-repo into tuantuan)
 
     // Nếu có callbackUrl thì chuyển hướng đến đó, nếu không thì về trang chủ
     if (callbackUrl) {
