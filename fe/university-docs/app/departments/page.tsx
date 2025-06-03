@@ -67,7 +67,7 @@ export default function DepartmentsPage() {
       const subjectsData = await subjectsRes.json()
       setSubjects(Array.isArray(subjectsData) ? subjectsData : [])
 
-      const documentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`, {
+      const documentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       const documentsData = await documentsRes.json()

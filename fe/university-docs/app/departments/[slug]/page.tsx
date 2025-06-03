@@ -75,7 +75,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
         setLoading(false)
         if (Array.isArray(data)) {
           data.forEach((subject: Subject) => {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${subject.subject_id}`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public?subject_id=${subject.subject_id}`, {
               headers: token ? { Authorization: `Bearer ${token}` } : {},
             })
               .then(res => res.json())

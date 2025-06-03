@@ -75,7 +75,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
         setMajor(majorData);
 
         const documentsRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${courseSlug}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/documents/public?subject_id=${courseSlug}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const documentsData = await documentsRes.json();
