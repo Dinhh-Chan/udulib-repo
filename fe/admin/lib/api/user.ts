@@ -1,4 +1,4 @@
-import { apiClient } from "./client"
+import { apiClientAxios as apiClient } from "./client"
 import { AxiosResponse } from "axios"
 
 export interface User {
@@ -11,24 +11,8 @@ export interface User {
 }
 
 export const getUserProfile = async (userId: string): Promise<User> => {
-  const token = localStorage.getItem("access_token")
-  
-  if (!token) {
-    throw new Error("Không tìm thấy token xác thực")
-  }
-
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    }
-  })
-
-  if (!response.ok) {
-    throw new Error("Không thể lấy thông tin người dùng")
-  }
-
-  return response.json()
+  const response: AxiosResponse<User> = await apiClient.get(`/users/${userId}`)
+  return response.data
 }
 
 export interface GetUsersParams {

@@ -149,17 +149,17 @@ function DashboardContent() {
             <CardHeader className={cn("flex flex-row items-center justify-between space-y-0 pb-2", stat.bgColor)}>
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className={cn("h-4 w-4", stat.color)} />
-            </CardHeader>
+          </CardHeader>
             <CardContent className="pt-4">
               <div className={cn("text-2xl font-bold", stat.color)}>{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
                 {stat.title === "Tổng số tài liệu" && "Tài liệu trong hệ thống"}
                 {stat.title === "Lượt xem" && "Tổng lượt xem tài liệu"}
                 {stat.title === "Lượt tải" && "Tổng lượt tải tài liệu"}
                 {stat.title === "Người dùng" && "Người dùng đã đăng ký"}
-              </p>
-            </CardContent>
-          </Card>
+            </p>
+          </CardContent>
+        </Card>
         ))}
       </div>
 

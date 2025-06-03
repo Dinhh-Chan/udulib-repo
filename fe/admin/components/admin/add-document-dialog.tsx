@@ -2,6 +2,7 @@
 
 import { useState, useEffect, ReactNode } from "react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 import {
   Dialog,
   DialogContent,
@@ -22,9 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { apiClient } from "@/lib/api/client"
+import { apiClientAxios as apiClient } from "@/lib/api/client"
 import { Badge } from "@/components/ui/badge"
-import { X, Plus } from "lucide-react"
+import { X, Plus, Loader2 } from "lucide-react"
 import {
   Command,
   CommandEmpty,
@@ -37,6 +38,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { getSubjects } from "@/lib/api/subject"
+import { getTags, createTag } from "@/lib/api/tags"
 
 interface AddDocumentDialogProps {
   children?: ReactNode
@@ -56,30 +59,40 @@ interface Tag {
 }
 
 export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: AddDocumentDialogProps) {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState("")
   const [openTagCombobox, setOpenTagCombobox] = useState(false)
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false)
+  const [isLoadingTags, setIsLoadingTags] = useState(false)
+  const [searchTagTerm, setSearchTagTerm] = useState("")
 
   const fetchSubjects = async () => {
     try {
-      const data = await apiClient.get<{ subjects: Subject[] }>("/subjects")
-      setSubjects(data.subjects || [])
+      setIsLoadingSubjects(true)
+      const response = await getSubjects()
+      setSubjects(Array.isArray(response) ? response : [])
     } catch (error) {
       console.error("Error fetching subjects:", error)
       toast.error("Không thể tải danh sách môn học")
+    } finally {
+      setIsLoadingSubjects(false)
     }
   }
 
   const fetchTags = async () => {
     try {
-      const data = await apiClient.get<{ tags: Tag[] }>("/tags")
-      setTags(data.tags || [])
+      setIsLoadingTags(true)
+      const response = await getTags()
+      setTags(Array.isArray(response) ? response : [])
     } catch (error) {
       console.error("Error fetching tags:", error)
       toast.error("Không thể tải danh sách tags")
+    } finally {
+      setIsLoadingTags(false)
     }
   }
 
@@ -103,11 +116,27 @@ export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: A
       }
 
       // Tạo tài liệu mới
-      await apiClient.postFormData("/documents", formData)
+      const response = await apiClient.post("/documents", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
 
       toast.success("Tạo tài liệu thành công")
       onOpenChange(false)
-      onSuccess?.()
+      
+      // Gọi callback onSuccess nếu có
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        // Làm mới trang nếu không có callback
+        router.refresh()
+      }
+
+      // Sau 500ms, làm mới toàn bộ trang để đảm bảo dữ liệu được cập nhật
+      setTimeout(() => {
+        router.refresh()
+      }, 500)
     } catch (error) {
       console.error("Error creating document:", error)
       toast.error("Không thể tạo tài liệu mới")
@@ -127,8 +156,14 @@ export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: A
           setSelectedTags([...selectedTags, existingTag.tag_name])
         }
       } else {
-        // Thêm vào danh sách tags đã chọn
-        setSelectedTags([...selectedTags, newTag])
+        // Tạo tag mới trên server
+        const createdTag = await createTag(newTag)
+        if (createdTag) {
+          // Thêm vào danh sách tags đã chọn
+          setSelectedTags([...selectedTags, newTag])
+          // Cập nhật danh sách tags
+          await fetchTags()
+        }
       }
       setNewTag("")
     } catch (error) {
@@ -146,6 +181,10 @@ export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: A
     }
     setOpenTagCombobox(false)
   }
+
+  const filteredTags = searchTagTerm 
+    ? tags.filter(tag => tag.tag_name.toLowerCase().includes(searchTagTerm.toLowerCase()))
+    : tags
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,18 +226,29 @@ export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: A
               <Label htmlFor="subject_id" className="text-right">
                 Môn học
               </Label>
-              <Select name="subject_id" required>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Chọn môn học" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.subject_id} value={subject.subject_id.toString()}>
-                      {subject.subject_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="col-span-3">
+                <Select name="subject_id" required>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingSubjects ? "Đang tải..." : "Chọn môn học"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingSubjects ? (
+                      <div className="flex items-center justify-center py-2">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span>Đang tải danh sách môn học...</span>
+                      </div>
+                    ) : subjects.length === 0 ? (
+                      <SelectItem value="empty" disabled>Không có môn học nào</SelectItem>
+                    ) : (
+                      subjects.map((subject) => (
+                        <SelectItem key={subject.subject_id} value={subject.subject_id.toString()}>
+                          {subject.subject_name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="file" className="text-right">
@@ -228,23 +278,51 @@ export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: A
                         aria-expanded={openTagCombobox}
                         className="w-full justify-between"
                       >
-                        Chọn tag có sẵn
-                        <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        {isLoadingTags ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Đang tải tags...
+                          </>
+                        ) : (
+                          <>
+                            Chọn tag có sẵn
+                            <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0">
                       <Command>
-                        <CommandInput placeholder="Tìm kiếm tag..." />
+                        <CommandInput 
+                          placeholder="Tìm kiếm tag..." 
+                          value={searchTagTerm}
+                          onValueChange={setSearchTagTerm}
+                        />
                         <CommandEmpty>Không tìm thấy tag.</CommandEmpty>
                         <CommandGroup>
-                          {tags.map((tag) => (
-                            <CommandItem
-                              key={tag.tag_id}
-                              onSelect={() => handleSelectTag(tag.tag_name)}
-                            >
-                              {tag.tag_name}
-                            </CommandItem>
-                          ))}
+                          {isLoadingTags ? (
+                            <div className="flex items-center justify-center py-2">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span>Đang tải...</span>
+                            </div>
+                          ) : filteredTags.length === 0 ? (
+                            <CommandItem disabled>Không có tag nào phù hợp</CommandItem>
+                          ) : (
+                            filteredTags.map((tag) => (
+                              <CommandItem
+                                key={tag.tag_id}
+                                onSelect={() => handleSelectTag(tag.tag_name)}
+                                className="flex items-center"
+                              >
+                                <span className={selectedTags.includes(tag.tag_name) ? "font-bold" : ""}>
+                                  {tag.tag_name}
+                                </span>
+                                {selectedTags.includes(tag.tag_name) && (
+                                  <Badge className="ml-auto" variant="outline">Đã chọn</Badge>
+                                )}
+                              </CommandItem>
+                            ))
+                          )}
                         </CommandGroup>
                       </Command>
                     </PopoverContent>
@@ -308,7 +386,12 @@ export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: A
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Đang tạo..." : "Tạo tài liệu"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Đang tạo...
+                </>
+              ) : "Tạo tài liệu"}
             </Button>
           </DialogFooter>
         </form>

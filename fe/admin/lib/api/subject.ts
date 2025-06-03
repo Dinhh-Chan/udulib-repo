@@ -1,15 +1,28 @@
 import { Subject, SubjectCreate, SubjectUpdate } from "@/types/subject"
 import { apiClient } from "./client"
+import { apiClientAxios } from "./client"
+import { AxiosResponse } from "axios"
 import { toast } from "sonner"
 
 interface GetSubjectsParams {
   search?: string
+  major_id?: number
+  year_id?: number
+  page?: number
+  per_page?: number
 }
 
-export async function getSubjects(params: GetSubjectsParams = {}) {
-  const { search = "" } = params
-  const response = await apiClient.get<Subject[]>(`/subjects?search=${search}`)
-  return response
+export async function getSubjects(params: GetSubjectsParams = {}): Promise<Subject[]> {
+  try {
+    console.log("Gọi API lấy danh sách môn học")
+    const response: AxiosResponse<Subject[]> = await apiClientAxios.get("/subjects", { params })
+    console.log("Kết quả API subjects:", response.data)
+    return response.data
+  } catch (error) {
+    console.error("Error fetching subjects:", error)
+    toast.error("Không thể tải danh sách môn học")
+    return []
+  }
 }
 
 export async function getSubject(id: number): Promise<Subject | null> {

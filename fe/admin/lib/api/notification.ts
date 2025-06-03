@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client"
+import { apiClientAxios as apiClient } from "./client"
 import { AxiosResponse } from "axios"
 
 export type NotificationType = "info" | "warning" | "success" | "error"

@@ -143,3 +143,49 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_URL)
+
+export const apiClientAxios = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+  headers: {
+    "Content-Type": "application/json",
+  },
+})
+
+// Thêm interceptor để xử lý token
+apiClientAxios.interceptors.request.use((config) => {
+  // Kiểm tra cả hai nơi lưu token để đảm bảo tương thích
+  const token = localStorage.getItem("access_token") || localStorage.getItem("token")
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Thêm interceptor để xử lý response
+apiClientAxios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error.response?.data || error.message)
+    
+    // Nếu status là 401 thì đăng xuất và chuyển đến trang login
+    if (error.response?.status === 401) {
+      localStorage.removeItem("access_token")
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      window.location.href = "/login"
+    }
+    
+    // Hiển thị thông báo lỗi
+    if (error.response?.data?.detail) {
+      if (typeof error.response.data.detail === 'string') {
+        toast.error(error.response.data.detail)
+      } else if (Array.isArray(error.response.data.detail)) {
+        toast.error(error.response.data.detail[0]?.msg || "Validation error")
+      }
+    } else {
+      toast.error("Có lỗi xảy ra, vui lòng thử lại sau")
+    }
+    
+    return Promise.reject(error)
+  }
+)
