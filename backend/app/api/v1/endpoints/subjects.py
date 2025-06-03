@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
@@ -20,7 +20,7 @@ async def read_subjects(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Retrieve subjects.
+    Lấy danh sách môn học.
     """
     crud = SubjectCRUD(db)
     skip = (page - 1) * per_page
@@ -35,14 +35,14 @@ async def create_subject(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create new subject.
+    Tạo môn học mới.
     """
     crud = SubjectCRUD(db)
     subject = await crud.get_by_code(code=subject_in.subject_code)
     if subject:
         raise HTTPException(
-            status_code=400,
-            detail="Subject with this code already exists."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Môn học với mã này đã tồn tại"
         )
     subject = await crud.create(obj_in=subject_in)
     return subject
@@ -56,14 +56,14 @@ async def update_subject(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Update a subject.
+    Cập nhật thông tin môn học.
     """
     crud = SubjectCRUD(db)
     subject = await crud.get_by_id(id=subject_id)
     if not subject:
         raise HTTPException(
-            status_code=404,
-            detail="Subject not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy môn học"
         )
     subject = await crud.update(id=subject_id, obj_in=subject_in)
     return subject
@@ -76,14 +76,14 @@ async def read_subject(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get subject by ID.
+    Lấy thông tin chi tiết của một môn học.
     """
     crud = SubjectCRUD(db)
     subject = await crud.get_by_id(id=subject_id)
     if not subject:
         raise HTTPException(
-            status_code=404,
-            detail="Subject not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy môn học"
         )
     return subject
 
@@ -95,17 +95,17 @@ async def delete_subject(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Delete a subject.
+    Xóa một môn học.
     """
     crud = SubjectCRUD(db)
     subject = await crud.get_by_id(id=subject_id)
     if not subject:
         raise HTTPException(
-            status_code=404,
-            detail="Subject not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy môn học"
         )
     await crud.delete(id=subject_id)
-    return {"status": "success"}
+    return {"status": "success", "message": "Môn học đã được xóa thành công"}
 
 @router.get("/academic-year/{academic_year_id}", response_model=List[Subject])
 async def read_subjects_by_academic_year(

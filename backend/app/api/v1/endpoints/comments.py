@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
@@ -23,7 +23,7 @@ async def read_comments(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Retrieve comments.
+    Lấy danh sách bình luận.
     Nếu parent_comment_id được chỉ định, sẽ trả về replies của comment đó.
     Nếu include_replies=False (mặc định), chỉ trả về top-level comments.
     """
@@ -47,7 +47,7 @@ async def create_comment(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create new comment.
+    Tạo bình luận mới.
     Có thể tạo comment mới hoặc reply comment bằng cách chỉ định parent_comment_id.
     """
     crud = CommentCRUD(db)
@@ -56,7 +56,7 @@ async def create_comment(
         return comment
     except ValueError as e:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
 
@@ -69,20 +69,20 @@ async def update_comment(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Update a comment.
+    Cập nhật bình luận.
     """
     crud = CommentCRUD(db)
     try:
         comment = await crud.update(id=comment_id, obj_in=comment_in, user_id=current_user.user_id)
         if not comment:
             raise HTTPException(
-                status_code=404,
-                detail="Comment not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy bình luận"
             )
         return comment
     except ValueError as e:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         )
 
@@ -95,15 +95,15 @@ async def read_comment(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get comment by ID.
+    Lấy thông tin chi tiết của một bình luận.
     Có thể bao gồm tất cả replies bằng cách set include_replies=true.
     """
     crud = CommentCRUD(db)
     comment = await crud.get_by_id(id=comment_id, include_replies=include_replies)
     if not comment:
         raise HTTPException(
-            status_code=404,
-            detail="Comment not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy bình luận"
         )
     return comment
 
@@ -117,7 +117,6 @@ async def get_comment_replies(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get all replies of a specific comment.
     Lấy tất cả replies của một comment cụ thể.
     """
     crud = CommentCRUD(db)
@@ -127,8 +126,8 @@ async def get_comment_replies(
     parent_comment = await crud.get_by_id(id=comment_id)
     if not parent_comment:
         raise HTTPException(
-            status_code=404,
-            detail="Parent comment not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy bình luận gốc"
         )
     
     replies = await crud.get_replies(
@@ -146,7 +145,7 @@ async def delete_comment(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Delete a comment.
+    Xóa một bình luận.
     Lưu ý: Xóa comment sẽ tự động xóa tất cả replies (do CASCADE).
     """
     crud = CommentCRUD(db)
@@ -154,12 +153,12 @@ async def delete_comment(
         success = await crud.delete(id=comment_id, user_id=current_user.user_id)
         if not success:
             raise HTTPException(
-                status_code=404,
-                detail="Comment not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy bình luận"
             )
-        return {"status": "success", "message": "Comment và tất cả replies đã được xóa"}
+        return {"status": "success", "message": "Bình luận và tất cả replies đã được xóa thành công"}
     except ValueError as e:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
         ) 

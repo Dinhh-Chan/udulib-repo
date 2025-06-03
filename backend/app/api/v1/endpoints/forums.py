@@ -15,7 +15,7 @@ async def read_forums(
     db: AsyncSession = Depends(get_db),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách forums.
@@ -30,7 +30,7 @@ async def read_forum(
     *,
     db: AsyncSession = Depends(get_db),
     forum_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một forum.
@@ -39,8 +39,8 @@ async def read_forum(
     forum = await crud.get_by_id(id=forum_id)
     if not forum:
         raise HTTPException(
-            status_code=404,
-            detail="Forum not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy forum"
         )
     return forum
 
@@ -49,7 +49,7 @@ async def read_forum_by_subject(
     *,
     db: AsyncSession = Depends(get_db),
     subject_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy forum theo subject_id.
@@ -58,8 +58,8 @@ async def read_forum_by_subject(
     forum = await crud.get_by_subject_id(subject_id=subject_id)
     if not forum:
         raise HTTPException(
-            status_code=404,
-            detail="Forum not found for this subject"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy forum cho môn học này"
         )
     return forum
 
@@ -68,49 +68,77 @@ async def create_forum(
     *,
     db: AsyncSession = Depends(get_db),
     forum_in: ForumCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo forum mới.
     Chỉ admin mới có quyền tạo forum.
     """
-    # if current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
-    
-    crud = ForumCRUD(db)
-    # Kiểm tra xem forum cho subject đã tồn tại chưa
-    existing_forum = await crud.get_by_subject_id(forum_in.subject_id)
-    if existing_forum:
+    if current_user.role != "admin":
         raise HTTPException(
-            status_code=400,
-            detail="Forum for this subject already exists"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
         )
     
-    forum = await crud.create(obj_in=forum_in)
-    return forum
+    if not forum_in.subject_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="subject_id là bắt buộc"
+        )
+    
+    crud = ForumCRUD(db)
+    
+    try:
+        existing_forum = await crud.get_by_subject_id(forum_in.subject_id)
+        if existing_forum:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Forum cho môn học này đã tồn tại"
+            )
+        
+        forum = await crud.create(obj_in=forum_in)
+        return forum
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dữ liệu không hợp lệ: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi tạo forum. Vui lòng kiểm tra lại thông tin môn học."
+        )
 
 @router.delete("/{forum_id}")
 async def delete_forum(
     *,
     db: AsyncSession = Depends(get_db),
     forum_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Xóa một forum.
     Chỉ admin mới có quyền xóa.
     """
-    # if current_user.role != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Not enough permissions"
-    #     )
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền thực hiện thao tác này"
+        )
     
     crud = ForumCRUD(db)
+    forum = await crud.get_by_id(id=forum_id)
+    if not forum:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy forum"
+        )
+    
     success = await crud.delete(id=forum_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Forum not found")
-    return {"message": "Forum deleted successfully"} 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi xóa forum"
+        )
+    return {"status": "success", "message": "Forum đã được xóa thành công"} 

@@ -7,12 +7,14 @@ from app.schemas.user import User
 
 class ForumBase(BaseModel):
     subject_id: int
+    description: Optional[str] = None
 
 class ForumCreate(ForumBase):
     pass
 
 class ForumUpdate(BaseModel):
     subject_id: Optional[int] = None
+    description: Optional[str] = None
 
 class Forum(ForumBase):
     forum_id: int
