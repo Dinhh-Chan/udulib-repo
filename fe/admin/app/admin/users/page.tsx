@@ -16,10 +16,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Plus, Search } from "lucide-react"
+import { MoreHorizontal, Plus, Search, Eye, Pencil, Trash } from "lucide-react"
 import type { User } from "@/types/user"
 import { getUsers, deleteUser } from "@/lib/api/users"
 import { AddUserDialog } from "./add-user-dialog"
@@ -170,14 +171,15 @@ export default function UsersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Tác vụ</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => setSelectedUser(user)}>
-                            Chỉnh sửa
+                            <Pencil className="mr-2 h-4 w-4" /> Chỉnh sửa
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDelete(user.user_id)}
                           >
-                            Xóa
+                            <Trash className="mr-2 h-4 w-4" /> Xóa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

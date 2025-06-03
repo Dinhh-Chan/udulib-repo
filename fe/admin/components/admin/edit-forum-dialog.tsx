@@ -9,36 +9,42 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { updateForum, type Forum } from "@/lib/api/forum"
-import { Pencil } from "lucide-react"
+import { type Subject } from "@/types/subject"
 
-interface EditForumDialogProps {
-  forum: Forum
-  onSuccess?: () => void
-  trigger?: React.ReactNode
+interface ForumWithSubject extends Forum {
+  subjectData?: Subject
 }
 
-export function EditForumDialog({ forum, onSuccess, trigger }: EditForumDialogProps) {
-  const [open, setOpen] = useState(false)
+export interface EditForumDialogProps {
+  forum: ForumWithSubject
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
+}
+
+export function EditForumDialog({ forum, open, onOpenChange, onSuccess }: EditForumDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [description, setDescription] = useState(forum.description)
+  const [description, setDescription] = useState(forum.description || "")
 
   useEffect(() => {
-    setDescription(forum.description)
-  }, [forum])
+    if (open && forum) {
+      setDescription(forum.description || "")
+    }
+  }, [open, forum])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
 
     try {
-      setIsLoading(true)
       await updateForum(forum.forum_id, { description })
-      toast.success("Đã cập nhật diễn đàn")
-      setOpen(false)
+      toast.success("Cập nhật diễn đàn thành công")
+      onOpenChange(false)
       onSuccess?.()
     } catch (error) {
       console.error("Error updating forum:", error)
@@ -49,40 +55,43 @@ export function EditForumDialog({ forum, onSuccess, trigger }: EditForumDialogPr
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="ghost" size="icon">
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[550px]">
+        <DialogHeader>
+          <DialogTitle>Chỉnh sửa diễn đàn</DialogTitle>
+          <DialogDescription>
+            Cập nhật thông tin diễn đàn. Nhấn Lưu khi hoàn tất.
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa diễn đàn</DialogTitle>
-            <DialogDescription>
-              Chỉnh sửa thông tin diễn đàn.
-            </DialogDescription>
-          </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="description">Mô tả</label>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="subject" className="text-right">
+                Môn học
+              </Label>
+              <div className="col-span-3">
+                <div className="p-2 bg-muted rounded-md">
+                  {forum.subjectData?.subject_name || "Không có thông tin môn học"}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Mô tả
+              </Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Nhập mô tả diễn đàn"
-                disabled={isLoading}
+                placeholder="Nhập mô tả cho diễn đàn"
+                className="col-span-3"
+                rows={4}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              type="submit"
-              disabled={isLoading}
-            >
-              {isLoading ? "Đang cập nhật..." : "Cập nhật"}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
           </DialogFooter>
         </form>
