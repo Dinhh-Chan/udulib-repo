@@ -1,10 +1,15 @@
 from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import mimetypes
 import json
+from minio import Minio
+from minio.error import S3Error
+import uuid
+import logging
+import io
 
 from app.models.base import get_db
 from app.dependencies.auth import get_current_user, require_role
@@ -20,6 +25,29 @@ from app.schemas.document import (
 )
 
 router = APIRouter()
+
+# Cấu hình MinIO client
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
+MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME", "documents")
+
+# Khởi tạo MinIO client
+minio_client = Minio(
+    MINIO_ENDPOINT,
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
+    secure=False  # Đặt thành True nếu sử dụng HTTPS
+)
+
+# Tạo bucket nếu chưa tồn tại
+try:
+    if not minio_client.bucket_exists(MINIO_BUCKET_NAME):
+        minio_client.make_bucket(MINIO_BUCKET_NAME)
+        logging.info(f"Bucket '{MINIO_BUCKET_NAME}' được tạo thành công")
+except S3Error as e:
+    logging.error(f"Lỗi khi tạo bucket: {e}")
+
 @router.get("/count-document")
 async def count_document(
     *,
@@ -27,10 +55,6 @@ async def count_document(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     return await document.count_document(db)
-# Tạo thư mục uploads nếu chưa tồn tại
-UPLOAD_DIR = "uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
 
 def get_file_extension(filename: str) -> str:
     """Lấy phần mở rộng của file"""
@@ -53,6 +77,50 @@ def get_file_type(filename: str) -> str:
         return 'IMAGE'
     else:
         return 'OTHER'
+
+def generate_unique_filename(original_filename: str) -> str:
+    """Tạo tên file duy nhất"""
+    ext = get_file_extension(original_filename)
+    unique_id = str(uuid.uuid4())
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return f"{timestamp}_{unique_id}{ext}"
+
+def upload_file_to_minio(file_content: bytes, filename: str) -> str:
+    """Upload file lên MinIO và trả về đường dẫn"""
+    try:
+        unique_filename = generate_unique_filename(filename)
+        
+        # Upload file lên MinIO
+        minio_client.put_object(
+            MINIO_BUCKET_NAME,
+            unique_filename,
+            data=io.BytesIO(file_content),
+            length=len(file_content),
+            content_type=mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        )
+        
+        # Trả về đường dẫn MinIO
+        return f"minio://{MINIO_BUCKET_NAME}/{unique_filename}"
+        
+    except S3Error as e:
+        logging.error(f"Lỗi khi upload file lên MinIO: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi upload file: {str(e)}"
+        )
+
+def delete_file_from_minio(file_path: str) -> bool:
+    """Xóa file từ MinIO"""
+    try:
+        # Trích xuất object name từ đường dẫn
+        if file_path.startswith("minio://"):
+            object_name = file_path.replace(f"minio://{MINIO_BUCKET_NAME}/", "")
+            minio_client.remove_object(MINIO_BUCKET_NAME, object_name)
+            return True
+        return False
+    except S3Error as e:
+        logging.error(f"Lỗi khi xóa file từ MinIO: {e}")
+        return False
 
 @router.get("/", response_model=DocumentListResponse)
 async def get_documents(
@@ -148,17 +216,13 @@ async def create_document(
     """
     Tạo tài liệu mới.
     """
-    # Xử lý file upload
+    # Đọc nội dung file
     file_content = await file.read()
     file_size = len(file_content)
     file_type = get_file_type(file.filename)
     
-    # Tạo đường dẫn file
-    file_path = os.path.join(UPLOAD_DIR, f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
-    
-    # Lưu file
-    with open(file_path, "wb") as f:
-        f.write(file_content)
+    # Upload file lên MinIO
+    file_path = upload_file_to_minio(file_content, file.filename)
     
     # Xử lý tags từ JSON string
     tags_list = []
@@ -234,9 +298,8 @@ async def delete_document(
             detail="Không có quyền xóa tài liệu này"
         )
     
-    # Xóa file vật lý
-    if os.path.exists(doc.file_path):
-        os.remove(doc.file_path)
+    # Xóa file từ MinIO
+    delete_file_from_minio(doc.file_path)
     
     await document.delete(db, id=id)
     return {"message": "Xóa tài liệu thành công"}
@@ -280,3 +343,48 @@ async def record_document_download(
     
     await document.record_download(db, document_id=id, user_id=current_user.user_id)
     return {"message": "Ghi nhận lượt tải thành công"}
+
+@router.get("/{id}/download-url")
+async def get_document_download_url(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy URL tải tài liệu từ MinIO.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    try:
+        # Trích xuất object name từ đường dẫn
+        if doc.file_path.startswith("minio://"):
+            object_name = doc.file_path.replace(f"minio://{MINIO_BUCKET_NAME}/", "")
+            
+            # Tạo URL tạm thời để tải file (có hiệu lực trong 1 giờ)
+            download_url = minio_client.presigned_get_object(
+                MINIO_BUCKET_NAME,
+                object_name,
+                expires=timedelta(hours=1)
+            )
+            
+            # Ghi nhận lượt tải
+            await document.record_download(db, document_id=id, user_id=current_user.user_id)
+            
+            return {"download_url": download_url}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File không được lưu trữ trên MinIO"
+            )
+    except S3Error as e:
+        logging.error(f"Lỗi khi tạo URL tải: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi tạo URL tải file"
+        )
