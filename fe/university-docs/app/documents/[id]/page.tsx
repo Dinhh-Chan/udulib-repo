@@ -99,6 +99,9 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [replyLoading, setReplyLoading] = useState(false);
   const userCache = useRef<{ [userId: number]: { full_name: string; username: string } }>({});
   const [showComments, setShowComments] = useState(false);
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+  const downloadLinkRef = useRef<HTMLAnchorElement>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string>("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -321,7 +324,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     });
   }
 
-  // Lấy replies cho một comment
   const fetchReplies = async (parentId: number) => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
@@ -336,7 +338,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
   };
 
-  // Gửi reply
   const handleSubmitReply = async (e: React.FormEvent, parentId: number) => {
     e.preventDefault();
     if (!replyContent.trim() || !userId) return;
@@ -357,11 +358,9 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       });
       if (!res.ok) throw new Error("Không thể gửi reply");
       const newReply = await res.json();
-      // Lấy user info cho reply nếu cần
       if (!newReply.user && newReply.user_id) {
         newReply.user = await fetchUserInfo(newReply.user_id, token);
       }
-      // Luôn cập nhật replies cho comment cha
       setComments((prev) =>
         prev.map((c) =>
           c.comment_id === parentId
@@ -375,7 +374,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     setReplyLoading(false);
   };
 
-  // Khi render comment, thêm phần hiển thị replies và form trả lời
   const renderComment = (comment: Comment) => (
     <div key={comment.comment_id} className="border rounded-lg p-3">
       <div className="flex items-center gap-2 mb-1">
@@ -459,6 +457,38 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
   }
 
+  function getGoogleDrivePreviewUrl(url: string) {
+    if (!url) return null;
+    return url.replace(/\/(edit|view)(\?.*)?$/, "/preview");
+  }
+
+  const handleDownloadClick = () => {
+    if (!document) return;
+    setDownloadUrl(document.file_path);
+    setShowDownloadConfirm(true);
+  };
+
+  const getDownloadUrl = (url: string) => {
+    // Nếu là Google Docs, chuyển sang link export PDF
+    const match = url.match(/https:\/\/docs\.google\.com\/document\/d\/([\w-]+)/);
+    if (match) {
+      return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
+    }
+    return url;
+  };
+
+  const confirmDownload = () => {
+    setShowDownloadConfirm(false);
+    const finalUrl = getDownloadUrl(downloadUrl);
+    if (finalUrl.startsWith('http')) {
+      window.open(finalUrl, '_blank', 'noopener');
+    } else {
+      if (downloadLinkRef.current) {
+        downloadLinkRef.current.click();
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="container py-8 px-4 md:px-6">
@@ -495,9 +525,13 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           <div className="flex flex-wrap gap-4 mt-2">
             <div className="flex items-center gap-1 text-sm">
               <FileText className="h-4 w-4 text-muted-foreground" />
+<<<<<<< HEAD
               <span className="text-muted-foreground">
                 {document.file_type?.split('/')?.[1]?.toUpperCase() || document.file_type?.toUpperCase() || 'UNKNOWN'}
               </span>
+=======
+              <span className="text-muted-foreground">{document.file_type?.split('/')?.[1]?.toUpperCase() || document.file_type?.toUpperCase() || 'UNKNOWN'}</span>
+>>>>>>> 4d2acdbcaca69b503cddfeb4873260319a3c79fd
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
               <span className="text-muted-foreground">•</span>
@@ -518,18 +552,16 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1">
-            <div className="bg-muted rounded-lg p-4 flex items-center justify-center h-[500px] mb-4">
-              <div className="text-center">
-                <FileText className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-lg font-medium">Xem trước tài liệu</h3>
-                <p className="text-muted-foreground mt-2 max-w-md">
-                  Tài liệu này có thể được xem trước trực tiếp trên trình duyệt.
-                </p>
-                <Button className="mt-4">
-                  <Download className="h-4 w-4 mr-2" />
-                  Tải xuống để xem đầy đủ
-                </Button>
-              </div>
+            <div className="bg-muted rounded-lg flex items-center justify-center h-[500px] mb-4 p-0">
+              {document.file_path && document.file_path.includes("docs.google.com") && getGoogleDrivePreviewUrl(document.file_path) ? (
+                <iframe
+                  src={getGoogleDrivePreviewUrl(document.file_path) as string}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, minHeight: 500, minWidth: '100%' }}
+                  allow="autoplay"
+                ></iframe>
+              ) : null}
             </div>
 
             <div className="flex items-center justify-between">
@@ -607,10 +639,21 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 </div>
                 {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}
                 {ratingError && <div className="text-xs text-red-500 mt-1">{ratingError}</div>}
-                <Button className="w-full">
+                <Button
+                  className="w-full"
+                  onClick={handleDownloadClick}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Tải xuống
                 </Button>
+                {/* Thẻ a ẩn để download file nội bộ */}
+                <a
+                  href={getDownloadUrl(document.file_path)}
+                  download
+                  ref={downloadLinkRef}
+                  style={{ display: 'none' }}
+                  tabIndex={-1}
+                >Download</a>
                 <p className="text-xs text-muted-foreground mt-2">
                   Đã có {document.download_count} lượt tải xuống
                 </p>
@@ -671,6 +714,19 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           <DialogFooter>
             <Button onClick={() => setShowConfirm(false)} variant="outline">Huỷ</Button>
             <Button onClick={confirmRate} disabled={ratingLoading}>Xác nhận</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal xác nhận tải xuống */}
+      <Dialog open={showDownloadConfirm} onOpenChange={setShowDownloadConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận tải xuống</DialogTitle>
+          </DialogHeader>
+          <div>Bạn có chắc chắn muốn tải tài liệu này về máy không?</div>
+          <DialogFooter>
+            <Button onClick={() => setShowDownloadConfirm(false)} variant="outline">Huỷ</Button>
+            <Button onClick={confirmDownload}>Xác nhận</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

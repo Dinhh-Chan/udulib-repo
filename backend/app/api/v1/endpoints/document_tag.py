@@ -27,7 +27,7 @@ async def add_document_tags(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    if doc.user_id != current_user.id and current_user.role != "admin":
+    if doc.user_id != current_user.user_id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
             detail="Not enough permissions"
@@ -76,7 +76,7 @@ async def remove_document_tag(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    if doc.user_id != current_user.id and current_user.role != "admin":
+    if doc.user_id != current_user.user_id and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
             detail="Not enough permissions"
