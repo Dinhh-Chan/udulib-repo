@@ -12,14 +12,50 @@ import {
 import { useRouter } from "next/navigation"
 import { Notification, getUnreadNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/api/notification"
 import { useAuth } from "@/contexts/auth-context"
+import { cn } from "@/lib/utils"
 
 export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+
+  const getNotificationTypeColor = (type: string) => {
+    switch (type) {
+      case "info":
+        return "bg-blue-100 border-blue-300 text-blue-800"
+      case "warning":
+        return "bg-amber-100 border-amber-300 text-amber-800"
+      case "success":
+        return "bg-green-100 border-green-300 text-green-800"
+      case "error":
+        return "bg-red-100 border-red-300 text-red-800"
+      default:
+        return "bg-gray-100 border-gray-300 text-gray-800"
+    }
+  }
+
+  const getNotificationTypeBadge = (type: string) => {
+    switch (type) {
+      case "info":
+        return "bg-blue-500 text-white"
+      case "warning":
+        return "bg-amber-500 text-white"
+      case "success":
+        return "bg-green-500 text-white"
+      case "error":
+        return "bg-red-500 text-white"
+      default:
+        return "bg-gray-500 text-white"
+    }
+  }
 
   const fetchNotifications = async () => {
+    if (!isAuthenticated || !user) {
+      setNotifications([])
+      return
+    }
+    
     try {
       const data = await getUnreadNotifications()
       setNotifications(data)
@@ -29,13 +65,16 @@ export default function NotificationDropdown() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       fetchNotifications()
       // Cập nhật thông báo mỗi 30 giây
       const interval = setInterval(fetchNotifications, 30000)
       return () => clearInterval(interval)
+    } else {
+      // Xóa thông báo khi đăng xuất
+      setNotifications([])
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, user?.user_id])
 
   const handleMarkAllAsRead = async () => {
     try {
@@ -98,12 +137,23 @@ export default function NotificationDropdown() {
             {notifications.map((notification) => (
               <DropdownMenuItem
                 key={`notification-${notification.notification_id}`}
-                className="p-3 cursor-pointer"
+                className={cn(
+                  "p-3 cursor-pointer border rounded-md my-1 mx-1",
+                  getNotificationTypeColor(notification.type)
+                )}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex flex-col gap-1">
-                  <p className="font-medium text-sm">{notification.title}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                      getNotificationTypeBadge(notification.type)
+                    )}>
+                      {notification.type.toUpperCase()}
+                    </span>
+                    <p className="font-medium text-sm">{notification.title}</p>
+                  </div>
+                  <p className="text-xs line-clamp-2">
                     {notification.content}
                   </p>
                   <p className="text-xs text-muted-foreground">

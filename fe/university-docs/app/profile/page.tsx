@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -60,7 +60,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     // Lấy tab từ URL query parameter
-    const tab = searchParams.get("tab")
+    const tab = searchParams?.get("tab")
     if (tab && ["profile", "documents", "forum", "notifications", "settings"].includes(tab)) {
       setActiveTab(tab)
     }
@@ -273,6 +273,36 @@ export default function ProfilePage() {
       toast.error("Không thể cập nhật thông tin")
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  const getNotificationTypeColor = (type: string) => {
+    switch (type) {
+      case "info":
+        return "bg-blue-100 border-blue-300 text-blue-800"
+      case "warning":
+        return "bg-amber-100 border-amber-300 text-amber-800"
+      case "success":
+        return "bg-green-100 border-green-300 text-green-800"
+      case "error":
+        return "bg-red-100 border-red-300 text-red-800"
+      default:
+        return "bg-gray-100 border-gray-300 text-gray-800"
+    }
+  }
+
+  const getNotificationTypeBadge = (type: string) => {
+    switch (type) {
+      case "info":
+        return "bg-blue-500 text-white"
+      case "warning":
+        return "bg-amber-500 text-white"
+      case "success":
+        return "bg-green-500 text-white"
+      case "error":
+        return "bg-red-500 text-white"
+      default:
+        return "bg-gray-500 text-white"
     }
   }
 
@@ -715,7 +745,11 @@ export default function ProfilePage() {
                             <div
                               key={`notification-${notification.notification_id}`}
                               className={`p-4 border rounded-lg ${
-                                !notification.is_read ? "bg-primary/5 border-primary/20" : ""
+                                !notification.is_read 
+                                  ? notification.type 
+                                    ? getNotificationTypeColor(notification.type)
+                                    : "bg-primary/5 border-primary/20" 
+                                  : ""
                               }`}
                             >
                               <div className="flex items-start gap-4">
@@ -725,6 +759,14 @@ export default function ProfilePage() {
                                   }`}
                                 />
                                 <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                      getNotificationTypeBadge(notification.type || "info")
+                                    }`}>
+                                      {(notification.type || "info").toUpperCase()}
+                                    </span>
+                                    <p className="font-medium">{notification.title}</p>
+                                  </div>
                                   <p className={notification.is_read ? "text-muted-foreground" : ""}>
                                     {notification.content}
                                   </p>
@@ -774,11 +816,19 @@ export default function ProfilePage() {
                             .map((notification) => (
                               <div
                                 key={`notification-${notification.notification_id}`}
-                                className="p-4 border rounded-lg bg-primary/5 border-primary/20"
+                                className={`p-4 border rounded-lg ${getNotificationTypeColor(notification.type || "info")}`}
                               >
                                 <div className="flex items-start gap-4">
                                   <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
                                   <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                        getNotificationTypeBadge(notification.type || "info")
+                                      }`}>
+                                        {(notification.type || "info").toUpperCase()}
+                                      </span>
+                                      <p className="font-medium">{notification.title}</p>
+                                    </div>
                                     <p>{notification.content}</p>
                                     <p className="text-sm text-muted-foreground mt-1">
                                       {new Date(notification.created_at).toLocaleDateString("vi-VN")}
@@ -827,6 +877,14 @@ export default function ProfilePage() {
                                 <div className="flex items-start gap-4">
                                   <div className="w-2 h-2 mt-2 rounded-full bg-muted" />
                                   <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                        getNotificationTypeBadge(notification.type || "info")
+                                      }`}>
+                                        {(notification.type || "info").toUpperCase()}
+                                      </span>
+                                      <p className="font-medium text-muted-foreground">{notification.title}</p>
+                                    </div>
                                     <p className="text-muted-foreground">{notification.content}</p>
                                     <p className="text-sm text-muted-foreground mt-1">
                                       {new Date(notification.created_at).toLocaleDateString("vi-VN")}
