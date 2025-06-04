@@ -7,25 +7,32 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { BookOpen, FileText, Upload, Users, Search } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { getPublicDocuments, Document } from "@/lib/api/documents"
+import { getMajors } from "@/lib/api/major"
+import { Major } from "@/types/major"
 
 export default function Home() {
   const { isAuthenticated } = useAuth()
   const [recentDocuments, setRecentDocuments] = useState<Document[]>([])
+  const [popularDepartments, setPopularDepartments] = useState<Major[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const fetchRecentDocuments = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getPublicDocuments(1, 4)
-        setRecentDocuments(response.documents || [])
+        const [documentsResponse, majorsResponse] = await Promise.all([
+          getPublicDocuments(1, 4),
+          getMajors(1, 4)
+        ])
+        setRecentDocuments(documentsResponse.documents || [])
+        setPopularDepartments(majorsResponse)
       } catch (error) {
-        console.error("Error fetching recent documents:", error)
+        console.error("Error fetching data:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchRecentDocuments()
+    fetchData()
   }, [])
 
   return (
@@ -199,20 +206,20 @@ export default function Home() {
               <Link href="/departments">Xem tất cả</Link>
             </Button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {popularDepartments.map((dept) => (
-              <Card key={dept.id} className="overflow-hidden">
-                <Link href={`/departments/${dept.slug}`}>
+              <Card key={dept.major_id} className="overflow-hidden">
+                <Link href={`/departments/${dept.major_id}`}>
                   <div className="h-40 bg-muted flex items-center justify-center">
-                    <dept.icon className="h-16 w-16 text-muted-foreground/50" />
+                    <BookOpen className="h-16 w-16 text-muted-foreground/50" />
                   </div>
                   <CardHeader>
-                    <CardTitle>{dept.name}</CardTitle>
+                    <CardTitle>{dept.major_name}</CardTitle>
                     <CardDescription>{dept.description}</CardDescription>
                   </CardHeader>
                   <CardFooter>
                     <div className="text-sm text-muted-foreground">
-                      {dept.courseCount} môn học • {dept.documentCount} tài liệu
+                      Mã ngành: {dept.major_code}
                     </div>
                   </CardFooter>
                 </Link>
@@ -244,34 +251,3 @@ export default function Home() {
     </div>
   )
 }
-
-// Sample data
-const popularDepartments = [
-  {
-    id: "1",
-    name: "Công nghệ thông tin",
-    slug: "it",
-    description: "Ngành học về khoa học máy tính, phát triển phần mềm và hệ thống thông tin",
-    courseCount: 42,
-    documentCount: 358,
-    icon: BookOpen,
-  },
-  {
-    id: "2",
-    name: "Tài chính - Ngân hàng",
-    slug: "finance",
-    description: "Ngành học về quản lý tài chính, ngân hàng và đầu tư",
-    courseCount: 36,
-    documentCount: 287,
-    icon: BookOpen,
-  },
-  {
-    id: "3",
-    name: "Kế toán",
-    slug: "accounting",
-    description: "Ngành học về kế toán, kiểm toán và quản lý tài chính doanh nghiệp",
-    courseCount: 30,
-    documentCount: 245,
-    icon: BookOpen,
-  },
-]

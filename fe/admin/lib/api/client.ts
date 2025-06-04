@@ -105,7 +105,7 @@ class ApiClient {
   async patch<T>(endpoint: string, data: any, options: RequestOptions = {}): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
-      method: "PATCH",
+        method: "PATCH",
       body: JSON.stringify(data),
     })
   }

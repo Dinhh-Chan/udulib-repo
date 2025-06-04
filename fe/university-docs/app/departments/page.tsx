@@ -49,19 +49,27 @@ export default function DepartmentsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
-      const majorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`)
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const majorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const majorsData = await majorsRes.json()
       setMajors(Array.isArray(majorsData) ? majorsData : [])
 
-      const subjectsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects`)
+      const subjectsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const subjectsData = await subjectsRes.json()
       setSubjects(Array.isArray(subjectsData) ? subjectsData : [])
 
-      const documentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents`)
+      const documentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const documentsData = await documentsRes.json()
       setDocuments(Array.isArray(documentsData.documents) ? documentsData.documents : [])
 
@@ -103,6 +111,10 @@ export default function DepartmentsPage() {
     return uniqueTags
   }
 
+  const filteredMajors = majors.filter((major) =>
+    major.major_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) return <div>Đang tải...</div>
 
   return (
@@ -113,42 +125,51 @@ export default function DepartmentsPage() {
           <p className="text-muted-foreground">Khám phá tài liệu học tập theo ngành học và môn học</p>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Tìm kiếm ngành học..." className="pl-9" />
+        {/* Thanh tìm kiếm ngành học */}
+        <div className="relative mb-4">
+          <Input
+            placeholder="Tìm kiếm ngành học..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {majors.map((major) => (
-            <Card key={major.major_id} className="overflow-hidden">
-              <Link href={`/departments/${major.major_id}`}>
-                <div className="h-40 bg-muted flex items-center justify-center">
-                  <BookOpen className="h-16 w-16 text-muted-foreground/50" />
-                </div>
-                <CardHeader>
-                  <CardTitle>{major.major_name}</CardTitle>
-                  <CardDescription>{major.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {getTagsByMajor(major.major_id).slice(0, 3).map(tag => (
-                      <span
-                        key={tag.tag_id}
-                        className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      >
-                        {tag.tag_name}
-                      </span>
-                    ))}
+          {filteredMajors.length === 0 ? (
+            <div className="col-span-full text-center text-muted-foreground py-8">Không tìm thấy ngành học phù hợp.</div>
+          ) : (
+            filteredMajors.map((major) => (
+              <Card key={major.major_id} className="overflow-hidden">
+                <Link href={`/departments/${major.major_id}`}>
+                  <div className="h-40 bg-muted flex items-center justify-center">
+                    <BookOpen className="h-16 w-16 text-muted-foreground/50" />
                   </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="text-sm text-muted-foreground">
-                    {getCourseCount(major.major_id)} môn học • {getDocumentCount(major.major_id)} tài liệu
-                  </div>
-                </CardFooter>
-              </Link>
-            </Card>
-          ))}
+                  <CardHeader>
+                    <CardTitle>{major.major_name}</CardTitle>
+                    <CardDescription>{major.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {getTagsByMajor(major.major_id).slice(0, 3).map(tag => (
+                        <span
+                          key={tag.tag_id}
+                          className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          {tag.tag_name}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <div className="text-sm text-muted-foreground">
+                      {getCourseCount(major.major_id)} môn học • {getDocumentCount(major.major_id)} tài liệu
+                    </div>
+                  </CardFooter>
+                </Link>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronRight, FileText } from "lucide-react"
+import React from "react"
 
 interface Major {
   major_id: number;
@@ -19,26 +20,28 @@ interface Subject {
   description: string;
 }
 
-export default function DepartmentPage({ params }: { params: { slug: string } }) {
+export default function DepartmentPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = React.use(params);
   const [major, setMajor] = useState<Major | null>(null)
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [selectedYear, setSelectedYear] = useState<number>(1)
   const [loading, setLoading] = useState(false)
   const [documentCounts, setDocumentCounts] = useState<{ [subject_id: number]: number }>({})
 
-  // Lấy major_id từ params hoặc localStorage
   useEffect(() => {
-    let majorIdFromUrl = Number(params.slug)
+    let majorIdFromUrl = Number(slug)
     let foundMajor: Major | null = null
 
     async function fetchMajor() {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`)
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       const data = await res.json()
-      // Nếu params.slug là số, tìm theo major_id, nếu là chuỗi, tìm theo slug
       if (!isNaN(majorIdFromUrl)) {
         foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl)
       } else {
-        foundMajor = data.find((m: Major) => m.slug === params.slug)
+        foundMajor = data.find((m: Major) => m.slug === slug)
       }
       setMajor(foundMajor || null)
       if (foundMajor) {
@@ -46,7 +49,6 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
       }
     }
 
-    // Nếu reload lại trang, lấy major_id từ localStorage nếu không có params
     if (!isNaN(majorIdFromUrl)) {
       fetchMajor()
     } else {
@@ -58,21 +60,24 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
         fetchMajor()
       }
     }
-  }, [params.slug])
+  }, [slug])
 
-  // Lấy danh sách môn học theo năm học và ngành học
   useEffect(() => {
     if (!selectedYear || !major) return
     setLoading(true)
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects?major_id=${major.major_id}&year_id=${selectedYear}`)
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects?major_id=${major.major_id}&year_id=${selectedYear}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then(res => res.json())
       .then(data => {
         setSubjects(Array.isArray(data) ? data : [])
         setLoading(false)
-        // Lấy số lượng tài liệu cho từng môn học
         if (Array.isArray(data)) {
           data.forEach((subject: Subject) => {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents?subject_id=${subject.subject_id}`)
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public?subject_id=${subject.subject_id}`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })
               .then(res => res.json())
               .then(docData => {
                 setDocumentCounts(prev => ({
@@ -129,7 +134,7 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
                       </CardContent>
                       <CardFooter>
                         <Button variant="outline" asChild className="w-full">
-                          <Link href={`/departments/${params.slug}/courses/${subject.subject_id}`}>Xem tài liệu</Link>
+                          <Link href={`/departments/${slug}/courses/${subject.subject_id}`}>Xem tài liệu</Link>
                         </Button>
                       </CardFooter>
                     </Card>

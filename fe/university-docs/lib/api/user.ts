@@ -8,7 +8,7 @@ export const getUserProfile = async (userId: string): Promise<User> => {
     throw new Error("Không tìm thấy token xác thực")
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json"
@@ -33,7 +33,7 @@ export const updateUserProfile = async (userId: number, userData: {
     throw new Error("Không tìm thấy token xác thực")
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -43,7 +43,8 @@ export const updateUserProfile = async (userId: number, userData: {
   })
 
   if (!response.ok) {
-    throw new Error("Không thể cập nhật thông tin người dùng")
+    const error = await response.json()
+    throw new Error(error.detail || "Không thể cập nhật thông tin người dùng")
   }
 
   return response.json()

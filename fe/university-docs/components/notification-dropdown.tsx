@@ -19,6 +19,7 @@ export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
+  const [mounted, setMounted] = useState(false);
 
   const getNotificationTypeColor = (type: string) => {
     switch (type) {
@@ -76,6 +77,8 @@ export default function NotificationDropdown() {
     }
   }, [isAuthenticated, user?.user_id])
 
+  useEffect(() => { setMounted(true); }, []);
+
   const handleMarkAllAsRead = async () => {
     try {
       await markAllNotificationsAsRead()
@@ -99,7 +102,8 @@ export default function NotificationDropdown() {
     }
   }
 
-  if (!isAuthenticated) return null
+  if (!mounted) return null;
+  if (!isAuthenticated) return null;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>

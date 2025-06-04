@@ -14,10 +14,14 @@ import {
   Share2,
   Bookmark,
   Flag,
+  Eye,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
+import React from "react"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Document {
   document_id: number
@@ -51,18 +55,98 @@ interface Document {
   }>
 }
 
-export default function DocumentPage({ params }: { params: { id: string } }) {
+interface Rating {
+  rating_id: number;
+  document_id: number;
+  user_id: number;
+  score: number;
+  comment?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface Comment {
+  comment_id: number;
+  document_id: number;
+  user_id: number;
+  content: string;
+  created_at: string;
+  updated_at?: string;
+  user?: { full_name: string; username: string };
+  replies?: Comment[];
+}
+
+export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = React.use(params);
   const [document, setDocument] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [ratings, setRatings] = useState<Rating[]>([])
+  const [userRating, setUserRating] = useState<number | null>(null)
+  const [userRatingId, setUserRatingId] = useState<number | null>(null)
+  const [ratingLoading, setRatingLoading] = useState(false)
+  const [ratingError, setRatingError] = useState<string | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [pendingScore, setPendingScore] = useState<number | null>(null)
   const router = useRouter()
+  const [userId, setUserId] = useState<number | null>(null);
+  const hasIncreasedView = useRef(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentContent, setCommentContent] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
+  const userCache = useRef<{ [userId: number]: { full_name: string; username: string } }>({});
+  const [showComments, setShowComments] = useState(false);
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+  const downloadLinkRef = useRef<HTMLAnchorElement>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setUserId(user.user_id);
+        }
+      } catch {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!id || !userId || hasIncreasedView.current) return;
+
+    const checkAndIncreaseView = async () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const checkRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/history?document_id=${id}&user_id=${userId}&page=1&per_page=1`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      const history = await checkRes.json();
+
+      if (!Array.isArray(history) || history.length === 0) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/view`, {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+      }
+      hasIncreasedView.current = true;
+    };
+
+    checkAndIncreaseView();
+  }, [id, userId]);
 
   useEffect(() => {
     const fetchDocument = async () => {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${params.id}`)
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        )
         if (!response.ok) {
           throw new Error(`Lỗi khi tải dữ liệu: ${response.status}`)
         }
@@ -76,8 +160,147 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       }
     }
 
-    fetchDocument()
-  }, [params.id])
+    fetchDocument();
+
+    const fetchRatings = async () => {
+      try {
+        setRatingLoading(true)
+        setRatingError(null)
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings?document_id=${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!res.ok) throw new Error("Không thể tải đánh giá")
+        const data = await res.json()
+        setRatings(Array.isArray(data) ? data : [])
+        if (userId) {
+          const found = (Array.isArray(data) ? data : []).find((r: Rating) => r.user_id === userId)
+          if (found) {
+            setUserRating(found.score)
+            setUserRatingId(found.rating_id)
+          } else {
+            setUserRating(null)
+            setUserRatingId(null)
+          }
+        }
+      } catch (err) {
+        setRatingError(err instanceof Error ? err.message : "Có lỗi khi tải đánh giá")
+      } finally {
+        setRatingLoading(false)
+      }
+    }
+    fetchRatings()
+  }, [id, userId])
+
+  const fetchUserInfo = async (userId: number, token: string | null) => {
+    if (userCache.current[userId]) return userCache.current[userId];
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        userCache.current[userId] = { full_name: userData.full_name, username: userData.username };
+        return userCache.current[userId];
+      }
+    } catch {}
+    return { full_name: "Ẩn danh", username: "" };
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchComments = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments?document_id=${id}&include_replies=true&page=1&per_page=20`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("Không thể tải bình luận");
+        let data = await res.json();
+        const tree = buildCommentTree(data);
+        await fillUserInfoForComments(tree, token, fetchUserInfo);
+        setComments(tree);
+      } catch (err) {}
+    };
+    fetchComments();
+  }, [id]);
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentContent.trim() || !userId) return;
+    setCommentLoading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          document_id: Number(id),
+          content: commentContent,
+        }),
+      });
+      if (!res.ok) throw new Error("Không thể gửi bình luận");
+      let newComment = await res.json();
+      // Nếu comment chưa có user, fetch user info
+      if (!newComment.user && newComment.user_id) {
+        try {
+          const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${newComment.user_id}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            newComment.user = { full_name: userData.full_name, username: userData.username };
+          }
+        } catch {}
+      }
+      setComments((prev) => [newComment, ...prev]);
+      setCommentContent("");
+    } catch (err) {
+      // ignore
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleStarClick = (score: number) => {
+    if (userRating) return;
+    setPendingScore(score)
+    setShowConfirm(true)
+  }
+
+  const confirmRate = async () => {
+    if (!pendingScore) return;
+    setShowConfirm(false)
+    setRatingLoading(true)
+    setRatingError(null)
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          document_id: Number(id),
+          score: pendingScore,
+        }),
+      })
+      if (!res.ok) throw new Error("Không thể gửi đánh giá")
+      const newRating = await res.json()
+      setRatings((prev) => [...prev, newRating])
+      setUserRating(pendingScore)
+      setUserRatingId(newRating.rating_id)
+    } catch (err) {
+      setRatingError(err instanceof Error ? err.message : "Có lỗi khi gửi đánh giá")
+    } finally {
+      setRatingLoading(false)
+      setPendingScore(null)
+    }
+  }
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B'
@@ -89,12 +312,182 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN', {
       year: 'numeric',
       month: '2-digit',
-      day: '2-digit'
-    })
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
   }
+
+  const fetchReplies = async (parentId: number) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments?parent_comment_id=${parentId}&page=1&per_page=20`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Không thể tải replies");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const handleSubmitReply = async (e: React.FormEvent, parentId: number) => {
+    e.preventDefault();
+    if (!replyContent.trim() || !userId) return;
+    setReplyLoading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          document_id: Number(id),
+          content: replyContent,
+          parent_comment_id: parentId,
+        }),
+      });
+      if (!res.ok) throw new Error("Không thể gửi reply");
+      const newReply = await res.json();
+      if (!newReply.user && newReply.user_id) {
+        newReply.user = await fetchUserInfo(newReply.user_id, token);
+      }
+      setComments((prev) =>
+        prev.map((c) =>
+          c.comment_id === parentId
+            ? { ...c, replies: c.replies ? [newReply, ...c.replies] : [newReply] }
+            : c
+        )
+      );
+      setReplyContent("");
+      setReplyingToId(null);
+    } catch {}
+    setReplyLoading(false);
+  };
+
+  const renderComment = (comment: Comment) => (
+    <div key={comment.comment_id} className="border rounded-lg p-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="font-medium text-sm">{comment.user?.full_name || comment.user?.username || "Ẩn danh"}</span>
+        <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
+      </div>
+      <div className="text-sm">{comment.content}</div>
+      <Button
+        variant="link"
+        size="sm"
+        className="px-0 text-xs"
+        onClick={() => setReplyingToId(comment.comment_id)}
+      >
+        Trả lời
+      </Button>
+      {/* Hiển thị replies nếu có */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="pl-4 mt-2 border-l space-y-2">
+          {comment.replies.map((reply) => renderComment(reply))}
+        </div>
+      )}
+      {/* Form trả lời */}
+      {replyingToId === comment.comment_id && (
+        <form
+          onSubmit={(e) => handleSubmitReply(e, comment.comment_id)}
+          className="flex flex-col gap-2 mt-2"
+        >
+          <Textarea
+            value={replyContent}
+            onChange={(e) => setReplyContent(e.target.value)}
+            placeholder="Nhập trả lời..."
+            rows={2}
+            required
+            disabled={replyLoading}
+          />
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={replyLoading || !replyContent.trim()}>
+              {replyLoading ? "Đang gửi..." : "Gửi trả lời"}
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setReplyingToId(null)}>
+              Hủy
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+
+  function buildCommentTree(flatComments: any[]) {
+    const map: { [id: number]: any } = {};
+    const roots: any[] = [];
+
+    // Tạo map comment_id -> comment
+    flatComments.forEach(comment => {
+      map[comment.comment_id] = { ...comment, replies: [] };
+    });
+
+    // Gắn replies vào comment cha
+    flatComments.forEach(comment => {
+      if (comment.parent_comment_id) {
+        const parent = map[comment.parent_comment_id];
+        if (parent) {
+          parent.replies.push(map[comment.comment_id]);
+        }
+      } else {
+        roots.push(map[comment.comment_id]);
+      }
+    });
+
+    return roots;
+  }
+
+  async function fillUserInfoForComments(comments: any[], token: string | null, fetchUserInfo: any) {
+    for (const comment of comments) {
+      if (!comment.user && comment.user_id) {
+        comment.user = await fetchUserInfo(comment.user_id, token);
+      }
+      if (comment.replies && comment.replies.length > 0) {
+        await fillUserInfoForComments(comment.replies, token, fetchUserInfo);
+      }
+    }
+  }
+
+  function getGoogleDrivePreviewUrl(url: string) {
+    if (!url) return null;
+    return url.replace(/\/(edit|view)(\?.*)?$/, "/preview");
+  }
+
+  const handleDownloadClick = () => {
+    if (!document) return;
+    setDownloadUrl(document.file_path);
+    setShowDownloadConfirm(true);
+  };
+
+  const getDownloadUrl = (url: string) => {
+    // Nếu là Google Docs, chuyển sang link export PDF
+    const match = url.match(/https:\/\/docs\.google\.com\/document\/d\/([\w-]+)/);
+    if (match) {
+      return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
+    }
+    return url;
+  };
+
+  const confirmDownload = () => {
+    setShowDownloadConfirm(false);
+    const finalUrl = getDownloadUrl(downloadUrl);
+    if (finalUrl.startsWith('http')) {
+      window.open(finalUrl, '_blank', 'noopener');
+    } else {
+      if (downloadLinkRef.current) {
+        downloadLinkRef.current.click();
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -132,44 +525,50 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
           <div className="flex flex-wrap gap-4 mt-2">
             <div className="flex items-center gap-1 text-sm">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{document.file_type.split('/')[1].toUpperCase()}</span>
+              <span className="text-muted-foreground">{document.file_type?.split('/')?.[1]?.toUpperCase() || document.file_type?.toUpperCase() || 'UNKNOWN'}</span>
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
-            </div>
-            <div className="flex items-center gap-1 text-sm">
+              <span className="text-muted-foreground">•</span>
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">{formatDate(document.created_at)}</span>
-            </div>
-            <div className="flex items-center gap-1 text-sm">
+              <span className="text-muted-foreground">•</span>
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">{document.user.full_name}</span>
+              <span className="text-muted-foreground">•</span>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{document.view_count} lượt xem</span>
+              <span className="text-muted-foreground">•</span>
+              <Download className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{document.download_count} lượt tải</span>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1">
-            <div className="bg-muted rounded-lg p-4 flex items-center justify-center h-[500px] mb-4">
-              <div className="text-center">
-                <FileText className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-lg font-medium">Xem trước tài liệu</h3>
-                <p className="text-muted-foreground mt-2 max-w-md">
-                  Tài liệu này có thể được xem trước trực tiếp trên trình duyệt.
-                </p>
-                <Button className="mt-4">
-                  <Download className="h-4 w-4 mr-2" />
-                  Tải xuống để xem đầy đủ
-                </Button>
-              </div>
+            <div className="bg-muted rounded-lg flex items-center justify-center h-[500px] mb-4 p-0">
+              {document.file_path && document.file_path.includes("docs.google.com") && getGoogleDrivePreviewUrl(document.file_path) ? (
+                <iframe
+                  src={getGoogleDrivePreviewUrl(document.file_path) as string}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, minHeight: 500, minWidth: '100%' }}
+                  allow="autoplay"
+                ></iframe>
+              ) : null}
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm">
                   <ThumbsUp className="h-4 w-4 mr-2" />
-                  Thích ({document.view_count})
+                  Thích
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowComments((v) => !v)}
+                >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Bình luận
                 </Button>
@@ -203,10 +602,15 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
                   ))}
                 </div>
                 <div className="flex items-center gap-2 mt-4">
-                  <div className="text-sm font-medium">Đánh giá:</div>
+                  <div className="text-sm font-medium">{ratings.length} đánh giá:</div>
                   <div className="flex items-center">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} className="text-yellow-400 focus:outline-none">
+                      <button
+                        key={star}
+                        className={`text-yellow-400 focus:outline-none ${userRating && userRating >= star ? "" : "opacity-40"}`}
+                        onClick={() => handleStarClick(star)}
+                        disabled={!!userRating || ratingLoading}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
@@ -223,13 +627,27 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
                     ))}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    ({document.average_rating.toFixed(1)}/5)
+                    ({ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length).toFixed(1) : "0.0"}/5)
+                    {/* <span className="ml-1">({ratings.length} đánh giá)</span> */}
                   </div>
                 </div>
-                <Button className="w-full">
+                {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}
+                {ratingError && <div className="text-xs text-red-500 mt-1">{ratingError}</div>}
+                <Button
+                  className="w-full"
+                  onClick={handleDownloadClick}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Tải xuống
                 </Button>
+                {/* Thẻ a ẩn để download file nội bộ */}
+                <a
+                  href={getDownloadUrl(document.file_path)}
+                  download
+                  ref={downloadLinkRef}
+                  style={{ display: 'none' }}
+                  tabIndex={-1}
+                >Download</a>
                 <p className="text-xs text-muted-foreground mt-2">
                   Đã có {document.download_count} lượt tải xuống
                 </p>
@@ -253,7 +671,59 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
             </Card>
           </div>
         </div>
+
+        {showComments && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4">Bình luận</h2>
+            <form onSubmit={handleSubmitComment} className="flex flex-col gap-2 mb-4">
+              <Textarea
+                value={commentContent}
+                onChange={e => setCommentContent(e.target.value)}
+                placeholder="Nhập bình luận của bạn..."
+                rows={3}
+                required
+                disabled={commentLoading}
+              />
+              <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
+                {commentLoading ? "Đang gửi..." : "Gửi bình luận"}
+              </Button>
+            </form>
+            <div className="space-y-4">
+              {comments.length === 0 ? (
+                <div className="text-muted-foreground">Chưa có bình luận nào.</div>
+              ) : (
+                comments.map((comment) => renderComment(comment))
+              )}
+            </div>
+          </div>
+        )}
       </div>
+      {/* Modal xác nhận đánh giá */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận đánh giá</DialogTitle>
+          </DialogHeader>
+          <div>Bạn có chắc chắn muốn đánh giá {pendingScore} sao cho tài liệu này không?</div>
+          <DialogFooter>
+            <Button onClick={() => setShowConfirm(false)} variant="outline">Huỷ</Button>
+            <Button onClick={confirmRate} disabled={ratingLoading}>Xác nhận</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal xác nhận tải xuống */}
+      <Dialog open={showDownloadConfirm} onOpenChange={setShowDownloadConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận tải xuống</DialogTitle>
+          </DialogHeader>
+          <div>Bạn có chắc chắn muốn tải tài liệu này về máy không?</div>
+          <DialogFooter>
+            <Button onClick={() => setShowDownloadConfirm(false)} variant="outline">Huỷ</Button>
+            <Button onClick={confirmDownload}>Xác nhận</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

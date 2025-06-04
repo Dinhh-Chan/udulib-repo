@@ -52,7 +52,7 @@ async def create_comment(
     """
     crud = CommentCRUD(db)
     try:
-        comment = await crud.create(obj_in=comment_in, user_id=1)
+        comment = await crud.create(obj_in=comment_in, user_id=current_user.user_id)
         return comment
     except ValueError as e:
         raise HTTPException(

@@ -74,10 +74,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await apiClient.post<LoginResponse>("/auth/login", {
-        username,
-        password,
-      })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) throw new Error("Đăng nhập thất bại");
+      const response: LoginResponse = await res.json();
 
       const { access_token, user } = response
       localStorage.setItem("token", access_token)
