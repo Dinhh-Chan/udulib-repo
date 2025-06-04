@@ -53,6 +53,7 @@ class ForumReplyBase(BaseModel):
 
 class ForumReplyCreate(ForumReplyBase):
     post_id: int
+    parent_reply_id: Optional[int] = None
 
 class ForumReplyUpdate(BaseModel):
     content: Optional[str] = None
@@ -62,8 +63,10 @@ class ForumReply(ForumReplyBase, TimeStampBase):
     reply_id: int
     post_id: int
     user_id: int
+    parent_reply_id: Optional[int] = None
     status: ForumStatus
     user: Optional[User] = None
+    child_replies: List["ForumReply"] = []
     
     class Config:
         from_attributes = True
