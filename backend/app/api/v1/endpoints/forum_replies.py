@@ -18,10 +18,13 @@ async def read_forum_replies(
     post_id: Optional[int] = None,
     user_id: Optional[int] = None,
     status: Optional[str] = None,
+    parent_reply_id: Optional[int] = Query(None, description="Filter by parent reply ID. Use null for top-level replies."),
     current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách forum replies.
+    Mặc định chỉ lấy top-level replies (parent_reply_id = null).
+    Để lấy child replies của một reply cụ thể, truyền parent_reply_id.
     """
     crud = ForumReplyCRUD(db)
     skip = (page - 1) * per_page
@@ -30,7 +33,8 @@ async def read_forum_replies(
         limit=per_page,
         post_id=post_id,
         user_id=user_id,
-        status=status
+        status=status,
+        parent_reply_id=parent_reply_id
     )
     return replies
 
@@ -58,13 +62,14 @@ async def create_forum_reply(
     *,
     db: AsyncSession = Depends(get_db),
     reply_in: ForumReplyCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo forum reply mới.
+    Có thể tạo top-level reply (parent_reply_id = null) hoặc nested reply (parent_reply_id có giá trị).
     """
     crud = ForumReplyCRUD(db)
-    reply = await crud.create(obj_in=reply_in, user_id=1)
+    reply = await crud.create(obj_in=reply_in, user_id=current_user.user_id)
     return reply
 
 @router.put("/{reply_id}", response_model=ForumReply)
@@ -158,4 +163,35 @@ async def delete_forum_reply(
         raise HTTPException(
             status_code=403,
             detail=str(e)
-        ) 
+        )
+
+@router.post("/{reply_id}/reply", response_model=ForumReply)
+async def reply_to_reply(
+    *,
+    db: AsyncSession = Depends(get_db),
+    reply_id: int,
+    reply_content: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Reply to một reply cụ thể (nested reply).
+    """
+    crud = ForumReplyCRUD(db)
+    
+    # Kiểm tra parent reply có tồn tại không
+    parent_reply = await crud.get_by_id(id=reply_id)
+    if not parent_reply:
+        raise HTTPException(
+            status_code=404,
+            detail="Parent reply not found"
+        )
+    
+    # Tạo reply mới
+    reply_in = ForumReplyCreate(
+        post_id=parent_reply["post_id"],
+        parent_reply_id=reply_id,
+        content=reply_content
+    )
+    
+    reply = await crud.create(obj_in=reply_in, user_id=current_user.user_id)
+    return reply 
