@@ -145,8 +145,10 @@ export default function ProfilePage() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
-    // Cập nhật URL với tab mới
-    router.push(`/profile?tab=${tab}`)
+    // Cập nhật URL mà không reload trang
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', tab)
+    window.history.pushState({}, '', url)
   }
 
   const handleViewDocument = async (documentId: number) => {

@@ -8,7 +8,7 @@ export const getUserProfile = async (userId: string): Promise<User> => {
     throw new Error("Không tìm thấy token xác thực")
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json"

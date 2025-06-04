@@ -100,29 +100,6 @@ export default function Navbar() {
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            {isSearchOpen ? (
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Tìm kiếm tài liệu..."
-                  className="w-full pl-8"
-                  autoFocus
-                  onBlur={() => setIsSearchOpen(false)}
-                />
-              </div>
-            ) : (
-              <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} className="hidden md:flex">
-                <Search className="h-5 w-5" />
-                <span className="sr-only">Tìm kiếm</span>
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" asChild className="md:hidden">
-              <Link href="/search">
-                <Search className="h-5 w-5" />
-                <span className="sr-only">Tìm kiếm</span>
-              </Link>
-            </Button>
             <ThemeToggle />
             {isAuthenticated ? (
               <>
