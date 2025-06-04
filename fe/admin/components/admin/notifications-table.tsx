@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { MoreHorizontal, Bell, Check, Trash2, Search } from "lucide-react"
-import { toast } from "sonner"
+import { showSuccessToast, showErrorToast, cn } from "@/lib/utils"
 import {
   getNotifications,
   updateNotification,
@@ -27,6 +27,7 @@ import {
   markAllAsRead,
   type Notification
 } from "@/lib/api/notification"
+import { useAuth } from "@/contexts/auth-context"
 
 interface NotificationsTableProps {
   page?: number
@@ -35,12 +36,49 @@ interface NotificationsTableProps {
 }
 
 export function NotificationsTable({ page = 1, per_page = 20, onReload }: NotificationsTableProps) {
+  const { user, isAuthenticated } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
 
+  const getNotificationTypeColor = (type: string) => {
+    switch (type) {
+      case "info":
+        return "bg-blue-50 border-blue-200"
+      case "warning":
+        return "bg-amber-50 border-amber-200"
+      case "success":
+        return "bg-green-50 border-green-200"
+      case "error":
+        return "bg-red-50 border-red-200"
+      default:
+        return ""
+    }
+  }
+
+  const getNotificationTypeBadge = (type: string) => {
+    switch (type) {
+      case "info":
+        return "bg-blue-100 text-blue-800 hover:bg-blue-100"
+      case "warning":
+        return "bg-amber-100 text-amber-800 hover:bg-amber-100"
+      case "success":
+        return "bg-green-100 text-green-800 hover:bg-green-100"
+      case "error":
+        return "bg-red-100 text-red-800 hover:bg-red-100"
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
+    }
+  }
+
   const fetchNotifications = async () => {
+    if (!isAuthenticated) {
+      setNotifications([])
+      setFilteredNotifications([])
+      return
+    }
+    
     try {
       setIsLoading(true)
       const data = await getNotifications({ page, per_page })
@@ -49,7 +87,7 @@ export function NotificationsTable({ page = 1, per_page = 20, onReload }: Notifi
       setFilteredNotifications(notificationsArray)
     } catch (error) {
       console.error("Error fetching notifications:", error)
-      toast.error("Không thể tải danh sách thông báo")
+      showErrorToast("Không thể tải danh sách thông báo")
     } finally {
       setIsLoading(false)
     }
@@ -57,7 +95,7 @@ export function NotificationsTable({ page = 1, per_page = 20, onReload }: Notifi
 
   useEffect(() => {
     fetchNotifications()
-  }, [page, per_page])
+  }, [page, per_page, isAuthenticated, user?.user_id])
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -76,36 +114,36 @@ export function NotificationsTable({ page = 1, per_page = 20, onReload }: Notifi
   const handleMarkAsRead = async (id: number) => {
     try {
       await updateNotification(id, { is_read: true })
-      toast.success("Đã đánh dấu là đã đọc")
+      showSuccessToast("Đã đánh dấu là đã đọc")
       fetchNotifications()
       onReload?.()
     } catch (error) {
       console.error("Error marking notification as read:", error)
-      toast.error("Không thể đánh dấu thông báo")
+      showErrorToast("Không thể đánh dấu thông báo")
     }
   }
 
   const handleDelete = async (id: number) => {
     try {
       await deleteNotification(id)
-      toast.success("Đã xóa thông báo")
+      showSuccessToast("Đã xóa thông báo")
       fetchNotifications()
       onReload?.()
     } catch (error) {
       console.error("Error deleting notification:", error)
-      toast.error("Không thể xóa thông báo")
+      showErrorToast("Không thể xóa thông báo")
     }
   }
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead()
-      toast.success("Đã đánh dấu tất cả là đã đọc")
+      showSuccessToast("Đã đánh dấu tất cả là đã đọc")
       fetchNotifications()
       onReload?.()
     } catch (error) {
       console.error("Error marking all notifications as read:", error)
-      toast.error("Không thể đánh dấu tất cả thông báo")
+      showErrorToast("Không thể đánh dấu tất cả thông báo")
     }
   }
 
@@ -152,12 +190,18 @@ export function NotificationsTable({ page = 1, per_page = 20, onReload }: Notifi
               </TableRow>
             ) : (
               filteredNotifications.map((notification) => (
-                <TableRow key={notification.notification_id} className={notification.is_read ? "" : "bg-blue-50"}>
+                <TableRow 
+                  key={notification.notification_id} 
+                  className={cn(
+                    notification.is_read ? "" : "bg-blue-50",
+                    getNotificationTypeColor(notification.type)
+                  )}
+                >
                   <TableCell className="font-medium">{notification.title}</TableCell>
                   <TableCell>{notification.content}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {notification.type}
+                    <Badge className={cn(getNotificationTypeBadge(notification.type))}>
+                      {notification.type.toUpperCase()}
                     </Badge>
                   </TableCell>
                   <TableCell>

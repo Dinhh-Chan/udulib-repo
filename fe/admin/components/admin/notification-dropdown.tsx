@@ -14,14 +14,22 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { getNotifications, updateNotification, type Notification } from "@/lib/api/notification"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 
 export function NotificationDropdown() {
   const router = useRouter()
+  const { user, isAuthenticated } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
 
   const fetchNotifications = async () => {
+    if (!isAuthenticated) {
+      setNotifications([])
+      setUnreadCount(0)
+      return
+    }
+    
     try {
       setIsLoading(true)
       const data = await getNotifications({ per_page: 5, sort: "-created_at" })
@@ -39,7 +47,7 @@ export function NotificationDropdown() {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [isAuthenticated, user?.user_id])
 
   const handleMarkAsRead = async (id: number) => {
     try {
