@@ -18,13 +18,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { apiClient } from "@/lib/api/client"
-import { toast } from "sonner"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Search, MoreHorizontal } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
 import { EditMajorDialog } from "./edit-major-dialog"
 import { Major } from "@/types/major"
 import { deleteMajor } from "@/lib/api/major"
+import { showSuccessToast, showErrorToast } from "@/lib/utils"
 
 interface MajorsResponse {
   items: Major[]
@@ -61,11 +61,11 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
           // Đã được xử lý bởi ApiClient, không cần làm gì thêm
         } else if (error.response?.data?.detail) {
           // Hiển thị lỗi cụ thể từ API
-          toast.error(error.response.data.detail);
+          showErrorToast(error.response.data.detail);
         } else if (error instanceof Error) {
-          toast.error(error.message);
+          showErrorToast(error.message);
         } else {
-          toast.error("Không thể tải danh sách ngành học");
+          showErrorToast("Không thể tải danh sách ngành học");
         }
       } finally {
         setIsLoading(false)
@@ -92,18 +92,18 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
     try {
       await deleteMajor(id)
       setReloadKey(key => key + 1)
-      toast.success("Xóa ngành học thành công")
+      showSuccessToast("Xóa ngành học thành công")
     } catch (error: any) {
       // Xử lý lỗi từ API
       if (error.type === 'silent' && error.message) {
         // Đã được xử lý bởi ApiClient, không cần làm gì thêm
       } else if (error.response?.data?.detail) {
         // Hiển thị lỗi cụ thể từ API
-        toast.error(error.response.data.detail);
+        showErrorToast(error.response.data.detail);
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showErrorToast(error.message);
       } else {
-        toast.error("Không thể xóa ngành học");
+        showErrorToast("Không thể xóa ngành học");
       }
     }
   }

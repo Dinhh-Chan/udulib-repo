@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Major, MajorUpdate } from "@/types/major"
 import { updateMajor } from "@/lib/api/major"
-import { toast } from "sonner"
+import { showSuccessToast, showErrorToast } from "@/lib/utils"
 
 interface EditMajorDialogProps {
   major: Major
@@ -50,18 +50,18 @@ export function EditMajorDialog({ major, open, onOpenChange, onSuccess }: EditMa
         description: description || undefined,
       }
       await updateMajor(major.major_id, majorUpdate)
-      toast.success("Cập nhật ngành học thành công")
+      showSuccessToast("Cập nhật ngành học thành công")
       onSuccess?.()
       onOpenChange(false)
     } catch (error: any) {
       if (error.type === 'silent' && error.message) {
         // Đã được xử lý bởi ApiClient, không cần làm gì thêm
       } else if (error.response?.data?.detail) {
-        toast.error(error.response.data.detail);
+        showErrorToast(error.response.data.detail)
       } else if (error instanceof Error) {
-        toast.error(error.message)
+        showErrorToast(error.message)
       } else {
-        toast.error("Không thể cập nhật ngành học")
+        showErrorToast("Không thể cập nhật ngành học")
       }
     } finally {
       setIsLoading(false)

@@ -12,6 +12,37 @@ body {
   }
 }
 
+/* Tùy chỉnh toast notification */
+[data-sonner-toaster][data-position="top-center"] {
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.toast-center {
+  border-radius: 8px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px 16px;
+}
+
+/* Toast error - màu đỏ đậm hơn */
+[data-sonner-toast][data-type="error"] {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+/* Toast success - màu xanh lá đậm hơn */
+[data-sonner-toast][data-type="success"] {
+  background-color: #dcfce7;
+  border-color: #22c55e;
+  color: #15803d;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

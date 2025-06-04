@@ -1,8 +1,29 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { toast, ToastOptions } from "sonner"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+// Tùy chỉnh toast options mặc định
+const defaultToastOptions: ToastOptions = {
+  position: "top-center",
+  className: "toast-center",
+  duration: 4000,
+}
+
+// Các hàm tiện ích hiển thị toast
+export function showSuccessToast(message: string, options?: ToastOptions) {
+  return toast.success(message, { ...defaultToastOptions, ...options })
+}
+
+export function showErrorToast(message: string, options?: ToastOptions) {
+  return toast.error(message, { ...defaultToastOptions, ...options })
+}
+
+export function showInfoToast(message: string, options?: ToastOptions) {
+  return toast(message, { ...defaultToastOptions, ...options })
 }
 
 export function formatFileSize(bytes: number): string {

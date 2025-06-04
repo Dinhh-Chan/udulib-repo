@@ -24,7 +24,17 @@ export default function RootLayout({
               {children}
             </AuthProvider>
           </Suspense>
-          <Toaster />
+          <Toaster 
+            position="top-center" 
+            toastOptions={{
+              style: { 
+                marginTop: '4rem',
+                maxWidth: '500px',
+                width: 'auto'
+              },
+              className: 'toast-center'
+            }}
+          />
         </QueryClientProvider>
       </body>
     </html>

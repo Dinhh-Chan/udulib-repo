@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios"
-import { toast } from "sonner"
+import { showErrorToast } from "@/lib/utils"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
 
@@ -55,19 +55,19 @@ class ApiClient {
 
       if (!response.ok) {
         if (response.status === 405) {
-          toast.error(`Phương thức ${options.method} không được phép cho endpoint ${endpoint}`);
+          showErrorToast(`Phương thức ${options.method} không được phép cho endpoint ${endpoint}`);
           return Promise.reject({ type: 'silent', message: `Method ${options.method} Not Allowed` });
         }
         if (data.detail) {
           if (Array.isArray(data.detail)) {
             const errorMessage = data.detail[0]?.msg || "Lỗi xác thực dữ liệu";
-            toast.error(errorMessage);
+            showErrorToast(errorMessage);
             return Promise.reject({ type: 'silent', message: errorMessage });
           }
-          toast.error(data.detail);
+          showErrorToast(data.detail);
           return Promise.reject({ type: 'silent', message: data.detail });
         }
-        toast.error(`Lỗi HTTP ${response.status}: ${response.statusText}`);
+        showErrorToast(`Lỗi HTTP ${response.status}: ${response.statusText}`);
         return Promise.reject({ type: 'silent', message: `HTTP Error ${response.status}` });
       }
 
@@ -77,7 +77,7 @@ class ApiClient {
         return Promise.reject(error);
       }
       
-      toast.error("Có lỗi xảy ra, vui lòng thử lại sau");
+      showErrorToast("Có lỗi xảy ra, vui lòng thử lại sau");
       return Promise.reject({ type: 'silent', message: "Unexpected error" });
     }
   }
@@ -181,8 +181,6 @@ apiClientAxios.interceptors.request.use((config) => {
 apiClientAxios.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error:", error.response?.data || error.message)
-    
     // Nếu status là 401 thì đăng xuất và chuyển đến trang login
     if (error.response?.status === 401) {
       localStorage.removeItem("access_token")
@@ -194,12 +192,12 @@ apiClientAxios.interceptors.response.use(
     // Hiển thị thông báo lỗi
     if (error.response?.data?.detail) {
       if (typeof error.response.data.detail === 'string') {
-        toast.error(error.response.data.detail)
+        showErrorToast(error.response.data.detail)
       } else if (Array.isArray(error.response.data.detail)) {
-        toast.error(error.response.data.detail[0]?.msg || "Validation error")
+        showErrorToast(error.response.data.detail[0]?.msg || "Lỗi xác thực dữ liệu")
       }
     } else {
-      toast.error("Có lỗi xảy ra, vui lòng thử lại sau")
+      showErrorToast("Có lỗi xảy ra, vui lòng thử lại sau")
     }
     
     return Promise.reject(error)
