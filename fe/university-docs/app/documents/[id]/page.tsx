@@ -102,6 +102,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
   const downloadLinkRef = useRef<HTMLAnchorElement>(null);
   const [downloadUrl, setDownloadUrl] = useState<string>("");
+  const [hasDownloaded, setHasDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -477,15 +479,30 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     return url;
   };
 
-  const confirmDownload = () => {
+  const confirmDownload = async () => {
     setShowDownloadConfirm(false);
-    const finalUrl = getDownloadUrl(downloadUrl);
-    if (finalUrl.startsWith('http')) {
-      window.open(finalUrl, '_blank', 'noopener');
-    } else {
-      if (downloadLinkRef.current) {
-        downloadLinkRef.current.click();
+    setIsDownloading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/download`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        setHasDownloaded(true);
+        const finalUrl = getDownloadUrl(downloadUrl);
+        if (finalUrl.startsWith('http')) {
+          window.open(finalUrl, '_blank', 'noopener');
+        } else {
+          if (downloadLinkRef.current) {
+            downloadLinkRef.current.click();
+          }
+        }
       }
+    } catch (err) {
+      console.error("Error downloading document:", err);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -636,9 +653,10 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 <Button
                   className="w-full"
                   onClick={handleDownloadClick}
+                  disabled={isDownloading}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Tải xuống
+                  {isDownloading ? "Đang tải xuống..." : hasDownloaded ? "Đã tải xuống" : "Tải xuống"}
                 </Button>
                 {/* Thẻ a ẩn để download file nội bộ */}
                 <a
@@ -650,6 +668,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 >Download</a>
                 <p className="text-xs text-muted-foreground mt-2">
                   Đã có {document.download_count} lượt tải xuống
+                  {hasDownloaded && " • Bạn đã tải tài liệu này"}
                 </p>
               </CardContent>
             </Card>
@@ -717,10 +736,19 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           <DialogHeader>
             <DialogTitle>Xác nhận tải xuống</DialogTitle>
           </DialogHeader>
-          <div>Bạn có chắc chắn muốn tải tài liệu này về máy không?</div>
+          <div>
+            <p>Bạn có chắc chắn muốn tải tài liệu này về máy không?</p>
+            {hasDownloaded && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Lưu ý: Bạn đã tải tài liệu này trước đó.
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button onClick={() => setShowDownloadConfirm(false)} variant="outline">Huỷ</Button>
-            <Button onClick={confirmDownload}>Xác nhận</Button>
+            <Button onClick={confirmDownload} disabled={isDownloading}>
+              {isDownloading ? "Đang tải..." : "Xác nhận"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

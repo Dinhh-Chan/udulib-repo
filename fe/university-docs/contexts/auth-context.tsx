@@ -56,10 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const urlParams = new URLSearchParams(window.location.search)
     const callbackUrl = urlParams.get("callbackUrl")
     
-    toast.success("Đăng nhập thành công", {
-      duration: 2000,
-      position: "top-center"
-    })
 
     // Nếu có callbackUrl thì chuyển hướng đến đó, nếu không thì về trang chủ
     if (callbackUrl) {

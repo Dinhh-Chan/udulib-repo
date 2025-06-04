@@ -1,9 +1,20 @@
 import { Major, MajorCreate, MajorUpdate } from "@/types/major"
+import { getAuthToken } from "./auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-export async function getMajors(): Promise<Major[]> {
-  const response = await fetch(`${API_URL}/majors`)
+const getHeaders = () => {
+  const token = getAuthToken()
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  }
+}
+
+export async function getMajors(page: number = 1, perPage: number = 20): Promise<Major[]> {
+  const response = await fetch(`${API_URL}/majors?page=${page}&per_page=${perPage}`, {
+    headers: getHeaders()
+  })
   if (!response.ok) {
     throw new Error("Failed to fetch majors")
   }

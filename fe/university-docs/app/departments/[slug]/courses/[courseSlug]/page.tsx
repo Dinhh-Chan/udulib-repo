@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronRight, FileText, Download, Eye, Calendar, User } from "lucide-react"
 import React from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 type Document = {
   document_id: number;
@@ -127,6 +128,11 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
 }
 
 function DocumentCard({ document }: { document: Document }) {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [hasDownloaded, setHasDownloaded] = useState(false);
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+  const downloadLinkRef = useRef<HTMLAnchorElement>(null);
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -139,6 +145,46 @@ function DocumentCard({ document }: { document: Document }) {
     if (!dateString) return ''
     return new Date(dateString).toLocaleDateString('vi-VN')
   }
+
+  const getDownloadUrl = (url: string) => {
+    // Nếu là Google Docs, chuyển sang link export PDF
+    const match = url.match(/https:\/\/docs\.google\.com\/document\/d\/([\w-]+)/);
+    if (match) {
+      return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
+    }
+    return url;
+  };
+
+  const handleDownloadClick = () => {
+    setShowDownloadConfirm(true);
+  };
+
+  const confirmDownload = async () => {
+    setShowDownloadConfirm(false);
+    setIsDownloading(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${document.document_id}/download`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        setHasDownloaded(true);
+        const finalUrl = getDownloadUrl(document.file_path);
+        if (finalUrl.startsWith('http')) {
+          window.open(finalUrl, '_blank', 'noopener');
+        } else {
+          if (downloadLinkRef.current) {
+            downloadLinkRef.current.click();
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error downloading document:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <Card>
@@ -169,7 +215,10 @@ function DocumentCard({ document }: { document: Document }) {
           </div>
           <div className="flex items-center gap-1">
             <Download className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{document.download_count} lượt tải</span>
+            <span className="text-muted-foreground">
+              {document.download_count} lượt tải
+              {hasDownloaded && " • Đã tải"}
+            </span>
           </div>
         </div>
       </CardContent>
@@ -180,11 +229,48 @@ function DocumentCard({ document }: { document: Document }) {
             Xem trước
           </Link>
         </Button>
-        <Button size="sm" className="flex-1">
+        <Button 
+          size="sm" 
+          className="flex-1"
+          onClick={handleDownloadClick}
+          disabled={isDownloading}
+        >
           <Download className="h-4 w-4 mr-2" />
-          Tải xuống
+          {isDownloading ? "Đang tải..." : hasDownloaded ? "Đã tải xuống" : "Tải xuống"}
         </Button>
       </CardFooter>
+
+      {/* Thẻ a ẩn để download file nội bộ */}
+      <a
+        href={getDownloadUrl(document.file_path)}
+        download
+        ref={downloadLinkRef}
+        style={{ display: 'none' }}
+        tabIndex={-1}
+      >Download</a>
+
+      {/* Modal xác nhận tải xuống */}
+      <Dialog open={showDownloadConfirm} onOpenChange={setShowDownloadConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận tải xuống</DialogTitle>
+          </DialogHeader>
+          <div>
+            <p>Bạn có chắc chắn muốn tải tài liệu này về máy không?</p>
+            {hasDownloaded && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Lưu ý: Bạn đã tải tài liệu này trước đó.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowDownloadConfirm(false)} variant="outline">Huỷ</Button>
+            <Button onClick={confirmDownload} disabled={isDownloading}>
+              {isDownloading ? "Đang tải..." : "Xác nhận"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
