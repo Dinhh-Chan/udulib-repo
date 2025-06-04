@@ -17,6 +17,50 @@ async def read_current_user(current_user: UserModel = Depends(get_current_user))
     """
     return current_user
 
+@router.put("/me", response_model=User)
+async def update_current_user(
+    *,
+    db: AsyncSession = Depends(get_db),
+    user_in: UserUpdate,
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Cập nhật thông tin người dùng hiện tại.
+    """
+    # Nếu có cập nhật email, kiểm tra email không trùng
+    if user_in.email and user_in.email != current_user.email:
+        existing_user = await user_crud.get_by_email(db=db, email=user_in.email)
+        if existing_user and existing_user.user_id != current_user.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email đã tồn tại"
+            )
+    
+    # Nếu có cập nhật username, kiểm tra username không trùng
+    if user_in.username and user_in.username != current_user.username:
+        existing_user = await user_crud.get_by_username(db=db, username=user_in.username)
+        if existing_user and existing_user.user_id != current_user.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tên đăng nhập đã tồn tại"
+            )
+    
+    # Kiểm tra quyền: User thường không thể thay đổi role và status
+    if user_in.role and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thay đổi vai trò"
+        )
+    
+    if user_in.status and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thay đổi trạng thái tài khoản"
+        )
+    
+    user = await user_crud.update(db=db, db_obj=current_user, obj_in=user_in)
+    return user
+
 @router.get("/", response_model=List[User])
 async def read_users(
     db: AsyncSession = Depends(get_db),
