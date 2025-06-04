@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ChevronRight, ArrowLeft, MessageSquare, Eye, Clock, User, Reply } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
-import { getForum, getForumPost, getForumReplies, createForumReply } from "@/lib/api/forum"
+import { getForum, getForumPost, getForumReplies, createForumReply, createReplyToComment } from "@/lib/api/forum"
 import { toast } from "sonner"
 import type { Forum, ForumPost, ForumReply } from "@/types/forum"
 
@@ -20,11 +20,16 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
   const [forum, setForum] = useState<Forum | null>(null)
   const [post, setPost] = useState<ForumPost | null>(null)
   const [replies, setReplies] = useState<ForumReply[]>([])
+  const [allReplies, setAllReplies] = useState<ForumReply[]>([])
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [isSubmittingReply, setIsSubmittingReply] = useState(false)
   const [replyContent, setReplyContent] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalReplies, setTotalReplies] = useState(0)
+  const [replyingTo, setReplyingTo] = useState<number | null>(null)
+  const [replyToCommentContent, setReplyToCommentContent] = useState("")
+  const [isSubmittingReplyToComment, setIsSubmittingReplyToComment] = useState(false)
+  const [totalPages, setTotalPages] = useState(0)
   const resolvedParams = use(params)
 
   useEffect(() => {
@@ -62,13 +67,48 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
 
   const loadReplies = async () => {
     try {
-      const repliesData = await getForumReplies(parseInt(resolvedParams.postId), currentPage, 5)
-      setReplies(repliesData.replies)
-      setTotalReplies(repliesData.total)
+      // Lấy tất cả replies một lần
+      const repliesData = await getForumReplies(parseInt(resolvedParams.postId), 1, 1000)
+      setAllReplies(repliesData.replies)
+      
+      // Tính tổng số tất cả replies (bao gồm child replies)
+      const countAllReplies = (repliesList: ForumReply[]): number => {
+        let count = repliesList.length
+        repliesList.forEach(reply => {
+          if (reply.child_replies && reply.child_replies.length > 0) {
+            count += countAllReplies(reply.child_replies)
+          }
+        })
+        return count
+      }
+      
+      const totalAllReplies = countAllReplies(repliesData.replies)
+      setTotalReplies(totalAllReplies)
+      
+      // Tính phân trang cho main replies
+      const totalPages = Math.ceil(repliesData.replies.length / 5)
+      setTotalPages(totalPages)
+      
+      // Hiển thị replies cho trang hiện tại
+      updateCurrentPageReplies(repliesData.replies, currentPage)
     } catch (error) {
       console.error("Error loading replies:", error)
     }
   }
+
+  const updateCurrentPageReplies = (allRepliesList: ForumReply[], page: number) => {
+    const startIndex = (page - 1) * 5
+    const endIndex = startIndex + 5
+    const currentPageReplies = allRepliesList.slice(startIndex, endIndex)
+    setReplies(currentPageReplies)
+  }
+
+  // Cập nhật replies khi chuyển trang
+  useEffect(() => {
+    if (allReplies.length > 0) {
+      updateCurrentPageReplies(allReplies, currentPage)
+    }
+  }, [currentPage, allReplies])
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,6 +138,42 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
     }
   }
 
+  const handleSubmitReplyToComment = async (e: React.FormEvent, replyId: number) => {
+    e.preventDefault()
+    
+    if (!replyToCommentContent.trim()) {
+      toast.error("Vui lòng nhập nội dung phản hồi")
+      return
+    }
+
+    try {
+      setIsSubmittingReplyToComment(true)
+      await createReplyToComment(replyId, replyToCommentContent.trim())
+      
+      setReplyToCommentContent("")
+      setReplyingTo(null)
+      toast.success("Đăng phản hồi thành công!")
+      
+      // Reload replies để hiển thị phản hồi mới
+      await loadReplies()
+    } catch (error: any) {
+      console.error("Error creating reply to comment:", error)
+      toast.error(error.message || "Không thể đăng phản hồi")
+    } finally {
+      setIsSubmittingReplyToComment(false)
+    }
+  }
+
+  const handleReplyClick = (replyId: number) => {
+    setReplyingTo(replyId)
+    setReplyToCommentContent("")
+  }
+
+  const handleCancelReply = () => {
+    setReplyingTo(null)
+    setReplyToCommentContent("")
+  }
+
   if (isLoading || isLoadingData) {
     return (
       <div className="container py-8 px-4 md:px-6">
@@ -120,8 +196,6 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
       </div>
     )
   }
-
-  const totalPages = Math.ceil(totalReplies / 5)
 
   return (
     <div className="container py-8 px-4 md:px-6">
@@ -258,6 +332,83 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
                           <div className="prose max-w-none">
                             <p className="whitespace-pre-wrap">{reply.content}</p>
                           </div>
+                          
+                          {/* Nút Reply */}
+                          <div className="pt-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReplyClick(reply.reply_id)}
+                              className="text-sm text-muted-foreground hover:text-foreground"
+                            >
+                              <Reply className="h-3 w-3 mr-1" />
+                              Phản hồi
+                            </Button>
+                          </div>
+
+                          {/* Form reply inline */}
+                          {replyingTo === reply.reply_id && (
+                            <Card className="mt-3 bg-muted/30">
+                              <CardContent className="pt-4">
+                                <form onSubmit={(e) => handleSubmitReplyToComment(e, reply.reply_id)} className="space-y-3">
+                                  <Textarea
+                                    placeholder={`Phản hồi ${reply.author?.full_name || "comment này"}...`}
+                                    rows={3}
+                                    value={replyToCommentContent}
+                                    onChange={(e) => setReplyToCommentContent(e.target.value)}
+                                    required
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      type="submit" 
+                                      size="sm" 
+                                      disabled={isSubmittingReplyToComment}
+                                    >
+                                      {isSubmittingReplyToComment ? "Đang đăng..." : "Đăng phản hồi"}
+                                    </Button>
+                                    <Button 
+                                      type="button" 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={handleCancelReply}
+                                    >
+                                      Hủy
+                                    </Button>
+                                  </div>
+                                </form>
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {/* Hiển thị nested replies nếu có */}
+                          {reply.child_replies && reply.child_replies.length > 0 && (
+                            <div className="ml-6 mt-4 space-y-3 border-l-2 border-muted pl-4">
+                              {reply.child_replies.map((nestedReply) => (
+                                <div key={nestedReply.reply_id} className="flex gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage 
+                                      src={"/placeholder.svg"} 
+                                      alt={nestedReply.author?.username || "Người dùng"} 
+                                    />
+                                    <AvatarFallback>
+                                      {nestedReply.author?.full_name?.substring(0, 2) || "ND"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-sm">{nestedReply.author?.full_name || "Người dùng"}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {new Date(nestedReply.created_at).toLocaleDateString("vi-VN")}
+                                      </p>
+                                    </div>
+                                    <div className="prose max-w-none">
+                                      <p className="text-sm whitespace-pre-wrap">{nestedReply.content}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>

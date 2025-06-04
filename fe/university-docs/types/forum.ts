@@ -41,10 +41,10 @@ export interface ForumReply {
   user_id: number
   content: string
   created_at: string
-  updated_at: string
+  updated_at: string | null
   status: string
-  parent_id?: number | null
-  replies?: ForumReply[]
+  parent_reply_id?: number | null
+  child_replies?: ForumReply[]
   author: {
     user_id: number
     username: string
