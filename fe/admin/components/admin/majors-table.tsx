@@ -24,6 +24,7 @@ import { Search, MoreHorizontal } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
 import { EditMajorDialog } from "./edit-major-dialog"
 import { Major } from "@/types/major"
+import { deleteMajor } from "@/lib/api/major"
 
 interface MajorsResponse {
   items: Major[]
@@ -54,9 +55,18 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
         setIsLoading(true)
         const response = await apiClient.get<Major[]>(`/majors?page=${page}&search=${debouncedSearch}`)
         setMajors(response)
-      } catch (error) {
-        console.error("Error fetching majors:", error)
-        toast.error("Không thể tải danh sách ngành học")
+      } catch (error: any) {
+        // Xử lý lỗi từ API
+        if (error.type === 'silent' && error.message) {
+          // Đã được xử lý bởi ApiClient, không cần làm gì thêm
+        } else if (error.response?.data?.detail) {
+          // Hiển thị lỗi cụ thể từ API
+          toast.error(error.response.data.detail);
+        } else if (error instanceof Error) {
+          toast.error(error.message);
+        } else {
+          toast.error("Không thể tải danh sách ngành học");
+        }
       } finally {
         setIsLoading(false)
       }
@@ -75,13 +85,26 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
   }, [debouncedSearch, router, search, searchParams])
 
   const handleDelete = async (id: number) => {
+    if (!confirm("Bạn có chắc muốn xóa ngành học này?")) {
+      return;
+    }
+    
     try {
-      await apiClient.delete(`/majors/${id}`)
+      await deleteMajor(id)
       setReloadKey(key => key + 1)
       toast.success("Xóa ngành học thành công")
-    } catch (error) {
-      console.error("Error deleting major:", error)
-      toast.error("Không thể xóa ngành học")
+    } catch (error: any) {
+      // Xử lý lỗi từ API
+      if (error.type === 'silent' && error.message) {
+        // Đã được xử lý bởi ApiClient, không cần làm gì thêm
+      } else if (error.response?.data?.detail) {
+        // Hiển thị lỗi cụ thể từ API
+        toast.error(error.response.data.detail);
+      } else if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Không thể xóa ngành học");
+      }
     }
   }
 

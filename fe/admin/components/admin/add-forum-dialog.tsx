@@ -48,7 +48,6 @@ export function AddForumDialog({ open, onOpenChange, onSuccess, subjectId }: Add
       const response = await getSubjects()
       setSubjects(Array.isArray(response) ? response : [])
     } catch (error) {
-      console.error("Error fetching subjects:", error)
       toast.error("Không thể tải danh sách môn học")
     } finally {
       setIsLoadingSubjects(false)
@@ -84,9 +83,9 @@ export function AddForumDialog({ open, onOpenChange, onSuccess, subjectId }: Add
       toast.success("Tạo diễn đàn thành công")
       onOpenChange(false)
       onSuccess?.()
-    } catch (error) {
-      console.error("Error creating forum:", error)
-      toast.error("Không thể tạo diễn đàn mới")
+    } catch (error: any) {
+      // Không cần làm gì vì lỗi đã được xử lý bởi ApiClient
+      // và đã hiển thị thông báo qua toast
     } finally {
       setIsLoading(false)
     }

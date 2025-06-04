@@ -53,13 +53,16 @@ export function EditMajorDialog({ major, open, onOpenChange, onSuccess }: EditMa
       toast.success("Cập nhật ngành học thành công")
       onSuccess?.()
       onOpenChange(false)
-    } catch (error) {
-      if (error instanceof Error) {
+    } catch (error: any) {
+      if (error.type === 'silent' && error.message) {
+        // Đã được xử lý bởi ApiClient, không cần làm gì thêm
+      } else if (error.response?.data?.detail) {
+        toast.error(error.response.data.detail);
+      } else if (error instanceof Error) {
         toast.error(error.message)
       } else {
         toast.error("Không thể cập nhật ngành học")
       }
-      console.error(error)
     } finally {
       setIsLoading(false)
     }

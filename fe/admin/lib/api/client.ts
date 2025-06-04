@@ -50,32 +50,35 @@ class ApiClient {
     }
 
     try {
-      console.log(`API Request: ${options.method || 'GET'} ${url}`, config.body ? JSON.parse(config.body as string) : null)
       const response = await fetch(url, config)
       const data = await response.json()
-      console.log(`API Response: ${response.status}`, data)
 
       if (!response.ok) {
         if (response.status === 405) {
-          throw new Error(`Method ${options.method} Not Allowed for endpoint ${endpoint}`)
+          toast.error(`Phương thức ${options.method} không được phép cho endpoint ${endpoint}`);
+          return Promise.reject({ type: 'silent', message: `Method ${options.method} Not Allowed` });
         }
         if (data.detail) {
           if (Array.isArray(data.detail)) {
-            const errorMessage = data.detail[0]?.msg || "Validation error"
-            throw new Error(errorMessage)
+            const errorMessage = data.detail[0]?.msg || "Lỗi xác thực dữ liệu";
+            toast.error(errorMessage);
+            return Promise.reject({ type: 'silent', message: errorMessage });
           }
-          throw new Error(data.detail)
+          toast.error(data.detail);
+          return Promise.reject({ type: 'silent', message: data.detail });
         }
-        throw new Error(`HTTP Error ${response.status}: ${response.statusText}`)
+        toast.error(`Lỗi HTTP ${response.status}: ${response.statusText}`);
+        return Promise.reject({ type: 'silent', message: `HTTP Error ${response.status}` });
       }
 
-      return data
-    } catch (error) {
-      console.error("API request failed:", error)
-      if (error instanceof Error) {
-        throw error
+      return data;
+    } catch (error: any) {
+      if (error.type === 'silent') {
+        return Promise.reject(error);
       }
-      throw new Error("An unexpected error occurred")
+      
+      toast.error("Có lỗi xảy ra, vui lòng thử lại sau");
+      return Promise.reject({ type: 'silent', message: "Unexpected error" });
     }
   }
 

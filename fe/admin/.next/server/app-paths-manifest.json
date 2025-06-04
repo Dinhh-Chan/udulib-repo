@@ -1,10 +1,7 @@
 {
-  "/page": "app/page.js",
-  "/admin/settings/page": "app/admin/settings/page.js",
+  "/login/page": "app/login/page.js",
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/majors/page": "app/admin/majors/page.js",
-  "/admin/courses/page": "app/admin/courses/page.js",
-  "/admin/documents/page": "app/admin/documents/page.js",
-  "/admin/notifications/page": "app/admin/notifications/page.js",
-  "/admin/page": "app/admin/page.js"
+  "/admin/forum/page": "app/admin/forum/page.js",
+  "/admin/users/page": "app/admin/users/page.js",
+  "/admin/majors/page": "app/admin/majors/page.js"
 }
