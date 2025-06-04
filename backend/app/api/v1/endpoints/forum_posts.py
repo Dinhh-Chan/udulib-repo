@@ -84,7 +84,7 @@ async def read_forum_post(
     *,
     db: AsyncSession = Depends(get_db),
     post_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một forum post.
@@ -103,7 +103,7 @@ async def create_forum_post(
     *,
     db: AsyncSession = Depends(get_db),
     post_in: ForumPostCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo forum post mới.

@@ -24,6 +24,8 @@ import { getUserDocuments, getDocumentDetail, updateDocument, deleteDocument, Do
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Notification, getAllNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/api/notification"
+import { getUserForumPosts, deleteForumPost } from "@/lib/api/forum"
+import { ForumPost } from "@/types/forum"
 
 export default function ProfilePage() {
   const searchParams = useSearchParams()
@@ -57,6 +59,12 @@ export default function ProfilePage() {
     email: "",
     studentId: ""
   })
+  const [forumPosts, setForumPosts] = useState<ForumPost[]>([])
+  const [isLoadingForumPosts, setIsLoadingForumPosts] = useState(false)
+  const [forumCurrentPage, setForumCurrentPage] = useState(1)
+  const [forumTotalPages, setForumTotalPages] = useState(1)
+  const [forumPostToDelete, setForumPostToDelete] = useState<number | null>(null)
+  const [isDeleteForumPostDialogOpen, setIsDeleteForumPostDialogOpen] = useState(false)
 
   useEffect(() => {
     // Lấy tab từ URL query parameter
@@ -130,6 +138,27 @@ export default function ProfilePage() {
 
     fetchNotifications()
   }, [isAuthenticated, activeTab])
+
+  useEffect(() => {
+    const fetchUserForumPosts = async () => {
+      if (!authUser?.user_id || activeTab !== "forum") return
+
+      setIsLoadingForumPosts(true)
+      try {
+        const response = await getUserForumPosts(authUser.user_id, forumCurrentPage, 5)
+        setForumPosts(response.posts || [])
+        setForumTotalPages(response.total_pages)
+      } catch (error) {
+        console.error("Error fetching forum posts:", error)
+        toast.error("Không thể tải danh sách bài viết")
+        setForumPosts([])
+      } finally {
+        setIsLoadingForumPosts(false)
+      }
+    }
+
+    fetchUserForumPosts()
+  }, [authUser?.user_id, forumCurrentPage, activeTab])
 
   useEffect(() => {
     if (user) {
@@ -210,6 +239,27 @@ export default function ProfilePage() {
     }
   }
 
+  const handleDeleteForumPost = async () => {
+    if (!forumPostToDelete) return
+
+    try {
+      setIsLoadingForumPosts(true)
+      await deleteForumPost(forumPostToDelete)
+      toast.success("Xóa bài viết thành công")
+      setIsDeleteForumPostDialogOpen(false)
+      // Refresh danh sách bài viết forum
+      const response = await getUserForumPosts(authUser!.user_id, forumCurrentPage, 5)
+      setForumPosts(response.posts || [])
+      setForumTotalPages(response.total_pages)
+    } catch (error) {
+      console.error("Error deleting forum post:", error)
+      toast.error("Không thể xóa bài viết")
+    } finally {
+      setIsLoadingForumPosts(false)
+      setForumPostToDelete(null)
+    }
+  }
+
   const handleMarkNotificationAsRead = async (notificationId: number) => {
     try {
       await markNotificationAsRead(notificationId)
@@ -266,13 +316,15 @@ export default function ProfilePage() {
         email: updatedUser.email,
         university_id: updatedUser.university_id
       }
+      
+      // Cập nhật localStorage và state
       localStorage.setItem("user", JSON.stringify(updatedUserData))
       setUser(updatedUserData)
 
       toast.success("Cập nhật thông tin thành công")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error)
-      toast.error("Không thể cập nhật thông tin")
+      toast.error(error.message || "Không thể cập nhật thông tin")
     } finally {
       setIsUpdating(false)
     }
@@ -581,6 +633,106 @@ export default function ProfilePage() {
                       </div>
                     </TabsContent>
                   </Tabs>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "forum" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Bài viết diễn đàn</CardTitle>
+                  <CardDescription>Quản lý các bài viết bạn đã đăng trên diễn đàn</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingForumPosts ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : forumPosts && forumPosts.length > 0 ? (
+                    <>
+                      <div className="space-y-4">
+                        {forumPosts.map((post) => (
+                          <div key={post.post_id} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div className="flex-1">
+                              {post.status === "approved" ? (
+                                <Link href={`/forum/posts/${post.post_id}`} className="font-medium hover:underline">
+                                  {post.title}
+                                </Link>
+                              ) : (
+                                <span className="font-medium text-muted-foreground">
+                                  {post.title}
+                                </span>
+                              )}
+                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                                <Badge variant={post.status === "approved" ? "default" : "secondary"}>
+                                  {post.status === "approved" ? "Đã duyệt" : 
+                                   post.status === "pending" ? "Chờ duyệt" : "Từ chối"}
+                                </Badge>
+                                <span>•</span>
+                                <span>{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
+                                <span>•</span>
+                                <span>{(post as any).forum_name || "Diễn đàn"}</span>
+                                {post.reply_count !== undefined && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{post.reply_count} trả lời</span>
+                                  </>
+                                )}
+                              </div>
+                              <div className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                                {post.content.replace(/<[^>]*>/g, '').substring(0, 100)}
+                                {post.content.length > 100 && '...'}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {post.status === "approved" && (
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/forum/posts/${post.post_id}`}>Xem</Link>
+                                </Button>
+                              )}
+                              <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                onClick={() => {
+                                  setForumPostToDelete(post.post_id)
+                                  setIsDeleteForumPostDialogOpen(true)
+                                }}
+                              >
+                                Xóa
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {forumTotalPages > 1 && (
+                        <div className="flex justify-center gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setForumCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={forumCurrentPage === 1}
+                          >
+                            Trước
+                          </Button>
+                          <span className="flex items-center px-4">
+                            Trang {forumCurrentPage} / {forumTotalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setForumCurrentPage((prev) => Math.min(prev + 1, forumTotalPages))}
+                            disabled={forumCurrentPage === forumTotalPages}
+                          >
+                            Sau
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Chưa có bài viết nào được đăng
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -918,6 +1070,23 @@ export default function ProfilePage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteDocument} disabled={isLoadingDocument}>
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isDeleteForumPostDialogOpen} onOpenChange={setIsDeleteForumPostDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa bài viết</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteForumPost} disabled={isLoadingForumPosts}>
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

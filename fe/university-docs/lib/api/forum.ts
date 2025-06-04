@@ -363,15 +363,134 @@ export async function createForumReply(data: {
     })
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.detail || "Không thể tạo bình luận")
+      throw new Error(error.detail || "Không thể tạo phản hồi")
     }
-    const reply = await response.json()
+    return response.json()
+  } catch (error) {
+    console.error("Error creating forum reply:", error)
+    throw error
+  }
+}
+
+// Get user forum posts với phân trang
+export async function getUserForumPosts(userId: number, page: number = 1, per_page: number = 5): Promise<{
+  posts: ForumPost[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+}> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-posts?user_id=${userId}&page=${page}&per_page=${per_page}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể lấy danh sách bài viết")
+    }
     
-    // Lấy thông tin người bình luận
+    const posts = await response.json()
+    
+    // Lấy thông tin chi tiết cho từng bài viết (forum, user)
+    const postsWithDetails = await Promise.all(
+      posts.map(async (post: ForumPost) => {
+        try {
+          // Lấy thông tin forum và subject
+          const forum = await getForum(post.forum_id)
+          const author = await getUser(post.user_id)
+          
+          return {
+            ...post,
+            forum_name: forum.subject_name,
+            author: {
+              user_id: author.user_id,
+              username: author.username,
+              full_name: author.full_name,
+              email: author.email,
+              university_id: author.university_id,
+              role: author.role,
+              status: author.status,
+              created_at: author.created_at,
+              updated_at: author.updated_at,
+              last_login: author.last_login,
+              google_id: author.google_id
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching details for post ${post.post_id}:`, error)
+          return {
+            ...post,
+            forum_name: "Không xác định",
+            author: {
+              user_id: post.user_id,
+              username: "Người dùng",
+              full_name: "Người dùng",
+              email: "",
+              university_id: "",
+              role: "user",
+              status: "inactive",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              last_login: null,
+              google_id: null
+            }
+          }
+        }
+      })
+    )
+
+    // Giả lập phân trang vì API có thể chưa trả về thông tin phân trang
+    const total = postsWithDetails.length
+    const total_pages = Math.ceil(total / per_page)
+    
+    return {
+      posts: postsWithDetails,
+      total,
+      page,
+      per_page,
+      total_pages
+    }
+  } catch (error) {
+    console.error("Error fetching user forum posts:", error)
+    throw error
+  }
+}
+
+// Tạo bài viết mới trong forum
+export async function createForumPost(data: {
+  forum_id: number
+  title: string
+  content: string
+}): Promise<ForumPost> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-posts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể tạo bài viết")
+    }
+    
+    const post = await response.json()
+    
+    // Lấy thông tin người đăng
     try {
-      const author = await getUser(reply.user_id)
+      const author = await getUser(post.user_id)
       return {
-        ...reply,
+        ...post,
         author: {
           user_id: author.user_id,
           username: author.username,
@@ -387,11 +506,11 @@ export async function createForumReply(data: {
         }
       }
     } catch (error) {
-      console.error(`Error fetching author for reply ${reply.reply_id}:`, error)
+      console.error(`Error fetching author for new post ${post.post_id}:`, error)
       return {
-        ...reply,
+        ...post,
         author: {
-          user_id: reply.user_id,
+          user_id: post.user_id,
           username: "Người dùng",
           full_name: "Người dùng",
           email: "",
@@ -406,7 +525,29 @@ export async function createForumReply(data: {
       }
     }
   } catch (error) {
-    console.error("Error creating forum reply:", error)
+    console.error("Error creating forum post:", error)
+    throw error
+  }
+}
+
+// Xóa bài viết forum
+export async function deleteForumPost(postId: number): Promise<void> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-posts/${postId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể xóa bài viết")
+    }
+  } catch (error) {
+    console.error("Error deleting forum post:", error)
     throw error
   }
 } 

@@ -14,11 +14,12 @@ export interface ForumPost {
   created_at: string
   updated_at: string
   status: string
-  category: "question" | "discussion" | "resource" | "announcement"
   department: string
   departmentSlug: string
   course?: string
   courseSlug?: string
+  forum_name?: string
+  reply_count?: number
   author: {
     user_id: number
     username: string
