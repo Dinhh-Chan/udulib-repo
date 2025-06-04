@@ -1,0 +1,178 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { apiClient } from "@/lib/api/client"
+import { toast } from "sonner"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Search, MoreHorizontal } from "lucide-react"
+import { useDebounce } from "@/hooks/use-debounce"
+import { EditMajorDialog } from "./edit-major-dialog"
+import { Major } from "@/types/major"
+
+interface MajorsResponse {
+  items: Major[]
+  total: number
+  total_pages: number
+  current_page: number
+}
+
+interface MajorsTableProps {
+  page?: number
+  search?: string
+}
+
+export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
+  const [majors, setMajors] = useState<Major[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState(search)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [selectedMajor, setSelectedMajor] = useState<Major | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const debouncedSearch = useDebounce(searchTerm, 500)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const fetchMajors = async () => {
+      try {
+        setIsLoading(true)
+        const response = await apiClient.get<Major[]>(`/majors?page=${page}&search=${debouncedSearch}`)
+        setMajors(response)
+      } catch (error) {
+        console.error("Error fetching majors:", error)
+        toast.error("Không thể tải danh sách ngành học")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchMajors()
+  }, [page, debouncedSearch, reloadKey])
+
+  useEffect(() => {
+    if (debouncedSearch !== search) {
+      const params = new URLSearchParams(searchParams?.toString())
+      params.set("search", debouncedSearch)
+      params.set("page", "1")
+      router.push(`?${params.toString()}`, { scroll: false })
+    }
+  }, [debouncedSearch, router, search, searchParams])
+
+  const handleDelete = async (id: number) => {
+    try {
+      await apiClient.delete(`/majors/${id}`)
+      setReloadKey(key => key + 1)
+      toast.success("Xóa ngành học thành công")
+    } catch (error) {
+      console.error("Error deleting major:", error)
+      toast.error("Không thể xóa ngành học")
+    }
+  }
+
+  const handleEdit = (major: Major) => {
+    setSelectedMajor(major)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditSuccess = () => {
+    setReloadKey(key => key + 1)
+  }
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 px-6 py-4">
+        <h2 className="text-2xl font-bold tracking-tight">Danh sách ngành học</h2>
+        <div className="relative flex-1 max-w-[300px]">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm kiếm ngành học..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8 w-full"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Mã ngành</TableHead>
+              <TableHead>Tên ngành</TableHead>
+              <TableHead>Mô tả</TableHead>
+              <TableHead>Ngày tạo</TableHead>
+              <TableHead className="text-right">Thao tác</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {majors.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center">
+                  Không có dữ liệu
+                </TableCell>
+              </TableRow>
+            ) : (
+              majors.map((major) => (
+                <TableRow key={major.major_id}>
+                  <TableCell>{major.major_code}</TableCell>
+                  <TableCell>{major.major_name}</TableCell>
+                  <TableCell>{major.description}</TableCell>
+                  <TableCell>{new Date(major.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(major)}>
+                          Sửa
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => handleDelete(major.major_id)}
+                        >
+                          Xóa
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {selectedMajor && (
+        <EditMajorDialog
+          major={selectedMajor}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+    </div>
+  )
+}

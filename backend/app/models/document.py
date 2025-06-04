@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Enum, DateTime, func
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -14,8 +14,14 @@ class Document(Base):
     file_type = Column(String(50), nullable=False, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.subject_id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-    status = Column(Enum("approved", "pending", "rejected"), default="pending")
+    status = Column(Enum("approved", "pending", "rejected", name="document_status"), default="pending")
     view_count = Column(Integer, default=0)
     download_count = Column(Integer, default=0)
-    created_at = Column(String)  
-    updated_at = Column(String)  
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    subject = relationship("Subject", back_populates="documents")
+    user = relationship("User", back_populates="documents")
+    document_tags = relationship("DocumentTag", back_populates="document", overlaps="tags,document_tags")
+    tags = relationship("Tag", secondary="document_tags", back_populates="documents", overlaps="document_tags")

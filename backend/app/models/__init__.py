@@ -4,7 +4,6 @@ from app.models.major import Major
 from app.models.academic_year import AcademicYear
 from app.models.subject import Subject
 from app.models.document import Document
-from app.models.department import Department
 from app.models.tag import Tag
 from app.models.document_tag import DocumentTag
 from app.models.comment import Comment
@@ -16,7 +15,6 @@ from app.models.forum_post import ForumPost
 from app.models.forum_reply import ForumReply
 from app.models.system_config import SystemConfig
 from app.models.notification import Notification
-from app.models.subject_department import SubjectDepartment
 from sqlalchemy.orm import relationship
 
 # Define relationships to avoid circular imports
@@ -37,9 +35,6 @@ Subject.major = relationship("Major", back_populates="subjects")
 Subject.academic_year = relationship("AcademicYear", back_populates="subjects")
 Subject.documents = relationship("Document", back_populates="subject")
 Subject.forum = relationship("Forum", back_populates="subject", uselist=False)
-Subject.departments = relationship("Department", secondary="subject_departments", back_populates="subjects")
-
-Department.subjects = relationship("Subject", secondary="subject_departments", back_populates="departments")
 
 Document.subject = relationship("Subject", back_populates="documents")
 Document.user = relationship("User", back_populates="documents")

@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from app.models.base import Base
 
@@ -10,8 +11,12 @@ class Rating(Base):
     document_id = Column(Integer, ForeignKey("documents.document_id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     score = Column(Integer, nullable=False)  # Between 0 and 5, 0 means like without rating
-    created_at = Column(String)  
-    updated_at = Column(String)  
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="ratings")
+    document = relationship("Document", back_populates="ratings")
 
     # Unique constraint
     __table_args__ = (

@@ -10,4 +10,8 @@ class Tag(Base):
     tag_name = Column(String(50), nullable=False, unique=True, index=True)
     created_at = Column(String)  
 
+    # Relationships
+    document_tags = relationship("DocumentTag", back_populates="tag", overlaps="documents")
+    documents = relationship("Document", secondary="document_tags", back_populates="tags", overlaps="document_tags")
+
     
