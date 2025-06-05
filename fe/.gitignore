@@ -52,6 +52,5 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
-docker-compose.yml
 dbeaver-ce_latest_amd64.deb
 **/.next/
