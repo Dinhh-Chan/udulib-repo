@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     full_name: Optional[str] = Field(None, max_length=100)
     role: UserRole = UserRole.student
     university_id: Optional[str] = Field(None, max_length=50)
+    avatar_url: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
@@ -25,6 +26,7 @@ class UserUpdate(BaseModel):
     role: Optional[UserRole] = None
     status: Optional[UserStatus] = None
     university_id: Optional[str] = Field(None, max_length=50)
+    avatar_url: Optional[str] = None
     password: Optional[str] = None
 
 class User(UserBase, TimeStampBase):
