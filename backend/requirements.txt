@@ -21,4 +21,5 @@ google-auth-oauthlib
 google-auth-httplib2
 python-jose[cryptography]
 httpx
-jose 
+jose
+minio==7.2.0 
