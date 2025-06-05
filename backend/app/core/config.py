@@ -106,6 +106,7 @@ class Settings(BaseSettings):
     MINIO_SECURE: bool = False  # Set to True for HTTPS
     MINIO_DOCUMENT_BUCKET: str = "documents"
     MINIO_AVATAR_BUCKET: str = "avatar"
+    MINIO_MAJOR_IMAGE_BUCKET: str = "major-images"
 
     model_config = {
         "case_sensitive": True,

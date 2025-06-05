@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.models.base import get_db
@@ -6,8 +6,10 @@ from app.services.crud.major_crud import MajorCRUD
 from app.schemas.major import Major, MajorCreate, MajorUpdate
 from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User
+from app.services.major_image_service import major_image_service
 
 router = APIRouter()
+
 @router.get("/count-major")
 async def count_major(
     db: AsyncSession = Depends(get_db),
@@ -35,42 +37,6 @@ async def get_majors(
     majors = await crud.get_all(skip=skip, limit=per_page)
     return majors
 
-@router.get("/{major_id}", response_model=Major)
-async def get_major(
-    major_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Lấy thông tin chi tiết của một ngành học theo ID.
-    """
-    crud = MajorCRUD(db)
-    major = await crud.get_by_id(major_id)
-    if not major:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy ngành học"
-        )
-    return major
-
-@router.get("/code/{major_code}", response_model=Major)
-async def get_major_by_code(
-    major_code: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Lấy thông tin chi tiết của một ngành học theo mã ngành.
-    """
-    crud = MajorCRUD(db)
-    major = await crud.get_by_code(major_code)
-    if not major:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy ngành học"
-        )
-    return major
-
 @router.post("/", response_model=Major)
 async def create_major(
     major_in: MajorCreate,
@@ -96,6 +62,70 @@ async def create_major(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+@router.post("/upload-image")
+async def upload_major_image(
+    major_id: int = Query(..., description="ID của ngành học"),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("admin"))
+):
+    return await major_image_service.upload_image(db, major_id, file)
+
+@router.get("/image-url")
+async def get_major_image_url(
+    major_id: int = Query(..., description="ID của ngành học"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    crud = MajorCRUD(db)
+    major = await crud.get_by_id(major_id)
+    if not major:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ngành học"
+        )
+    image_url = major_image_service.get_image_url(major)
+    return {"image_url": image_url}
+
+@router.delete("/image")
+async def delete_major_image(
+    major_id: int = Query(..., description="ID của ngành học"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role("admin"))
+):
+    await major_image_service.delete_image(db, major_id)
+    return {"message": "Xóa ảnh ngành học thành công"}
+
+@router.get("/code/{major_code}", response_model=Major)
+async def get_major_by_code(
+    major_code: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    crud = MajorCRUD(db)
+    major = await crud.get_by_code(major_code)
+    if not major:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ngành học"
+        )
+    return major
+
+@router.get("/{major_id}", response_model=Major)
+async def get_major(
+    major_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    crud = MajorCRUD(db)
+    major = await crud.get_by_id(major_id)
+    if not major:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy ngành học"
+        )
+    return major
 
 @router.put("/{major_id}", response_model=Major)
 async def update_major(

@@ -23,7 +23,11 @@ class MinIOService:
         self._ensure_buckets_exist()
     
     def _ensure_buckets_exist(self):
-        buckets = [settings.MINIO_DOCUMENT_BUCKET, settings.MINIO_AVATAR_BUCKET]
+        buckets = [
+            settings.MINIO_DOCUMENT_BUCKET, 
+            settings.MINIO_AVATAR_BUCKET,
+            settings.MINIO_MAJOR_IMAGE_BUCKET
+        ]
         for bucket in buckets:
             try:
                 if not self.client.bucket_exists(bucket):
