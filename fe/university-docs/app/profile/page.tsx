@@ -368,25 +368,38 @@ export default function ProfilePage() {
 
   if (!isAuthenticated) {
     return (
-      toast.error("Vui lòng đăng nhập để truy cập trang này", {
-        duration: 3000,
-        position: "top-center"
-      })
+      <div className="container py-8 px-4 md:px-6">
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <p className="text-muted-foreground">Vui lòng đăng nhập để truy cập trang này</p>
+          <Button asChild>
+            <Link href="/auth/login">Đăng nhập</Link>
+          </Button>
+        </div>
+      </div>
     )
   }
 
-  if (!user) {
+  if (!user && !isLoading && isAuthenticated) {
     return (
-      toast.error("Không tìm thấy thông tin người dùng", {
-        duration: 3000,
-        position: "top-center"
-      })
+      <div className="container py-8 px-4 md:px-6">
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+          <p className="text-muted-foreground">Không tìm thấy thông tin người dùng</p>
+          <Button onClick={() => window.location.reload()}>
+            Tải lại trang
+          </Button>
+        </div>
+      </div>
     )
+  }
+
+  // At this point, user is guaranteed to exist
+  if (!user) {
+    return <Loading />
   }
 
   return (
-    <div className="container py-8 px-4 md:px-6">
-      <div className="flex flex-col gap-8">
+    <div className="container py-4 sm:py-6 lg:py-8 px-4 md:px-6">
+      <div className="flex flex-col gap-4 sm:gap-6 lg:gap-8">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
             <Link href="/" className="hover:underline">
@@ -395,132 +408,146 @@ export default function ProfilePage() {
             <ChevronRight className="h-4 w-4" />
             <span>Hồ sơ cá nhân</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
-          <p className="text-muted-foreground">Quản lý thông tin cá nhân và hoạt động của bạn</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Hồ sơ cá nhân</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Quản lý thông tin cá nhân và hoạt động của bạn</p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-64 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          <div className="w-full lg:w-64 xl:w-72 space-y-4 lg:space-y-6">
             <Card>
               <CardContent className="p-4 flex flex-col items-center text-center">
-                <Avatar className="h-20 w-20 mb-4">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 mb-3 sm:mb-4">
                   <AvatarImage src="/placeholder.svg?height=80&width=80" alt={user.full_name} />
-                  <AvatarFallback>{user.full_name}</AvatarFallback>
+                  <AvatarFallback className="text-sm sm:text-base">{user.full_name}</AvatarFallback>
                 </Avatar>
-                <h3 className="font-medium text-lg">{user.full_name}</h3>
-                <p className="text-sm text-muted-foreground">{user.role}</p>
-                <Badge className="mt-2">{user.status === 'active' ? 'Đã kích hoạt' : 'Chưa kích hoạt'}</Badge>
-                <div className="w-full mt-4 pt-4 border-t flex flex-col gap-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Email:</span>
-                    <span className="font-medium">{user.email}</span>
+                <h3 className="font-medium text-base sm:text-lg truncate w-full">{user.full_name}</h3>
+                <p className="text-sm text-muted-foreground capitalize">{user.role}</p>
+                <Badge className="mt-2 text-xs">{user.status === 'active' ? 'Đã kích hoạt' : 'Chưa kích hoạt'}</Badge>
+                <div className="w-full mt-3 sm:mt-4 pt-3 sm:pt-4 border-t flex flex-col gap-2 text-xs sm:text-sm">
+                  <div className="flex justify-between items-start">
+                    <span className="text-muted-foreground">Email:</span>
+                    <span className="font-medium truncate ml-2 max-w-[60%]">{user.email}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Tên đăng nhập:</span>
-                    <span className="font-medium">{user.username}</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tên đăng nhập:</span>
+                    <span className="font-medium truncate ml-2 max-w-[60%]">{user.username}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Ngày tham gia:</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ngày tham gia:</span>
                     <span className="font-medium">{new Date(user.created_at).toLocaleDateString('vi-VN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Mã sinh viên:</span>
+                    <span className="font-medium truncate ml-2 max-w-[60%]">{user.university_id}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col space-y-1">
+            <div className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible space-x-1 lg:space-x-0 lg:space-y-1 pb-2 lg:pb-0">
               <Button
                 variant={activeTab === "profile" ? "default" : "ghost"}
-                className="justify-start"
+                className="justify-start whitespace-nowrap flex-shrink-0 lg:w-full"
                 onClick={() => handleTabChange("profile")}
               >
                 <User className="h-4 w-4 mr-2" />
-                Thông tin cá nhân
+                <span className="hidden sm:inline lg:inline">Thông tin cá nhân</span>
+                <span className="sm:hidden lg:hidden">Hồ sơ</span>
               </Button>
               <Button
                 variant={activeTab === "documents" ? "default" : "ghost"}
-                className="justify-start"
+                className="justify-start whitespace-nowrap flex-shrink-0 lg:w-full"
                 onClick={() => handleTabChange("documents")}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Tài liệu của tôi
+                <span className="hidden sm:inline lg:inline">Tài liệu của tôi</span>
+                <span className="sm:hidden lg:hidden">Tài liệu</span>
               </Button>
               <Button
                 variant={activeTab === "forum" ? "default" : "ghost"}
-                className="justify-start"
+                className="justify-start whitespace-nowrap flex-shrink-0 lg:w-full"
                 onClick={() => handleTabChange("forum")}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Bài viết diễn đàn
+                <span className="hidden sm:inline lg:inline">Bài viết diễn đàn</span>
+                <span className="sm:hidden lg:hidden">Diễn đàn</span>
               </Button>
               <Button
                 variant={activeTab === "notifications" ? "default" : "ghost"}
-                className="justify-start"
+                className="justify-start whitespace-nowrap flex-shrink-0 lg:w-full"
                 onClick={() => handleTabChange("notifications")}
               >
                 <Bell className="h-4 w-4 mr-2" />
-                Thông báo
+                <span className="hidden sm:inline lg:inline">Thông báo</span>
+                <span className="sm:hidden lg:hidden">Thông báo</span>
               </Button>
               <Button
                 variant={activeTab === "settings" ? "default" : "ghost"}
-                className="justify-start"
+                className="justify-start whitespace-nowrap flex-shrink-0 lg:w-full"
                 onClick={() => handleTabChange("settings")}
               >
                 <Settings className="h-4 w-4 mr-2" />
-                Cài đặt tài khoản
+                <span className="hidden sm:inline lg:inline">Cài đặt tài khoản</span>
+                <span className="sm:hidden lg:hidden">Cài đặt</span>
               </Button>
             </div>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {activeTab === "profile" && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Thông tin cá nhân</CardTitle>
-                  <CardDescription>Cập nhật thông tin cá nhân của bạn</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Thông tin cá nhân</CardTitle>
+                  <CardDescription className="text-sm">Cập nhật thông tin cá nhân của bạn</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="space-y-4 sm:space-y-6">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">Họ</Label>
+                        <Label htmlFor="firstName" className="text-sm font-medium">Họ</Label>
                         <Input 
                           id="firstName" 
                           value={formData.firstName}
                           onChange={handleInputChange}
+                          className="w-full"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">Tên</Label>
+                        <Label htmlFor="lastName" className="text-sm font-medium">Tên</Label>
                         <Input 
                           id="lastName" 
                           value={formData.lastName}
                           onChange={handleInputChange}
+                          className="w-full"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                       <Input 
                         id="email" 
                         type="email" 
                         value={formData.email}
                         onChange={handleInputChange}
+                        className="w-full"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="studentId">Mã sinh viên</Label>
+                      <Label htmlFor="studentId" className="text-sm font-medium">Mã sinh viên</Label>
                       <Input 
                         id="studentId" 
                         value={formData.studentId}
                         onChange={handleInputChange}
+                        className="w-full"
                       />
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="pt-4 sm:pt-6">
                   <Button 
                     onClick={handleUpdateProfile}
                     disabled={isUpdating}
+                    className="w-full sm:w-auto"
                   >
                     {isUpdating ? "Đang cập nhật..." : "Lưu thay đổi"}
                   </Button>
@@ -530,42 +557,42 @@ export default function ProfilePage() {
 
             {activeTab === "documents" && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Tài liệu của tôi</CardTitle>
-                  <CardDescription>Quản lý các tài liệu bạn đã tải lên</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Tài liệu của tôi</CardTitle>
+                  <CardDescription className="text-sm">Quản lý các tài liệu bạn đã tải lên</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="uploaded">
-                    <TabsContent value="uploaded" className="mt-6">
+                    <TabsContent value="uploaded" className="mt-4 sm:mt-6">
                       {isLoadingDocuments ? (
                         <div className="flex justify-center items-center py-8">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                       ) : documents && documents.length > 0 ? (
                         <>
-                          <div className="space-y-4">
+                          <div className="space-y-3 sm:space-y-4">
                             {documents.map((doc) => (
-                              <div key={doc.document_id} className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="flex-1">
-                                  <Link href={`/documents/${doc.document_id}`} className="font-medium hover:underline">
+                              <div key={doc.document_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <Link href={`/documents/${doc.document_id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
                                     {doc.title}
                                   </Link>
-                                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                    <Badge variant={doc.status === "approved" ? "default" : "secondary"}>
+                                  <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                    <Badge variant={doc.status === "approved" ? "default" : "secondary"} className="text-xs">
                                       {doc.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}
                                     </Badge>
-                                    <span>•</span>
+                                    <span className="hidden sm:inline">•</span>
                                     <span>{new Date(doc.created_at).toLocaleDateString('vi-VN')}</span>
-                                    <span>•</span>
-                                    <span>{doc.subject.subject_name}</span>
-                                    <span>•</span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span className="truncate max-w-[120px] sm:max-w-none">{doc.subject.subject_name}</span>
+                                    <span className="hidden sm:inline">•</span>
                                     <span>{doc.view_count} lượt xem</span>
-                                    <span>•</span>
+                                    <span className="hidden sm:inline">•</span>
                                     <span>{doc.download_count} lượt tải</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="outline" size="sm" onClick={() => handleViewDocument(doc.document_id)}>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Button variant="outline" size="sm" onClick={() => handleViewDocument(doc.document_id)} className="text-xs sm:text-sm">
                                     Chỉnh sửa
                                   </Button>
                                   <Button 
@@ -575,6 +602,7 @@ export default function ProfilePage() {
                                       setDocumentToDelete(doc.document_id)
                                       setIsDeleteDialogOpen(true)
                                     }}
+                                    className="text-xs sm:text-sm"
                                   >
                                     Xóa
                                   </Button>
@@ -583,16 +611,17 @@ export default function ProfilePage() {
                             ))}
                           </div>
                           {totalPages > 1 && (
-                            <div className="flex justify-center gap-2 mt-4">
+                            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mt-4">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                                 disabled={currentPage === 1}
+                                className="w-full sm:w-auto"
                               >
                                 Trước
                               </Button>
-                              <span className="flex items-center px-4">
+                              <span className="flex items-center px-4 text-sm">
                                 Trang {currentPage} / {totalPages}
                               </span>
                               <Button
@@ -600,6 +629,7 @@ export default function ProfilePage() {
                                 size="sm"
                                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                                 disabled={currentPage === totalPages}
+                                className="w-full sm:w-auto"
                               >
                                 Sau
                               </Button>
@@ -607,30 +637,30 @@ export default function ProfilePage() {
                           )}
                         </>
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
                           Chưa có tài liệu nào được tải lên
                         </div>
                       )}
                     </TabsContent>
-                    <TabsContent value="saved" className="mt-6">
-                      <div className="space-y-4">
+                    <TabsContent value="saved" className="mt-4 sm:mt-6">
+                      <div className="space-y-3 sm:space-y-4">
                         {savedDocuments.map((doc) => (
-                          <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex-1">
-                              <Link href={`/documents/${doc.id}`} className="font-medium hover:underline">
+                          <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <Link href={`/documents/${doc.id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
                                 {doc.title}
                               </Link>
-                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                <span>{doc.course}</span>
-                                <span>•</span>
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                <span className="truncate">{doc.course}</span>
+                                <span className="hidden sm:inline">•</span>
                                 <span>Đã lưu: {doc.savedDate}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm" asChild>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                                 <Link href={`/documents/${doc.id}`}>Xem</Link>
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
                                 Bỏ lưu
                               </Button>
                             </div>
@@ -638,25 +668,25 @@ export default function ProfilePage() {
                         ))}
                       </div>
                     </TabsContent>
-                    <TabsContent value="downloaded" className="mt-6">
-                      <div className="space-y-4">
+                    <TabsContent value="downloaded" className="mt-4 sm:mt-6">
+                      <div className="space-y-3 sm:space-y-4">
                         {downloadedDocuments.map((doc) => (
-                          <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex-1">
-                              <Link href={`/documents/${doc.id}`} className="font-medium hover:underline">
+                          <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <Link href={`/documents/${doc.id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
                                 {doc.title}
                               </Link>
-                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                <span>{doc.course}</span>
-                                <span>•</span>
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                <span className="truncate">{doc.course}</span>
+                                <span className="hidden sm:inline">•</span>
                                 <span>Đã tải: {doc.downloadDate}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm" asChild>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                                 <Link href={`/documents/${doc.id}`}>Xem</Link>
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
                                 Tải lại
                               </Button>
                             </div>
@@ -671,9 +701,9 @@ export default function ProfilePage() {
 
             {activeTab === "forum" && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Bài viết diễn đàn</CardTitle>
-                  <CardDescription>Quản lý các bài viết bạn đã đăng trên diễn đàn</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Bài viết diễn đàn</CardTitle>
+                  <CardDescription className="text-sm">Quản lý các bài viết bạn đã đăng trên diễn đàn</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {isLoadingForumPosts ? (
@@ -682,43 +712,43 @@ export default function ProfilePage() {
                     </div>
                   ) : forumPosts && forumPosts.length > 0 ? (
                     <>
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {forumPosts.map((post) => (
-                          <div key={post.post_id} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div className="flex-1">
+                          <div key={post.post_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
                               {post.status === "approved" ? (
-                                <Link href={`/forum/posts/${post.post_id}`} className="font-medium hover:underline">
+                                <Link href={`/forum/posts/${post.post_id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
                                   {post.title}
                                 </Link>
                               ) : (
-                                <span className="font-medium text-muted-foreground">
+                                <span className="font-medium text-muted-foreground text-sm sm:text-base block truncate">
                                   {post.title}
                                 </span>
                               )}
-                              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                                <Badge variant={post.status === "approved" ? "default" : "secondary"}>
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                <Badge variant={post.status === "approved" ? "default" : "secondary"} className="text-xs">
                                   {post.status === "approved" ? "Đã duyệt" : 
                                    post.status === "pending" ? "Chờ duyệt" : "Từ chối"}
                                 </Badge>
-                                <span>•</span>
+                                <span className="hidden sm:inline">•</span>
                                 <span>{new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
-                                <span>•</span>
-                                <span>{(post as any).forum_name || "Diễn đàn"}</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="truncate max-w-[120px] sm:max-w-none">{(post as any).forum_name || "Diễn đàn"}</span>
                                 {post.reply_count !== undefined && (
                                   <>
-                                    <span>•</span>
+                                    <span className="hidden sm:inline">•</span>
                                     <span>{post.reply_count} trả lời</span>
                                   </>
                                 )}
                               </div>
-                              <div className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                              <div className="mt-2 text-xs sm:text-sm text-muted-foreground line-clamp-2">
                                 {post.content.replace(/<[^>]*>/g, '').substring(0, 100)}
                                 {post.content.length > 100 && '...'}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0">
                               {post.status === "approved" && (
-                                <Button variant="outline" size="sm" asChild>
+                                <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
                                   <Link href={`/forum/posts/${post.post_id}`}>Xem</Link>
                                 </Button>
                               )}
@@ -729,6 +759,7 @@ export default function ProfilePage() {
                                   setForumPostToDelete(post.post_id)
                                   setIsDeleteForumPostDialogOpen(true)
                                 }}
+                                className="text-xs sm:text-sm"
                               >
                                 Xóa
                               </Button>
@@ -737,16 +768,17 @@ export default function ProfilePage() {
                         ))}
                       </div>
                       {forumTotalPages > 1 && (
-                        <div className="flex justify-center gap-2 mt-4">
+                        <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mt-4">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setForumCurrentPage((prev) => Math.max(prev - 1, 1))}
                             disabled={forumCurrentPage === 1}
+                            className="w-full sm:w-auto"
                           >
                             Trước
                           </Button>
-                          <span className="flex items-center px-4">
+                          <span className="flex items-center px-4 text-sm">
                             Trang {forumCurrentPage} / {forumTotalPages}
                           </span>
                           <Button
@@ -754,6 +786,7 @@ export default function ProfilePage() {
                             size="sm"
                             onClick={() => setForumCurrentPage((prev) => Math.min(prev + 1, forumTotalPages))}
                             disabled={forumCurrentPage === forumTotalPages}
+                            className="w-full sm:w-auto"
                           >
                             Sau
                           </Button>
@@ -761,7 +794,7 @@ export default function ProfilePage() {
                       )}
                     </>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
                       Chưa có bài viết nào được đăng
                     </div>
                   )}
@@ -771,53 +804,53 @@ export default function ProfilePage() {
 
             {activeTab === "settings" && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Cài đặt tài khoản</CardTitle>
-                  <CardDescription>Quản lý cài đặt tài khoản và quyền riêng tư</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Cài đặt tài khoản</CardTitle>
+                  <CardDescription className="text-sm">Quản lý cài đặt tài khoản và quyền riêng tư</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Bảo mật</h3>
-                    <div className="space-y-4">
+                <CardContent className="space-y-4 sm:space-y-6">
+                  <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-base sm:text-lg font-medium">Bảo mật</h3>
+                    <div className="space-y-3 sm:space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="current-password">Mật khẩu hiện tại</Label>
-                        <Input id="current-password" type="password" />
+                        <Label htmlFor="current-password" className="text-sm font-medium">Mật khẩu hiện tại</Label>
+                        <Input id="current-password" type="password" className="w-full" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="new-password">Mật khẩu mới</Label>
-                        <Input id="new-password" type="password" />
+                        <Label htmlFor="new-password" className="text-sm font-medium">Mật khẩu mới</Label>
+                        <Input id="new-password" type="password" className="w-full" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Xác nhận mật khẩu mới</Label>
-                        <Input id="confirm-password" type="password" />
+                        <Label htmlFor="confirm-password" className="text-sm font-medium">Xác nhận mật khẩu mới</Label>
+                        <Input id="confirm-password" type="password" className="w-full" />
                       </div>
-                      <Button>Cập nhật mật khẩu</Button>
+                      <Button className="w-full sm:w-auto">Cập nhật mật khẩu</Button>
                     </div>
 
                     <Separator />
 
-                    <h3 className="text-lg font-medium">Thông báo</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                    <h3 className="text-base sm:text-lg font-medium">Thông báo</h3>
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div className="space-y-0.5">
-                          <Label htmlFor="email-notifications">Thông báo qua email</Label>
-                          <p className="text-sm text-muted-foreground">Nhận thông báo qua email khi có hoạt động mới</p>
+                          <Label htmlFor="email-notifications" className="text-sm font-medium">Thông báo qua email</Label>
+                          <p className="text-xs sm:text-sm text-muted-foreground">Nhận thông báo qua email khi có hoạt động mới</p>
                         </div>
                         <Switch id="email-notifications" defaultChecked />
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div className="space-y-0.5">
-                          <Label htmlFor="document-notifications">Thông báo về tài liệu</Label>
-                          <p className="text-sm text-muted-foreground">
+                          <Label htmlFor="document-notifications" className="text-sm font-medium">Thông báo về tài liệu</Label>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Nhận thông báo khi tài liệu của bạn được duyệt hoặc có bình luận mới
                           </p>
                         </div>
                         <Switch id="document-notifications" defaultChecked />
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div className="space-y-0.5">
-                          <Label htmlFor="forum-notifications">Thông báo về diễn đàn</Label>
-                          <p className="text-sm text-muted-foreground">
+                          <Label htmlFor="forum-notifications" className="text-sm font-medium">Thông báo về diễn đàn</Label>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Nhận thông báo khi có trả lời cho bài viết của bạn
                           </p>
                         </div>
@@ -827,19 +860,19 @@ export default function ProfilePage() {
 
                     <Separator />
 
-                    <h3 className="text-lg font-medium">Quyền riêng tư</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                    <h3 className="text-base sm:text-lg font-medium">Quyền riêng tư</h3>
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div className="space-y-0.5">
-                          <Label htmlFor="profile-visibility">Hiển thị hồ sơ công khai</Label>
-                          <p className="text-sm text-muted-foreground">Cho phép người dùng khác xem hồ sơ của bạn</p>
+                          <Label htmlFor="profile-visibility" className="text-sm font-medium">Hiển thị hồ sơ công khai</Label>
+                          <p className="text-xs sm:text-sm text-muted-foreground">Cho phép người dùng khác xem hồ sơ của bạn</p>
                         </div>
                         <Switch id="profile-visibility" defaultChecked />
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div className="space-y-0.5">
-                          <Label htmlFor="activity-visibility">Hiển thị hoạt động</Label>
-                          <p className="text-sm text-muted-foreground">
+                          <Label htmlFor="activity-visibility" className="text-sm font-medium">Hiển thị hoạt động</Label>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Hiển thị hoạt động gần đây của bạn cho người dùng khác
                           </p>
                         </div>
@@ -849,23 +882,23 @@ export default function ProfilePage() {
 
                     <Separator />
 
-                    <h3 className="text-lg font-medium">Tài khoản liên kết</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                    <h3 className="text-base sm:text-lg font-medium">Tài khoản liên kết</h3>
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div className="space-y-0.5">
-                          <Label>Tài khoản Google</Label>
-                          <p className="text-sm text-muted-foreground">
+                          <Label className="text-sm font-medium">Tài khoản Google</Label>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Liên kết tài khoản Google để đăng nhập dễ dàng hơn
                           </p>
                         </div>
-                        <Button variant="outline">Liên kết</Button>
+                        <Button variant="outline" className="w-full sm:w-auto">Liên kết</Button>
                       </div>
                     </div>
 
                     <Separator />
 
-                    <div className="pt-4">
-                      <Button variant="destructive">Xóa tài khoản</Button>
+                    <div className="pt-3 sm:pt-4">
+                      <Button variant="destructive" className="w-full sm:w-auto">Xóa tài khoản</Button>
                     </div>
                   </div>
                 </CardContent>
@@ -874,28 +907,28 @@ export default function ProfilePage() {
 
             {activeTab === "notifications" && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Thông báo</CardTitle>
-                  <CardDescription>Quản lý thông báo của bạn</CardDescription>
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="text-lg sm:text-xl">Thông báo</CardTitle>
+                  <CardDescription className="text-sm">Quản lý thông báo của bạn</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="all" value={activeNotificationTab} onValueChange={setActiveNotificationTab}>
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="all">Tất cả</TabsTrigger>
-                      <TabsTrigger value="unread">Chưa đọc</TabsTrigger>
-                      <TabsTrigger value="read">Đã đọc</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6">
+                      <TabsTrigger value="all" className="text-xs sm:text-sm">Tất cả</TabsTrigger>
+                      <TabsTrigger value="unread" className="text-xs sm:text-sm">Chưa đọc</TabsTrigger>
+                      <TabsTrigger value="read" className="text-xs sm:text-sm">Đã đọc</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="all" className="mt-6">
+                    <TabsContent value="all" className="mt-4 sm:mt-6">
                       {isLoadingNotifications ? (
                         <div className="flex justify-center items-center py-8">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                       ) : notifications.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {notifications.map((notification) => (
                             <div
                               key={`notification-${notification.notification_id}`}
-                              className={`p-4 border rounded-lg ${
+                              className={`p-3 sm:p-4 border rounded-lg ${
                                 !notification.is_read 
                                   ? notification.type 
                                     ? getNotificationTypeColor(notification.type)
@@ -903,25 +936,25 @@ export default function ProfilePage() {
                                   : ""
                               }`}
                             >
-                              <div className="flex items-start gap-4">
+                              <div className="flex items-start gap-3 sm:gap-4">
                                 <div
-                                  className={`w-2 h-2 mt-2 rounded-full ${
+                                  className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${
                                     notification.is_read ? "bg-muted" : "bg-primary"
                                   }`}
                                 />
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
                                       getNotificationTypeBadge(notification.type || "info")
                                     }`}>
                                       {(notification.type || "info").toUpperCase()}
                                     </span>
-                                    <p className="font-medium">{notification.title}</p>
+                                    <p className="font-medium text-sm sm:text-base truncate">{notification.title}</p>
                                   </div>
-                                  <p className={notification.is_read ? "text-muted-foreground" : ""}>
+                                  <p className={`text-xs sm:text-sm ${notification.is_read ? "text-muted-foreground" : ""}`}>
                                     {notification.content}
                                   </p>
-                                  <p className="text-sm text-muted-foreground mt-1">
+                                  <p className="text-xs text-muted-foreground mt-1">
                                     {new Date(notification.created_at).toLocaleDateString("vi-VN")}
                                   </p>
                                 </div>
@@ -930,8 +963,10 @@ export default function ProfilePage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleMarkNotificationAsRead(notification.notification_id)}
+                                    className="flex-shrink-0 text-xs sm:text-sm"
                                   >
-                                    Đánh dấu đã đọc
+                                    <span className="hidden sm:inline">Đánh dấu đã đọc</span>
+                                    <span className="sm:hidden">Đã đọc</span>
                                   </Button>
                                 )}
                               </div>
@@ -943,45 +978,47 @@ export default function ProfilePage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={handleMarkAllNotificationsAsRead}
+                                className="text-xs sm:text-sm"
                               >
-                                Đánh dấu tất cả đã đọc
+                                <span className="hidden sm:inline">Đánh dấu tất cả đã đọc</span>
+                                <span className="sm:hidden">Đọc tất cả</span>
                               </Button>
                             </div>
                           )}
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
                           Không có thông báo nào
                         </div>
                       )}
                     </TabsContent>
-                    <TabsContent value="unread" className="mt-6">
+                    <TabsContent value="unread" className="mt-4 sm:mt-6">
                       {isLoadingNotifications ? (
                         <div className="flex justify-center items-center py-8">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                       ) : notifications.filter(n => !n.is_read).length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {notifications
                             .filter(n => !n.is_read)
                             .map((notification) => (
                               <div
                                 key={`notification-${notification.notification_id}`}
-                                className={`p-4 border rounded-lg ${getNotificationTypeColor(notification.type || "info")}`}
+                                className={`p-3 sm:p-4 border rounded-lg ${getNotificationTypeColor(notification.type || "info")}`}
                               >
-                                <div className="flex items-start gap-4">
-                                  <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                <div className="flex items-start gap-3 sm:gap-4">
+                                  <div className="w-2 h-2 mt-2 rounded-full bg-primary flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
                                         getNotificationTypeBadge(notification.type || "info")
                                       }`}>
                                         {(notification.type || "info").toUpperCase()}
                                       </span>
-                                      <p className="font-medium">{notification.title}</p>
+                                      <p className="font-medium text-sm sm:text-base truncate">{notification.title}</p>
                                     </div>
-                                    <p>{notification.content}</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
+                                    <p className="text-xs sm:text-sm">{notification.content}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       {new Date(notification.created_at).toLocaleDateString("vi-VN")}
                                     </p>
                                   </div>
@@ -989,8 +1026,10 @@ export default function ProfilePage() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleMarkNotificationAsRead(notification.notification_id)}
+                                    className="flex-shrink-0 text-xs sm:text-sm"
                                   >
-                                    Đánh dấu đã đọc
+                                    <span className="hidden sm:inline">Đánh dấu đã đọc</span>
+                                    <span className="sm:hidden">Đã đọc</span>
                                   </Button>
                                 </div>
                               </div>
@@ -1000,44 +1039,46 @@ export default function ProfilePage() {
                               variant="outline"
                               size="sm"
                               onClick={handleMarkAllNotificationsAsRead}
+                              className="text-xs sm:text-sm"
                             >
-                              Đánh dấu tất cả đã đọc
+                              <span className="hidden sm:inline">Đánh dấu tất cả đã đọc</span>
+                              <span className="sm:hidden">Đọc tất cả</span>
                             </Button>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
                           Không có thông báo chưa đọc
                         </div>
                       )}
                     </TabsContent>
-                    <TabsContent value="read" className="mt-6">
+                    <TabsContent value="read" className="mt-4 sm:mt-6">
                       {isLoadingNotifications ? (
                         <div className="flex justify-center items-center py-8">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                       ) : notifications.filter(n => n.is_read).length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {notifications
                             .filter(n => n.is_read)
                             .map((notification) => (
                               <div
                                 key={`notification-${notification.notification_id}`}
-                                className="p-4 border rounded-lg"
+                                className="p-3 sm:p-4 border rounded-lg"
                               >
-                                <div className="flex items-start gap-4">
-                                  <div className="w-2 h-2 mt-2 rounded-full bg-muted" />
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                <div className="flex items-start gap-3 sm:gap-4">
+                                  <div className="w-2 h-2 mt-2 rounded-full bg-muted flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
                                         getNotificationTypeBadge(notification.type || "info")
                                       }`}>
                                         {(notification.type || "info").toUpperCase()}
                                       </span>
-                                      <p className="font-medium text-muted-foreground">{notification.title}</p>
+                                      <p className="font-medium text-muted-foreground text-sm sm:text-base truncate">{notification.title}</p>
                                     </div>
-                                    <p className="text-muted-foreground">{notification.content}</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
+                                    <p className="text-muted-foreground text-xs sm:text-sm">{notification.content}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       {new Date(notification.created_at).toLocaleDateString("vi-VN")}
                                     </p>
                                   </div>
@@ -1046,7 +1087,7 @@ export default function ProfilePage() {
                             ))}
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
                           Không có thông báo đã đọc
                         </div>
                       )}
@@ -1060,42 +1101,44 @@ export default function ProfilePage() {
       </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa tài liệu</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Chỉnh sửa tài liệu</DialogTitle>
           </DialogHeader>
           {isLoadingDocument ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="space-y-4 py-4">
+            <div className="space-y-3 sm:space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Tiêu đề</Label>
+                <Label htmlFor="title" className="text-sm font-medium">Tiêu đề</Label>
                 <Input
                   id="title"
                   value={editForm.title}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Mô tả</Label>
+                <Label htmlFor="description" className="text-sm font-medium">Mô tả</Label>
                 <Textarea
                   id="description"
                   value={editForm.description || ""}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full min-h-[100px]"
                 />
               </div>
               {authUser?.role === "admin" && (
                 <div className="space-y-2">
-                  <Label htmlFor="status">Trạng thái</Label>
+                  <Label htmlFor="status" className="text-sm font-medium">Trạng thái</Label>
                   <Select
                     value={editForm.status}
                     onValueChange={(value: "approved" | "pending" | "rejected") =>
                       setEditForm({ ...editForm, status: value })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Chọn trạng thái" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1108,11 +1151,11 @@ export default function ProfilePage() {
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto order-2 sm:order-1">
               Hủy
             </Button>
-            <Button onClick={handleUpdateDocument} disabled={isLoadingDocument}>
+            <Button onClick={handleUpdateDocument} disabled={isLoadingDocument} className="w-full sm:w-auto order-1 sm:order-2">
               Lưu thay đổi
             </Button>
           </DialogFooter>
@@ -1120,16 +1163,16 @@ export default function ProfilePage() {
       </Dialog>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md sm:max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg sm:text-xl">Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm sm:text-base">
               Bạn có chắc chắn muốn xóa tài liệu này? Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteDocument} disabled={isLoadingDocument}>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto order-2 sm:order-1">Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteDocument} disabled={isLoadingDocument} className="w-full sm:w-auto order-1 sm:order-2">
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1137,16 +1180,16 @@ export default function ProfilePage() {
       </AlertDialog>
 
       <AlertDialog open={isDeleteForumPostDialogOpen} onOpenChange={setIsDeleteForumPostDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md sm:max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa bài viết</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg sm:text-xl">Xác nhận xóa bài viết</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm sm:text-base">
               Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteForumPost} disabled={isLoadingForumPosts}>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto order-2 sm:order-1">Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteForumPost} disabled={isLoadingForumPosts} className="w-full sm:w-auto order-1 sm:order-2">
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

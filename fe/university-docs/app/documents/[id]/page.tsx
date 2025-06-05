@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import React from "react"
 import { Textarea } from "@/components/ui/textarea"
+import { getDocumentDownloadUrl, getDocumentPreviewUrl } from "@/lib/api/documents"
 
 interface Document {
   document_id: number
@@ -100,8 +101,182 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const userCache = useRef<{ [userId: number]: { full_name: string; username: string } }>({});
   const [showComments, setShowComments] = useState(false);
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
-  const downloadLinkRef = useRef<HTMLAnchorElement>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string>("");
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const getPreviewUrl = (filePath: string, fileType: string) => {
+    if (!filePath) return "";
+    
+    console.log("Processing file path:", filePath, "type:", fileType)
+    
+    // Skip MinIO files - they will be handled separately with signed URLs
+    if (filePath.startsWith('minio://')) {
+      console.log("MinIO file detected, should use signed URL instead")
+      return "";
+    }
+    
+    // Nếu là Google Drive file (docs, sheets, slides)
+    if (filePath.includes("docs.google.com") || filePath.includes("drive.google.com")) {
+      // Google Docs
+      if (filePath.includes("docs.google.com/document")) {
+        return filePath.replace(/\/(edit|view)(\?.*)?$/, "/preview");
+      }
+      // Google Sheets
+      if (filePath.includes("docs.google.com/spreadsheets")) {
+        return filePath.replace(/\/(edit|view)(\?.*)?$/, "/preview");
+      }
+      // Google Slides
+      if (filePath.includes("docs.google.com/presentation")) {
+        return filePath.replace(/\/(edit|view)(\?.*)?$/, "/preview");
+      }
+      // Google Drive general files
+      if (filePath.includes("drive.google.com")) {
+        const fileIdMatch = filePath.match(/[-\w]{25,}/);
+        if (fileIdMatch) {
+          return `https://drive.google.com/file/d/${fileIdMatch[0]}/preview`;
+        }
+      }
+    }
+    
+    // Nếu là file PDF (bao gồm cả từ MinIO với signed URL)
+    if (fileType?.toLowerCase().includes("pdf") || filePath.toLowerCase().includes(".pdf")) {
+      console.log("Detected PDF file")
+      return filePath;
+    }
+    
+    // Nếu là file ảnh (bao gồm cả từ MinIO)
+    if (fileType?.toLowerCase().includes("image") || 
+        /\.(jpeg|jpg|png|gif|webp|bmp|svg)$/i.test(filePath)) {
+      console.log("Detected image file")
+      return filePath;
+    }
+    
+    // Nếu là file text
+    if (fileType?.toLowerCase().includes("text") || 
+        /\.(txt|md|csv)$/i.test(filePath)) {
+      console.log("Detected text file")
+      return filePath;
+    }
+    
+    // Nếu là file Office (Word, Excel, PowerPoint) - có thể preview qua Office Online
+    if (fileType?.includes("officedocument") || 
+        /\.(docx|xlsx|pptx|doc|xls|ppt)$/i.test(filePath)) {
+      console.log("Detected Office file")
+      // Office files từ MinIO có thể preview được nếu browser hỗ trợ
+      return filePath;
+    }
+    
+    // Nếu là signed URL từ S3/MinIO (có chứa signed URL parameters)
+    if (filePath.includes("X-Amz-Algorithm")) {
+      console.log("Detected signed URL")
+      return filePath;
+    }
+    
+    console.log("Cannot preview this file type")
+    return "";
+  };
+
+  const renderPreview = () => {
+    if (previewLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p>Đang tải preview...</p>
+          <p className="text-sm">Đang lấy signed URL từ MinIO...</p>
+        </div>
+      );
+    }
+
+    if (!previewUrl) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <FileText className="h-16 w-16 mb-4" />
+          <p>Không thể xem trước tài liệu này</p>
+          <p className="text-sm">Vui lòng tải xuống để xem</p>
+          {document && (
+            <div className="mt-4 text-xs text-center max-w-md">
+              <p>Loại file: {document.file_type}</p>
+              <p>Đường dẫn: {document.file_path?.substring(0, 80)}{document.file_path?.length > 80 ? '...' : ''}</p>
+              {document.file_path?.startsWith('minio://') && (
+                <p className="mt-2 text-amber-600">
+                  File từ MinIO - cần signed URL để preview
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const fileType = document?.file_type || "";
+    
+    // PDF files
+    if (fileType.toLowerCase().includes("pdf") || previewUrl.toLowerCase().includes(".pdf")) {
+      return (
+        <iframe
+          src={previewUrl}
+          width="100%"
+          height="100%"
+          style={{ border: 0, minHeight: 500 }}
+          title="PDF Preview"
+          onError={(e) => {
+            console.error("Failed to load PDF preview:", e)
+            setPreviewUrl("")
+          }}
+        />
+      );
+    }
+    
+    // Image files
+    if (fileType.toLowerCase().includes("image") || /\.(jpeg|jpg|png|gif|webp|bmp|svg)$/i.test(previewUrl)) {
+      return (
+        <img
+          src={previewUrl}
+          alt="Document preview"
+          className="max-w-full max-h-full object-contain"
+          style={{ maxHeight: 500 }}
+          onError={(e) => {
+            console.error("Failed to load image preview:", e)
+            setPreviewUrl("")
+          }}
+        />
+      );
+    }
+    
+    // Text files
+    if (fileType.toLowerCase().includes("text") || /\.(txt|md|csv)$/i.test(previewUrl)) {
+      return (
+        <iframe
+          src={previewUrl}
+          width="100%"
+          height="100%"
+          style={{ border: 0, minHeight: 500 }}
+          title="Text Preview"
+          onError={(e) => {
+            console.error("Failed to load text preview:", e)
+            setPreviewUrl("")
+          }}
+        />
+      );
+    }
+    
+    // Google Drive files or other embeddable content
+    return (
+      <iframe
+        src={previewUrl}
+        width="100%"
+        height="100%"
+        style={{ border: 0, minHeight: 500 }}
+        allow="autoplay"
+        title="Document Preview"
+        onError={(e) => {
+          console.error("Failed to load document preview:", e)
+          setPreviewUrl("")
+        }}
+      />
+    );
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -152,6 +327,52 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         }
         const data = await response.json()
         setDocument(data)
+        
+        // Lấy preview URL nếu có
+        if (data.file_path) {
+          console.log("File path:", data.file_path)
+          console.log("File type:", data.file_type)
+          
+          // Nếu file từ MinIO, sử dụng download URL làm preview URL
+          if (data.file_path.startsWith('minio://')) {
+            console.log("File from MinIO, getting signed URL for preview")
+            setPreviewLoading(true)
+            try {
+              const downloadUrl = await getDocumentDownloadUrl(Number(id))
+              if (downloadUrl) {
+                console.log("Using MinIO signed URL for preview:", downloadUrl)
+                setPreviewUrl(downloadUrl)
+              } else {
+                console.log("Could not get MinIO signed URL")
+                setPreviewUrl("")
+              }
+            } catch (error) {
+              console.log("Error getting MinIO signed URL:", error)
+              setPreviewUrl("")
+            } finally {
+              setPreviewLoading(false)
+            }
+          } else {
+            // Thử lấy preview URL từ server trước cho các file khác
+            try {
+              const serverPreviewUrl = await getDocumentPreviewUrl(Number(id))
+              if (serverPreviewUrl) {
+                console.log("Using server preview URL:", serverPreviewUrl)
+                setPreviewUrl(serverPreviewUrl)
+              } else {
+                // Fallback về logic client-side
+                const previewUrlResult = getPreviewUrl(data.file_path, data.file_type)
+                console.log("Using client preview URL:", previewUrlResult)
+                setPreviewUrl(previewUrlResult)
+              }
+            } catch (error) {
+              console.log("Server preview not available, using client-side logic")
+              const previewUrlResult = getPreviewUrl(data.file_path, data.file_type)
+              console.log("Preview URL:", previewUrlResult)
+              setPreviewUrl(previewUrlResult)
+            }
+          }
+        }
       } catch (err) {
         console.error("Error fetching document:", err)
         setError(err instanceof Error ? err.message : "Có lỗi xảy ra khi tải dữ liệu")
@@ -457,15 +678,47 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  function getGoogleDrivePreviewUrl(url: string) {
-    if (!url) return null;
-    return url.replace(/\/(edit|view)(\?.*)?$/, "/preview");
-  }
-
-  const handleDownloadClick = () => {
+  const handleDownloadClick = async () => {
     if (!document) return;
-    setDownloadUrl(document.file_path);
-    setShowDownloadConfirm(true);
+    
+    setDownloadLoading(true);
+    try {
+      await getDocumentDownloadUrl(Number(id));
+      setShowDownloadConfirm(true);
+    } catch (error) {
+      console.error("Error getting download URL:", error);
+      // Fallback về phương thức cũ nếu API mới không hoạt động
+      setShowDownloadConfirm(true);
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  const confirmDownload = async () => {
+    setShowDownloadConfirm(false);
+    setDownloadLoading(true);
+    
+    try {
+      const downloadUrl = await getDocumentDownloadUrl(Number(id));
+      if (downloadUrl) {
+        // Mở tab mới để download từ MinIO
+        window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      
+      // Fallback về phương thức cũ
+      const fallbackUrl = getDownloadUrl(document?.file_path || "");
+      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error("Error downloading:", error);
+      // Fallback về phương thức cũ
+      if (document?.file_path) {
+        const fallbackUrl = getDownloadUrl(document.file_path);
+        window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      }
+    } finally {
+      setDownloadLoading(false);
+    }
   };
 
   const getDownloadUrl = (url: string) => {
@@ -475,18 +728,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
     }
     return url;
-  };
-
-  const confirmDownload = () => {
-    setShowDownloadConfirm(false);
-    const finalUrl = getDownloadUrl(downloadUrl);
-    if (finalUrl.startsWith('http')) {
-      window.open(finalUrl, '_blank', 'noopener');
-    } else {
-      if (downloadLinkRef.current) {
-        downloadLinkRef.current.click();
-      }
-    }
   };
 
   if (loading) {
@@ -546,16 +787,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1">
-            <div className="bg-muted rounded-lg flex items-center justify-center h-[500px] mb-4 p-0">
-              {document.file_path && document.file_path.includes("docs.google.com") && getGoogleDrivePreviewUrl(document.file_path) ? (
-                <iframe
-                  src={getGoogleDrivePreviewUrl(document.file_path) as string}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0, minHeight: 500, minWidth: '100%' }}
-                  allow="autoplay"
-                ></iframe>
-              ) : null}
+            <div className="bg-muted rounded-lg flex items-center justify-center h-[500px] mb-4 p-0 overflow-hidden">
+              {renderPreview()}
             </div>
 
             <div className="flex items-center justify-between">
@@ -621,7 +854,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                   </div>
                   <div className="text-sm text-muted-foreground">
                     ({ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length).toFixed(1) : "0.0"}/5)
-                    {/* <span className="ml-1">({ratings.length} đánh giá)</span> */}
                   </div>
                 </div>
                 {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}
@@ -630,18 +862,11 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 <Button
                   className="w-full"
                   onClick={handleDownloadClick}
+                  disabled={downloadLoading}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Tải xuống
+                  {downloadLoading ? "Đang tải..." : "Tải xuống"}
                 </Button>
-                {/* Thẻ a ẩn để download file nội bộ */}
-                <a
-                  href={getDownloadUrl(document.file_path)}
-                  download
-                  ref={downloadLinkRef}
-                  style={{ display: 'none' }}
-                  tabIndex={-1}
-                >Download</a>
                 <p className="text-xs text-muted-foreground mt-2">
                   Đã có {document.download_count} lượt tải xuống
                 </p>
@@ -714,7 +939,9 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           <div>Bạn có chắc chắn muốn tải tài liệu này về máy không?</div>
           <DialogFooter>
             <Button onClick={() => setShowDownloadConfirm(false)} variant="outline">Huỷ</Button>
-            <Button onClick={confirmDownload}>Xác nhận</Button>
+            <Button onClick={confirmDownload} disabled={downloadLoading}>
+              {downloadLoading ? "Đang tải..." : "Xác nhận"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

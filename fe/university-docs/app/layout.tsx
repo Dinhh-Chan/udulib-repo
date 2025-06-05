@@ -27,16 +27,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} antialiased`}>
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             <Toaster position="top-center" richColors />
             <div className="flex min-h-screen flex-col">
               <Navbar />
-              <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-[1400px] w-full">
-                <main className="flex-1 py-6">
-                  {children}
-                </main>
+              <div className="flex-1 flex flex-col">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px] w-full flex-1">
+                  <main className="flex-1 py-4 sm:py-6 lg:py-8 min-h-0">
+                    {children}
+                  </main>
+                </div>
               </div>
               <Footer />
             </div>

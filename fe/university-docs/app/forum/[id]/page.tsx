@@ -131,20 +131,6 @@ export default function ForumDetailPage({ params }: { params: Promise<{ id: stri
                       <span>{new Date(post.created_at).toLocaleDateString("vi-VN")}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>0</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                      <span>0</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <ThumbsUp className="h-4 w-4" />
-                      <span>0</span>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             ))}

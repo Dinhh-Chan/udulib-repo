@@ -265,4 +265,57 @@ export const getPublicDocuments = async (page: number = 1, perPage: number = 4) 
   }
 
   return response.json();
-}; 
+};
+
+export const getDocumentDownloadUrl = async (documentId: number) => {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/download-url`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error("Không thể lấy link tải xuống")
+    }
+
+    const data = await response.json()
+    return data.download_url
+  } catch (error) {
+    console.error("Error getting download URL:", error)
+    throw error
+  }
+}
+
+export const getDocumentPreviewUrl = async (documentId: number) => {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/preview-url`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      // Nếu không có API preview riêng, có thể sử dụng download URL
+      return null
+    }
+
+    const data = await response.json()
+    return data.preview_url
+  } catch (error) {
+    console.error("Error getting preview URL:", error)
+    return null
+  }
+} 
