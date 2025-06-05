@@ -368,17 +368,19 @@ export default function ProfilePage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-16rem)]">
-        <p>Vui lòng đăng nhập để xem thông tin</p>
-      </div>
+      toast.error("Vui lòng đăng nhập để truy cập trang này", {
+        duration: 3000,
+        position: "top-center"
+      })
     )
   }
 
   if (!user) {
     return (
-      <div className="container flex items-center justify-center min-h-[calc(100vh-16rem)]">
-        <p>Không tìm thấy thông tin người dùng</p>
-      </div>
+      toast.error("Không tìm thấy thông tin người dùng", {
+        duration: 3000,
+        position: "top-center"
+      })
     )
   }
 

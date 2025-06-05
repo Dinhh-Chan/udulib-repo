@@ -33,15 +33,17 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
   const resolvedParams = use(params)
 
   useEffect(() => {
+    // Nếu chưa đăng nhập, chuyển hướng đến trang đăng nhập
     if (!isLoading && !isAuthenticated) {
-      router.push(`/login?callbackUrl=/forum/${resolvedParams.id}/post/${resolvedParams.postId}`)
+      router.push("/login")
       return
     }
 
-    if (isAuthenticated) {
-      loadData()
+    // Load post data khi đã đăng nhập
+    if (isAuthenticated && resolvedParams?.id && resolvedParams?.postId) {
+      loadPost()
     }
-  }, [isLoading, isAuthenticated, router, resolvedParams.id, resolvedParams.postId])
+  }, [isLoading, isAuthenticated, resolvedParams?.id, resolvedParams?.postId, router])
 
   useEffect(() => {
     if (isAuthenticated && post) {
@@ -49,7 +51,7 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
     }
   }, [isAuthenticated, post, currentPage])
 
-  const loadData = async () => {
+  const loadPost = async () => {
     try {
       const [forumData, postData] = await Promise.all([
         getForum(parseInt(resolvedParams.id)),

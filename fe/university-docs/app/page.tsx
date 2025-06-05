@@ -112,7 +112,7 @@ export default function Home() {
             </CardContent>
             <CardFooter>
               <Button variant="ghost" asChild className="w-full">
-                <Link href="/search">Tìm kiếm tài liệu</Link>
+                <Link href="/documents">Tìm kiếm tài liệu</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -130,7 +130,7 @@ export default function Home() {
             </CardContent>
             <CardFooter>
               <Button variant="ghost" asChild className="w-full">
-                <Link href="/register">Tham gia ngay</Link>
+                <Link href="/forum">Tham gia ngay</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -206,6 +206,25 @@ export default function Home() {
               <Link href="/departments">Xem tất cả</Link>
             </Button>
           </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="pb-3">
+                    <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+                    <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-muted rounded w-full"></div>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <div className="h-4 bg-muted rounded w-1/3"></div>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <div className="h-9 bg-muted rounded w-full"></div>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {popularDepartments.map((dept) => (
               <Card key={dept.major_id} className="overflow-hidden">
@@ -226,6 +245,7 @@ export default function Home() {
               </Card>
             ))}
           </div>
+          )}
         </div>
       </section>
 

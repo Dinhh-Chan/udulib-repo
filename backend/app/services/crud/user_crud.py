@@ -75,6 +75,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             db_obj.role = obj_in.role
         if obj_in.university_id:
             db_obj.university_id = obj_in.university_id
+        if obj_in.avatar_url is not None:
+            db_obj.avatar_url = obj_in.avatar_url
 
         db.add(db_obj)
         await db.commit()

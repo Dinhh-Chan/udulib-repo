@@ -52,17 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true)
     setIsAdmin(user.role === "admin")
 
-    // Lấy callbackUrl từ URL search params
-    const urlParams = new URLSearchParams(window.location.search)
-    const callbackUrl = urlParams.get("callbackUrl")
-    
-
-    // Nếu có callbackUrl thì chuyển hướng đến đó, nếu không thì về trang chủ
-    if (callbackUrl) {
-      router.push(callbackUrl)
-    } else {
-      router.push("/")
-    }
+    // Luôn chuyển hướng về trang chủ sau khi đăng nhập thành công
+    router.push("/")
   }
 
   const logout = () => {

@@ -18,7 +18,7 @@ class ApiClient {
   }
 
   private handleAuthError() {
-    // Clear auth data
+    // Clear stored auth data
     localStorage.removeItem("user")
     localStorage.removeItem("access_token")
     
@@ -28,10 +28,8 @@ class ApiClient {
       position: "top-center"
     })
     
-    // Redirect to login with current page as callback
-    const currentPath = window.location.pathname
-    const loginUrl = `/login?callbackUrl=${encodeURIComponent(currentPath)}`
-    window.location.href = loginUrl
+    // Redirect to login page
+    window.location.href = "/login"
   }
 
   private async handleResponse(response: Response) {

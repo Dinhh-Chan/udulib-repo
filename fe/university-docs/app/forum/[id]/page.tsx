@@ -23,7 +23,7 @@ export default function ForumDetailPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push(`/login?callbackUrl=/forum/${resolvedParams.id}`)
+      router.push("/login")
       return
     }
 

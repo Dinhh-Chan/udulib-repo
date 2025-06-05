@@ -19,6 +19,7 @@ class User(Base):
     
     google_id = Column(String(100), nullable=True)
     university_id = Column(String(50), nullable=True)
+    avatar_url = Column(String(500), nullable=True)  # URL của avatar lưu trên MinIO
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)

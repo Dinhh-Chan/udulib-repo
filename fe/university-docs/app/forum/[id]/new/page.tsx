@@ -27,15 +27,17 @@ export default function NewForumPostPage({ params }: { params: Promise<{ id: str
   const resolvedParams = use(params)
 
   useEffect(() => {
+    // Nếu chưa đăng nhập, chuyển hướng đến trang đăng nhập
     if (!isLoading && !isAuthenticated) {
-      router.push(`/login?callbackUrl=/forum/${resolvedParams.id}/new`)
+      router.push("/login")
       return
     }
 
-    if (isAuthenticated) {
+    // Load forum data khi đã đăng nhập
+    if (isAuthenticated && resolvedParams?.id) {
       loadForum()
     }
-  }, [isLoading, isAuthenticated, router, resolvedParams.id])
+  }, [isLoading, isAuthenticated, resolvedParams?.id, router])
 
   const loadForum = async () => {
     try {

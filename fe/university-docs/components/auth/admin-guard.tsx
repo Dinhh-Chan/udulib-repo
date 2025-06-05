@@ -15,8 +15,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated) {
       // Nếu chưa đăng nhập, chuyển hướng đến trang đăng nhập
-      const currentPath = window.location.pathname
-      router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`)
+      router.push("/login")
       toast.error("Vui lòng đăng nhập để truy cập trang này", {
         duration: 3000,
         position: "top-center"

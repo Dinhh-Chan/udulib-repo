@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -33,13 +33,14 @@ import {
 
 export default function UploadPage() {
   const router = useRouter()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [open, setOpen] = useState(false)
+  const hasRedirected = useRef(false)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -47,28 +48,36 @@ export default function UploadPage() {
     type: ""
   })
 
-  // Kiểm tra đăng nhập và lấy danh sách môn học
+  // Kiểm tra authentication và redirect nếu cần
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        toast.error("Vui lòng đăng nhập để tải lên tài liệu")
-        router.push("/login")
-        return
-      }
+    if (!authLoading && !isAuthenticated && !hasRedirected.current) {
+      hasRedirected.current = true
+      toast.error("Vui lòng đăng nhập để tải lên tài liệu", {
+        duration: 3000,
+        position: "top-center"
+      })
+      router.push("/login")
+      return
+    }
+  }, [authLoading, isAuthenticated, router])
 
-      try {
-        const subjectsData = await getSubjects()
-        setSubjects(subjectsData)
-      } catch (error) {
-        console.error("Error loading subjects:", error)
-        toast.error("Không thể tải danh sách môn học")
-      } finally {
-        setIsLoading(false)
+  // Load subjects khi đã authenticated
+  useEffect(() => {
+    const loadSubjects = async () => {
+      if (!authLoading && isAuthenticated) {
+        try {
+          const subjectsData = await getSubjects()
+          setSubjects(subjectsData)
+        } catch (error) {
+          console.error("Error loading subjects:", error)
+          toast.error("Không thể tải danh sách môn học")
+        } finally {
+          setIsLoading(false)
+        }
       }
     }
-    checkAuth()
-  }, [router])
+    loadSubjects()
+  }, [authLoading, isAuthenticated])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -94,12 +103,18 @@ export default function UploadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) {
-      toast.error("Vui lòng chọn tệp tài liệu")
+      toast.error("Vui lòng chọn tệp tài liệu", {
+        duration: 3000,
+        position: "top-center"
+      })
       return
     }
 
     if (!formData.subject_id) {
-      toast.error("Vui lòng chọn môn học")
+      toast.error("Vui lòng chọn môn học", {
+        duration: 3000,
+        position: "top-center"
+      })
       return
     }
 
@@ -119,21 +134,27 @@ export default function UploadPage() {
       })
       
       setUploadSuccess(true)
-      toast.success("Tải lên tài liệu thành công!")
+      toast.success("Tải lên tài liệu thành công!", {
+        duration: 3000,
+        position: "top-center"
+      })
     } catch (error) {
       console.error(error)
-      toast.error("Có lỗi xảy ra khi tải lên tài liệu")
+      toast.error("Có lỗi xảy ra khi tải lên tài liệu", {
+        duration: 3000,
+        position: "top-center"
+      })
     } finally {
       setIsUploading(false)
     }
   }
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return <Loading />
   }
 
   if (!isAuthenticated) {
-    return null
+    return null // Auth context sẽ handle redirect
   }
 
   return (

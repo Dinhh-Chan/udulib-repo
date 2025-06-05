@@ -30,6 +30,7 @@ class MajorCRUD:
                     "major_name": major.major_name,
                     "major_code": major.major_code,
                     "description": major.description,
+                    "image_url": major.image_url,
                     "created_at": major.created_at,
                     "updated_at": major.updated_at
                 }
@@ -53,6 +54,7 @@ class MajorCRUD:
                     "major_name": major.major_name,
                     "major_code": major.major_code,
                     "description": major.description,
+                    "image_url": major.image_url,
                     "created_at": major.created_at,
                     "updated_at": major.updated_at
                 }
@@ -73,6 +75,7 @@ class MajorCRUD:
                     "major_name": major.major_name,
                     "major_code": major.major_code,
                     "description": major.description,
+                    "image_url": major.image_url,
                     "created_at": major.created_at,
                     "updated_at": major.updated_at
                 }
@@ -98,6 +101,7 @@ class MajorCRUD:
                 "major_name": major.major_name,
                 "major_code": major.major_code,
                 "description": major.description,
+                "image_url": major.image_url,
                 "created_at": major.created_at,
                 "updated_at": major.updated_at
             }
@@ -138,6 +142,7 @@ class MajorCRUD:
                 "major_name": major.major_name,
                 "major_code": major.major_code,
                 "description": major.description,
+                "image_url": major.image_url,
                 "created_at": major.created_at,
                 "updated_at": major.updated_at
             }

@@ -52,7 +52,6 @@ export default function DocumentsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [filters, setFilters] = useState<{
     search?: string
-    major_id?: number
     year_id?: number
     file_type?: string
     subject_id?: number
@@ -75,7 +74,6 @@ export default function DocumentsPage() {
       
       // Thêm các tham số tìm kiếm và lọc
       if (debouncedSearch) params.append("search", debouncedSearch)
-      if (filters.major_id) params.append("major_id", filters.major_id.toString())
       if (filters.year_id) params.append("year_id", filters.year_id.toString())
       if (filters.file_type) params.append("file_type", filters.file_type)
       if (filters.subject_id) params.append("subject_id", filters.subject_id.toString())
@@ -84,7 +82,15 @@ export default function DocumentsPage() {
       params.append("page", currentPage.toString())
       params.append("per_page", ITEMS_PER_PAGE.toString())
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public?${params.toString()}`)
+      // Sử dụng API public để lấy tài liệu đã phê duyệt
+      let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/documents/public?${params.toString()}`
+      
+      // Nếu có filter theo year_id, sử dụng API academic-year
+      if (filters.year_id && !filters.file_type && !filters.subject_id && !debouncedSearch) {
+        apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/documents/academic-year/${filters.year_id}?page=${currentPage}&per_page=${ITEMS_PER_PAGE}`
+      }
+      
+      const response = await fetch(apiUrl)
       if (!response.ok) {
         throw new Error(`Lỗi khi tải dữ liệu: ${response.status}`)
       }
@@ -116,9 +122,18 @@ export default function DocumentsPage() {
 
   const handleView = async (documentId: number) => {
     try {
+      const token = localStorage.getItem("access_token")
+      if (!token) {
+        console.warn("Vui lòng đăng nhập")
+        return
+      }
+
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/view`, {
         method: 'POST',
-        credentials: 'include'
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       })
       // Cập nhật lại danh sách tài liệu sau khi ghi nhận lượt xem
       fetchDocuments()
@@ -129,9 +144,18 @@ export default function DocumentsPage() {
 
   const handleDownload = async (documentId: number) => {
     try {
+      const token = localStorage.getItem("access_token")
+      if (!token) {
+        console.warn("Vui lòng đăng nhập")
+        return
+      }
+
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/download`, {
         method: 'POST',
-        credentials: 'include'
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       })
       // Cập nhật lại danh sách tài liệu sau khi ghi nhận lượt tải
       fetchDocuments()
@@ -192,7 +216,12 @@ export default function DocumentsPage() {
                               <Link 
                                 href={`/documents/${doc.document_id}`}
                                 className="hover:underline"
-                                onClick={() => handleView(doc.document_id)}
+                                onClick={() => {
+                                  const token = localStorage.getItem("access_token")
+                                  if (token) {
+                                    handleView(doc.document_id)
+                                  }
+                                }}
                               >
                                 {doc.title}
                               </Link>

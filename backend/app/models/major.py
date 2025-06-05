@@ -11,5 +11,6 @@ class Major(Base):
     major_name = Column(String(100), nullable=False)
     major_code = Column(String(20), nullable=False, unique=True, index=True)
     description = Column(Text)
+    image_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  

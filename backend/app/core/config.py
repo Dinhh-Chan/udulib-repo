@@ -99,6 +99,15 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: Optional[str] = None
 
+    # MinIO Configuration
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin123"
+    MINIO_SECURE: bool = False  # Set to True for HTTPS
+    MINIO_DOCUMENT_BUCKET: str = "documents"
+    MINIO_AVATAR_BUCKET: str = "avatar"
+    MINIO_MAJOR_IMAGE_BUCKET: str = "major-images"
+
     model_config = {
         "case_sensitive": True,
         "env_file": ".env",

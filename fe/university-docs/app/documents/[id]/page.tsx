@@ -594,13 +594,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
             <Card>
               <CardContent className="p-4">
                 <h3 className="font-medium mb-4">Tải xuống tài liệu</h3>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {document.tags?.map((tag) => (
-                    <Badge key={tag.tag_id} variant="outline">
-                      {tag.tag_name}
-                    </Badge>
-                  ))}
-                </div>
                 <div className="flex items-center gap-2 mt-4">
                   <div className="text-sm font-medium">{ratings.length} đánh giá:</div>
                   <div className="flex items-center">
@@ -633,6 +626,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 </div>
                 {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}
                 {ratingError && <div className="text-xs text-red-500 mt-1">{ratingError}</div>}
+                <br />
                 <Button
                   className="w-full"
                   onClick={handleDownloadClick}

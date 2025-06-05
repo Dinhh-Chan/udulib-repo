@@ -18,7 +18,7 @@ export default function ForumPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push("/login?callbackUrl=/forum")
+      router.push("/login")
       return
     }
 
