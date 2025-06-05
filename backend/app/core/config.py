@@ -101,6 +101,7 @@ class Settings(BaseSettings):
 
     # MinIO Configuration
     MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_EXTERNAL_ENDPOINT: str = "localhost:9000"  # URL cho client browser truy cập
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin123"
     MINIO_SECURE: bool = False  # Set to True for HTTPS
