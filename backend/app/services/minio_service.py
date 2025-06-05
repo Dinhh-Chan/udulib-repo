@@ -87,7 +87,19 @@ class MinIOService:
                 path_parts = file_path.replace("minio://", "").split("/", 1)
                 if len(path_parts) == 2:
                     bucket, object_name = path_parts
-                    return self.client.presigned_get_object(bucket, object_name, expires=expires)
+                    presigned_url = self.client.presigned_get_object(bucket, object_name, expires=expires)
+                    
+                    # Thay thế internal endpoint bằng external endpoint cho client
+                    if presigned_url and settings.MINIO_ENDPOINT != settings.MINIO_EXTERNAL_ENDPOINT:
+                        presigned_url = presigned_url.replace(
+                            f"http://{settings.MINIO_ENDPOINT}", 
+                            f"http://{settings.MINIO_EXTERNAL_ENDPOINT}"
+                        ).replace(
+                            f"https://{settings.MINIO_ENDPOINT}", 
+                            f"https://{settings.MINIO_EXTERNAL_ENDPOINT}"
+                        )
+                    
+                    return presigned_url
             return None
         except S3Error as e:
             logging.error(f"Error creating presigned URL: {e}")
