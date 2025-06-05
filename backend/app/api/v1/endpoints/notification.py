@@ -4,8 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
 from app.services.crud.notification_crud import NotificationCRUD
+from app.services.crud.user_crud import user_crud
 from app.schemas.notification import Notification, NotificationCreate, NotificationUpdate
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User
 
 router = APIRouter()
@@ -209,4 +210,42 @@ async def mark_all_notifications_as_read(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Lỗi khi cập nhật trạng thái thông báo"
+        )
+
+@router.post("/broadcast", response_model=dict)
+async def broadcast_notification(
+    *,
+    db: AsyncSession = Depends(get_db),
+    notification_in: NotificationCreate,
+    current_user: User = Depends(require_role("admin"))
+):
+    """
+    Gửi thông báo cho tất cả người dùng.
+    Chỉ admin mới có quyền sử dụng API này.
+    """
+    try:
+        # Lấy danh sách tất cả người dùng
+        users = await user_crud.get_all(db=db)
+        
+        crud = NotificationCRUD(db)
+        success_count = 0
+        
+        # Tạo thông báo cho từng người dùng
+        for user in users:
+            try:
+                await crud.create(obj_in=notification_in, user_id=user.user_id)
+                success_count += 1
+            except Exception as e:
+                print(f"Error creating notification for user {user.user_id}: {str(e)}")
+                continue
+        
+        return {
+            "status": "success",
+            "message": f"Đã gửi thông báo cho {success_count}/{len(users)} người dùng"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi gửi thông báo: {str(e)}"
         ) 
