@@ -17,7 +17,7 @@ async def read_subjects(
     per_page: int = Query(20, ge=1, le=100),
     major_id: Optional[int] = None,
     year_id: Optional[int] = None,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách môn học.
@@ -31,7 +31,7 @@ async def read_subjects(
 async def count_subjects(
     *,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Đếm tổng số môn học.
@@ -47,7 +47,7 @@ async def read_subjects_by_academic_year(
     academic_year_id: int,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách môn học theo năm học.
@@ -86,7 +86,7 @@ async def read_subject(
     *,
     db: AsyncSession = Depends(get_db),
     subject_id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một môn học.
@@ -155,7 +155,7 @@ async def read_subjects_by_academic_year(
     academic_year_id: int,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách môn học theo năm học.

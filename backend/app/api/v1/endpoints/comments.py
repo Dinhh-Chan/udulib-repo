@@ -20,7 +20,7 @@ async def read_comments(
     user_id: Optional[int] = None,
     parent_comment_id: Optional[int] = None,
     include_replies: bool = Query(False, description="Bao gồm cả replies nếu true"),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách bình luận.
@@ -44,7 +44,7 @@ async def create_comment(
     *,
     db: AsyncSession = Depends(get_db),
     comment_in: CommentCreate,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Tạo bình luận mới.
@@ -92,7 +92,7 @@ async def read_comment(
     db: AsyncSession = Depends(get_db),
     comment_id: int,
     include_replies: bool = Query(False, description="Bao gồm tất cả replies của comment này"),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một bình luận.
@@ -114,7 +114,7 @@ async def get_comment_replies(
     comment_id: int,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy tất cả replies của một comment cụ thể.

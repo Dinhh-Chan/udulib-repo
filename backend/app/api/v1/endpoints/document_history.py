@@ -20,7 +20,7 @@ async def read_document_histories(
     document_id: Optional[int] = None,
     user_id: Optional[int] = None,
     action: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách lịch sử truy cập tài liệu.
@@ -60,7 +60,7 @@ async def read_document_history(
     *,
     db: AsyncSession = Depends(get_db),
     history_id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy chi tiết một bản ghi lịch sử theo ID.

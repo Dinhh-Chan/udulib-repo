@@ -15,7 +15,7 @@ async def read_forums(
     db: AsyncSession = Depends(get_db),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách forums.
@@ -30,7 +30,7 @@ async def read_forum(
     *,
     db: AsyncSession = Depends(get_db),
     forum_id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một forum.
@@ -49,7 +49,7 @@ async def read_forum_by_subject(
     *,
     db: AsyncSession = Depends(get_db),
     subject_id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy forum theo subject_id.

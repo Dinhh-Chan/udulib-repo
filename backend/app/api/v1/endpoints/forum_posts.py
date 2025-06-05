@@ -26,7 +26,7 @@ async def read_forum_posts(
     forum_id: Optional[int] = None,
     user_id: Optional[int] = None,
     # Loại bỏ status khỏi query parameters để tăng bảo mật
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách forum posts (cơ bản, không bao gồm status filter).
@@ -84,7 +84,7 @@ async def read_forum_post(
     *,
     db: AsyncSession = Depends(get_db),
     post_id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một forum post.

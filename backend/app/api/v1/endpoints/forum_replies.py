@@ -19,7 +19,7 @@ async def read_forum_replies(
     user_id: Optional[int] = None,
     status: Optional[str] = None,
     parent_reply_id: Optional[int] = Query(None, description="Filter by parent reply ID. Use null for top-level replies."),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách forum replies.
@@ -43,7 +43,7 @@ async def read_forum_reply(
     *,
     db: AsyncSession = Depends(get_db),
     reply_id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một forum reply.

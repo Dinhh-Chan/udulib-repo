@@ -52,7 +52,7 @@ except S3Error as e:
 async def count_document(
     *,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     return await document.count_document(db)
 
@@ -127,7 +127,7 @@ async def get_documents(
     *,
     db: Session = Depends(get_db),
     filter_request: DocumentFilterRequest = Depends(),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy danh sách tài liệu với bộ lọc.
@@ -171,7 +171,7 @@ async def get_documents_by_academic_year(
     academic_year_id: int,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy danh sách tài liệu theo năm học.
@@ -189,7 +189,7 @@ async def get_document(
     *,
     db: Session = Depends(get_db),
     id: int,
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy thông tin chi tiết của một tài liệu.

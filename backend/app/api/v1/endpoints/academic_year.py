@@ -21,7 +21,7 @@ async def get_academic_years(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách các năm học.
@@ -35,7 +35,7 @@ async def get_academic_years(
 async def get_academic_year(
     year_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một năm học theo ID.
@@ -161,7 +161,7 @@ async def get_years_with_subjects_count(
     db: AsyncSession = Depends(get_db),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy danh sách năm học kèm số lượng môn học liên quan.

@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("/count-major")
 async def count_major(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Đếm số lượng ngành học.
@@ -25,7 +25,7 @@ async def get_majors(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy danh sách các ngành học.
@@ -39,7 +39,7 @@ async def get_majors(
 async def get_major(
     major_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một ngành học theo ID.
@@ -57,7 +57,7 @@ async def get_major(
 async def get_major_by_code(
     major_code: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một ngành học theo mã ngành.
