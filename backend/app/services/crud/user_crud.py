@@ -77,6 +77,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             db_obj.university_id = obj_in.university_id
         if obj_in.avatar_url is not None:
             db_obj.avatar_url = obj_in.avatar_url
+        if obj_in.is_private is not None:
+            db_obj.is_private = obj_in.is_private
 
         db.add(db_obj)
         await db.commit()
@@ -118,8 +120,40 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             .limit(limit)
         )
         return result.scalars().all()
+
     async def get_by_id(self, db: AsyncSession, *, id: int) -> Optional[User]:
         return await super().get_by_id(db=db, id=id, pk_field="user_id")
+
+    async def get_public_users(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        role: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[User]:
+        """Lấy danh sách user công khai (không private)"""
+        query = select(User).where(User.is_private == False)
+        
+        if role:
+            query = query.where(User.role == role)
+        if search:
+            search = f"%{search}%"
+            query = query.where(
+                (User.email.ilike(search)) |
+                (User.full_name.ilike(search)) |
+                (User.username.ilike(search))
+            )
+        
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all()
+
+    async def is_profile_public(self, db: AsyncSession, *, user_id: int) -> bool:
+        """Kiểm tra xem profile có public không"""
+        user = await self.get_by_id(db, id=user_id)
+        return user and not user.is_private
 
 
 user_crud = CRUDUser(User)

@@ -4,10 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
 from app.services.crud.user_crud import user_crud
-from app.schemas.user import User, UserCreate, UserUpdate
+from app.schemas.user import User, UserCreate, UserUpdate, UserPasswordChange
 from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User as UserModel
 from app.services.avatar_service import avatar_service
+from app.services.privacy_service import privacy_service
 
 router = APIRouter()
 
@@ -52,6 +53,32 @@ async def update_current_user(
     
     user = await user_crud.update(db=db, db_obj=current_user, obj_in=user_in)
     return user
+
+@router.put("/me/change-password", response_model=dict)
+async def change_password(
+    *,
+    db: AsyncSession = Depends(get_db),
+    password_data: UserPasswordChange,
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Thay đổi mật khẩu của user hiện tại"""
+    
+    if password_data.new_password != password_data.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu mới và xác nhận mật khẩu không khớp"
+        )
+    
+    if not user_crud.verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu hiện tại không đúng"
+        )
+    
+    user_update = UserUpdate(password=password_data.new_password)
+    await user_crud.update(db=db, db_obj=current_user, obj_in=user_update)
+    
+    return {"message": "Mật khẩu đã được thay đổi thành công"}
 
 @router.get("/", response_model=List[User])
 async def read_users(
@@ -121,6 +148,44 @@ async def delete_current_user_avatar(
     await avatar_service.delete_avatar(db, current_user)
     return {"message": "Xóa avatar thành công"}
 
+@router.post("/toggle-privacy", response_model=User)
+async def toggle_privacy(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    updated_user = await privacy_service.toggle_privacy(db, current_user)
+    return updated_user
+
+@router.put("/privacy", response_model=User)
+async def set_privacy(
+    *,
+    db: AsyncSession = Depends(get_db),
+    is_private: bool,
+    current_user: UserModel = Depends(get_current_user)
+):
+    updated_user = await privacy_service.set_privacy(db, current_user, is_private)
+    return updated_user
+
+@router.get("/public", response_model=List[User])
+async def get_public_users(
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: UserModel = Depends(get_current_user)
+):
+    skip = (page - 1) * per_page
+    users = await user_crud.get_public_users(
+        db=db,
+        skip=skip,
+        limit=per_page,
+        role=role,
+        search=search
+    )
+    return users
+
 @router.get("/{user_id}", response_model=User)
 async def read_user(
     *,
@@ -134,6 +199,14 @@ async def read_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy người dùng"
         )
+    
+    # Kiểm tra quyền xem profile
+    # if not privacy_service.can_view_profile(user, current_user):
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail="Hồ sơ này được đặt ở chế độ riêng tư"
+    #     )
+    
     return user
 
 @router.put("/{user_id}", response_model=User)
