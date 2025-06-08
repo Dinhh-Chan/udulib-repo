@@ -1,7 +1,8 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
+import math
 
 from app.models.base import get_db
 from app.services.crud.document_history_crud import DocumentHistoryCRUD
@@ -9,10 +10,11 @@ from app.schemas.document_history import DocumentHistory, DocumentHistoryCreate
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.models.document import Document
+from app.models.document_history import DocumentHistory as DocumentHistoryModel
 
 router = APIRouter()
 
-@router.get("/", response_model=List[DocumentHistory])
+@router.get("/")
 async def read_document_histories(
     db: AsyncSession = Depends(get_db),
     page: int = Query(1, ge=1),
@@ -23,10 +25,12 @@ async def read_document_histories(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Lấy danh sách lịch sử truy cập tài liệu.
+    Lấy danh sách lịch sử truy cập tài liệu với pagination.
     """
     crud = DocumentHistoryCRUD(db)
     skip = (page - 1) * per_page
+    
+    # Lấy danh sách histories
     histories = await crud.get_all(
         skip=skip, 
         limit=per_page,
@@ -34,7 +38,29 @@ async def read_document_histories(
         user_id=user_id,
         action=action
     )
-    return histories
+    
+    # Đếm tổng số records với cùng filter
+    count_query = select(func.count(DocumentHistoryModel.history_id))
+    if document_id is not None:
+        count_query = count_query.where(DocumentHistoryModel.document_id == document_id)
+    if user_id is not None:
+        count_query = count_query.where(DocumentHistoryModel.user_id == user_id)
+    if action is not None:
+        count_query = count_query.where(DocumentHistoryModel.action == action)
+    
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+    
+    # Tính số trang
+    pages = math.ceil(total / per_page) if total > 0 else 1
+    
+    return {
+        "items": histories,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages
+    }
 
 @router.post("/", response_model=DocumentHistory)
 async def create_document_history(
