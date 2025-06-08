@@ -15,14 +15,18 @@ async def read_forums(
     db: AsyncSession = Depends(get_db),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None, description="Tìm kiếm theo mô tả forum, tên môn học hoặc mã môn học"),
+    subject_id: Optional[int] = Query(None, description="Lọc theo môn học"),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Lấy danh sách forums.
+    Lấy danh sách forums với tính năng tìm kiếm và lọc.
+    - search: Tìm kiếm theo mô tả forum, tên môn học, hoặc mã môn học
+    - subject_id: Lọc theo môn học cụ thể
     """
     crud = ForumCRUD(db)
     skip = (page - 1) * per_page
-    forums = await crud.get_all(skip=skip, limit=per_page)
+    forums = await crud.get_all(skip=skip, limit=per_page, search=search, subject_id=subject_id)
     return forums
 
 @router.get("/{forum_id}", response_model=Forum)
