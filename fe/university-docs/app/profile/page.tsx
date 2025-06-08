@@ -26,6 +26,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Notification, getAllNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/api/notification"
 import { getUserForumPosts, deleteForumPost } from "@/lib/api/forum"
 import { ForumPost } from "@/types/forum"
+import { getViewedDocuments, getDownloadedDocuments, DocumentHistory } from "@/lib/api/document-history"
 
 export default function ProfilePage() {
   const searchParams = useSearchParams()
@@ -65,6 +66,14 @@ export default function ProfilePage() {
   const [forumTotalPages, setForumTotalPages] = useState(1)
   const [forumPostToDelete, setForumPostToDelete] = useState<number | null>(null)
   const [isDeleteForumPostDialogOpen, setIsDeleteForumPostDialogOpen] = useState(false)
+  const [viewedDocuments, setViewedDocuments] = useState<DocumentHistory[]>([])
+  const [downloadedDocuments, setDownloadedDocuments] = useState<DocumentHistory[]>([])
+  const [isLoadingViewedDocuments, setIsLoadingViewedDocuments] = useState(false)
+  const [isLoadingDownloadedDocuments, setIsLoadingDownloadedDocuments] = useState(false)
+  const [viewedCurrentPage, setViewedCurrentPage] = useState(1)
+  const [viewedTotalPages, setViewedTotalPages] = useState(1)
+  const [downloadedCurrentPage, setDownloadedCurrentPage] = useState(1)
+  const [downloadedTotalPages, setDownloadedTotalPages] = useState(1)
 
   useEffect(() => {
     // Lấy tab từ URL query parameter
@@ -159,6 +168,48 @@ export default function ProfilePage() {
 
     fetchUserForumPosts()
   }, [authUser?.user_id, forumCurrentPage, activeTab])
+
+  useEffect(() => {
+    const fetchViewedDocuments = async () => {
+      if (!authUser?.user_id || activeTab !== "documents") return
+
+      setIsLoadingViewedDocuments(true)
+      try {
+        const response = await getViewedDocuments(authUser.user_id)
+        setViewedDocuments(response || [])
+        setViewedTotalPages(1) // Backend sẽ handle pagination
+      } catch (error) {
+        console.error("Error fetching viewed documents:", error)
+        toast.error("Không thể tải danh sách tài liệu đã xem")
+        setViewedDocuments([])
+      } finally {
+        setIsLoadingViewedDocuments(false)
+      }
+    }
+
+    fetchViewedDocuments()
+  }, [authUser?.user_id, viewedCurrentPage, activeTab])
+
+  useEffect(() => {
+    const fetchDownloadedDocuments = async () => {
+      if (!authUser?.user_id || activeTab !== "documents") return
+
+      setIsLoadingDownloadedDocuments(true)
+      try {
+        const response = await getDownloadedDocuments(authUser.user_id)
+        setDownloadedDocuments(response || [])
+        setDownloadedTotalPages(1) // Backend sẽ handle pagination
+      } catch (error) {
+        console.error("Error fetching downloaded documents:", error)
+        toast.error("Không thể tải danh sách tài liệu đã tải")
+        setDownloadedDocuments([])
+      } finally {
+        setIsLoadingDownloadedDocuments(false)
+      }
+    }
+
+    fetchDownloadedDocuments()
+  }, [authUser?.user_id, downloadedCurrentPage, activeTab])
 
   useEffect(() => {
     if (user) {
@@ -563,6 +614,11 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="uploaded">
+                    <TabsList>
+                      <TabsTrigger value="uploaded">Tải lên</TabsTrigger>
+                      <TabsTrigger value="viewed">Đã xem</TabsTrigger>
+                      <TabsTrigger value="downloaded">Đã tải</TabsTrigger>
+                    </TabsList>
                     <TabsContent value="uploaded" className="mt-4 sm:mt-6">
                       {isLoadingDocuments ? (
                         <div className="flex justify-center items-center py-8">
@@ -642,57 +698,115 @@ export default function ProfilePage() {
                         </div>
                       )}
                     </TabsContent>
-                    <TabsContent value="saved" className="mt-4 sm:mt-6">
-                      <div className="space-y-3 sm:space-y-4">
-                        {savedDocuments.map((doc) => (
-                          <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
-                            <div className="flex-1 min-w-0">
-                              <Link href={`/documents/${doc.id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
-                                {doc.title}
-                              </Link>
-                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
-                                <span className="truncate">{doc.course}</span>
-                                <span className="hidden sm:inline">•</span>
-                                <span>Đã lưu: {doc.savedDate}</span>
+                    <TabsContent value="viewed" className="mt-4 sm:mt-6">
+                      {isLoadingViewedDocuments ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : viewedDocuments.length > 0 ? (
+                        <>
+                          <div className="space-y-3 sm:space-y-4">
+                            {viewedDocuments.map((history) => (
+                              <div key={history.history_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <Link href={`/documents/${history.document_id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
+                                    {history.document?.title || "Tài liệu không có tiêu đề"}
+                                  </Link>
+                                  <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                    <span className="truncate">{history.document?.subject?.subject_name || "Không xác định"}</span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span>Đã xem: {new Date(history.created_at).toLocaleDateString('vi-VN')}</span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
-                                <Link href={`/documents/${doc.id}`}>Xem</Link>
-                              </Button>
-                              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-                                Bỏ lưu
-                              </Button>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                          {viewedTotalPages > 1 && (
+                            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setViewedCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                disabled={viewedCurrentPage === 1}
+                                className="w-full sm:w-auto"
+                              >
+                                Trước
+                              </Button>
+                              <span className="flex items-center px-4 text-sm">
+                                Trang {viewedCurrentPage} / {viewedTotalPages}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setViewedCurrentPage((prev) => Math.min(prev + 1, viewedTotalPages))}
+                                disabled={viewedCurrentPage === viewedTotalPages}
+                                className="w-full sm:w-auto"
+                              >
+                                Sau
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
+                          Chưa có tài liệu nào được xem
+                        </div>
+                      )}
                     </TabsContent>
                     <TabsContent value="downloaded" className="mt-4 sm:mt-6">
-                      <div className="space-y-3 sm:space-y-4">
-                        {downloadedDocuments.map((doc) => (
-                          <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
-                            <div className="flex-1 min-w-0">
-                              <Link href={`/documents/${doc.id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
-                                {doc.title}
-                              </Link>
-                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
-                                <span className="truncate">{doc.course}</span>
-                                <span className="hidden sm:inline">•</span>
-                                <span>Đã tải: {doc.downloadDate}</span>
+                      {isLoadingDownloadedDocuments ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : downloadedDocuments.length > 0 ? (
+                        <>
+                          <div className="space-y-3 sm:space-y-4">
+                            {downloadedDocuments.map((history) => (
+                              <div key={history.history_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg gap-3 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <Link href={`/documents/${history.document_id}`} className="font-medium hover:underline text-sm sm:text-base block truncate">
+                                    {history.document?.title || "Tài liệu không có tiêu đề"}
+                                  </Link>
+                                  <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                    <span className="truncate">{history.document?.subject?.subject_name || "Không xác định"}</span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span>Đã tải: {new Date(history.created_at).toLocaleDateString('vi-VN')}</span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
-                                <Link href={`/documents/${doc.id}`}>Xem</Link>
-                              </Button>
-                              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-                                Tải lại
-                              </Button>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                          {downloadedTotalPages > 1 && (
+                            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDownloadedCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                disabled={downloadedCurrentPage === 1}
+                                className="w-full sm:w-auto"
+                              >
+                                Trước
+                              </Button>
+                              <span className="flex items-center px-4 text-sm">
+                                Trang {downloadedCurrentPage} / {downloadedTotalPages}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDownloadedCurrentPage((prev) => Math.min(prev + 1, downloadedTotalPages))}
+                                disabled={downloadedCurrentPage === downloadedTotalPages}
+                                className="w-full sm:w-auto"
+                              >
+                                Sau
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
+                          Chưa có tài liệu nào được tải
+                        </div>
+                      )}
                     </TabsContent>
                   </Tabs>
                 </CardContent>
@@ -1199,90 +1313,3 @@ export default function ProfilePage() {
   )
 }
 
-// Sample data
-const userDocuments = [
-  {
-    id: "1",
-    title: "Bài tập thực hành lập trình C++",
-    course: "Nhập môn lập trình",
-    uploadDate: "15/04/2023",
-    status: "approved",
-  },
-  {
-    id: "2",
-    title: "Báo cáo đồ án môn học Cơ sở dữ liệu",
-    course: "Cơ sở dữ liệu",
-    uploadDate: "20/05/2023",
-    status: "approved",
-  },
-  {
-    id: "3",
-    title: "Slide thuyết trình môn Mạng máy tính",
-    course: "Mạng máy tính",
-    uploadDate: "10/06/2023",
-    status: "pending",
-  },
-]
-
-const savedDocuments = [
-  {
-    id: "4",
-    title: "Giáo trình Nhập môn lập trình",
-    course: "Nhập môn lập trình",
-    savedDate: "05/03/2023",
-  },
-  {
-    id: "5",
-    title: "Đề thi cuối kỳ môn Cấu trúc dữ liệu và giải thuật",
-    course: "Cấu trúc dữ liệu và giải thuật",
-    savedDate: "12/04/2023",
-  },
-]
-
-const downloadedDocuments = [
-  {
-    id: "6",
-    title: "Slide bài giảng tuần 1-5 môn Nhập môn lập trình",
-    course: "Nhập môn lập trình",
-    downloadDate: "01/03/2023",
-  },
-  {
-    id: "7",
-    title: "Bài tập thực hành số 1 môn Cấu trúc dữ liệu",
-    course: "Cấu trúc dữ liệu và giải thuật",
-    downloadDate: "10/04/2023",
-  },
-]
-
-const notifications = [
-  {
-    id: "1",
-    content: "Tài liệu 'Bài tập thực hành lập trình C++' của bạn đã được duyệt.",
-    time: "2 giờ trước",
-    read: false,
-  },
-  {
-    id: "2",
-    content: "Nguyễn Văn Y đã bình luận về tài liệu của bạn.",
-    time: "Hôm qua",
-    read: false,
-  },
-  {
-    id: "3",
-    content: "Bài viết của bạn trên diễn đàn đã nhận được 3 câu trả lời mới.",
-    time: "2 ngày trước",
-    read: false,
-  },
-  {
-    id: "4",
-    content: "Tài liệu 'Báo cáo đồ án môn học Cơ sở dữ liệu' của bạn đã được duyệt.",
-    time: "1 tuần trước",
-    read: true,
-  },
-  {
-    id: "5",
-    content: "Chào mừng bạn đến với hệ thống quản lý tài liệu học tập!",
-    time: "01/01/2023",
-    read: true,
-  },
-]
