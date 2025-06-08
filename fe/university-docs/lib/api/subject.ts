@@ -6,7 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 export async function getSubjects(): Promise<Subject[]> {
   try {
     const token = getAuthToken()
-    const response = await fetch(`${API_URL}/subjects`, {
+    const response = await fetch(`${API_URL}/subjects/`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -44,7 +44,7 @@ export async function getSubject(id: number): Promise<Subject> {
 export async function createSubject(data: SubjectCreate): Promise<Subject> {
   try {
     const token = getAuthToken()
-    const response = await fetch(`${API_URL}/subjects`, {
+    const response = await fetch(`${API_URL}/subjects/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

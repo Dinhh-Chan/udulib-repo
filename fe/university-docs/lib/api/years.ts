@@ -4,7 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export async function getYears(): Promise<Year[]> {
   try {
-    const response = await fetch(`${API_URL}/academic-years`)
+    const response = await fetch(`${API_URL}/academic-years/`)
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.detail || "Không thể lấy danh sách năm học")
@@ -45,7 +45,7 @@ export async function getYear(id: number): Promise<Year> {
 
 export async function createYear(data: YearCreate): Promise<Year> {
   try {
-    const response = await fetch(`${API_URL}/academic-years`, {
+    const response = await fetch(`${API_URL}/academic-years/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
