@@ -1,6 +1,9 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+import io
+import logging
 
 from app.models.base import get_db
 from app.services.crud.user_crud import user_crud
@@ -9,6 +12,7 @@ from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User as UserModel
 from app.services.avatar_service import avatar_service
 from app.services.privacy_service import privacy_service
+from app.services.minio_service import minio_service
 
 router = APIRouter()
 
@@ -132,10 +136,74 @@ async def upload_avatar(
 ):
     return await avatar_service.upload_avatar(db, current_user, file)
 
+def _get_avatar_stream_response(user: UserModel) -> StreamingResponse:
+    """Helper function để lấy avatar stream response"""
+    if not user.avatar_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Người dùng chưa có avatar"
+        )
+    
+    try:
+        # Logging để debug
+        logging.info(f"Attempting to get avatar for user {user.user_id}: {user.avatar_url}")
+        
+        # Kiểm tra file có tồn tại không trước khi stream
+        file_info = minio_service.get_file_info(user.avatar_url)
+        if not file_info:
+            logging.warning(f"Avatar file not found in MinIO: {user.avatar_url}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Avatar không tồn tại trong hệ thống lưu trữ"
+            )
+        
+        # Lấy file stream từ MinIO
+        file_stream = minio_service.get_file_stream(user.avatar_url)
+        if not file_stream:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không thể lấy avatar từ hệ thống lưu trữ"
+            )
+        
+        # Lấy content type từ file info đã có
+        content_type = file_info.get('content_type', 'image/jpeg')
+        
+        # Đọc dữ liệu ảnh
+        image_data = file_stream.read()
+        file_stream.close()
+        
+        logging.info(f"Successfully retrieved avatar for user {user.user_id}, size: {len(image_data)} bytes")
+        
+        return StreamingResponse(
+            io.BytesIO(image_data),
+            media_type=content_type,
+            headers={
+                "Cache-Control": "public, max-age=3600",
+                "Content-Disposition": "inline"
+            }
+        )
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logging.error(f"Error getting avatar for user {user.user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi server khi lấy avatar"
+        )
+
+@router.get("/avatar")
+async def get_current_user_avatar(
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Lấy ảnh avatar của user hiện tại"""
+    return _get_avatar_stream_response(current_user)
+
 @router.get("/avatar-url")
 async def get_current_user_avatar_url(
     current_user: UserModel = Depends(get_current_user)
 ):
+    """Lấy URL avatar của user hiện tại (backward compatibility)"""
     avatar_url = avatar_service.get_avatar_url(current_user)
     return {"avatar_url": avatar_url}
 
@@ -274,6 +342,23 @@ async def upload_avatar_for_user(
             detail="Không tìm thấy người dùng"
         )
     return await avatar_service.upload_avatar(db, user, file)
+
+@router.get("/{user_id}/avatar")
+async def get_user_avatar(
+    *,
+    db: AsyncSession = Depends(get_db),
+    user_id: int,
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Lấy ảnh avatar của user cụ thể"""
+    user = await user_crud.get_by_id(db=db, id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy người dùng"
+        )
+    
+    return _get_avatar_stream_response(user)
 
 @router.get("/{user_id}/avatar-url")
 async def get_user_avatar_url(
