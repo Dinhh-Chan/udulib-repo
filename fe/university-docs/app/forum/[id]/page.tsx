@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ChevronRight, Search, MessageSquare, Eye, ThumbsUp, Clock, User, Plus } from "lucide-react"
+import { ChevronRight, Search, MessageSquare, Eye, ThumbsUp, Clock, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 import { getForum, getForumPosts } from "@/lib/api/forum"
+import { NewPostModal } from "@/components/forum/new-post-modal"
 import type { Forum, ForumPost } from "@/types/forum"
 
 export default function ForumDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -77,12 +78,7 @@ export default function ForumDetailPage({ params }: { params: Promise<{ id: stri
               <h1 className="text-3xl font-bold tracking-tight">{forum.subject_name}</h1>
               <p className="text-muted-foreground">Thảo luận và chia sẻ kiến thức về môn học</p>
             </div>
-            <Button asChild>
-              <Link href={`/forum/${resolvedParams.id}/new`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tạo bài viết mới
-              </Link>
-            </Button>
+            <NewPostModal forum={forum} onPostCreated={loadData} />
           </div>
         </div>
 

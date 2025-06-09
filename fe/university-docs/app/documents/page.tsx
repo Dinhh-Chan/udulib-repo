@@ -121,50 +121,6 @@ export default function DocumentsPage() {
     return `${size.toFixed(1)} ${sizes[i]}`
   }
 
-  const handleView = async (documentId: number) => {
-    try {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        console.warn("Vui lòng đăng nhập")
-        return
-      }
-
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/view`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      // Cập nhật lại danh sách tài liệu sau khi ghi nhận lượt xem
-      fetchDocuments()
-    } catch (err) {
-      console.error("Error recording view:", err)
-    }
-  }
-
-  const handleDownload = async (documentId: number) => {
-    try {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        console.warn("Vui lòng đăng nhập")
-        return
-      }
-
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/download`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      // Cập nhật lại danh sách tài liệu sau khi ghi nhận lượt tải
-      fetchDocuments()
-    } catch (err) {
-      console.error("Error recording download:", err)
-    }
-  }
-
   return (
     <div className="container py-8 px-4 md:px-6">
       <div className="flex flex-col gap-8">
@@ -245,12 +201,6 @@ export default function DocumentsPage() {
                     <Link 
                       key={doc.document_id} 
                       href={`/documents/${doc.document_id}`}
-                      onClick={() => {
-                        const token = localStorage.getItem("access_token")
-                        if (token) {
-                          handleView(doc.document_id)
-                        }
-                      }}
                     >
                       <Card className="group relative overflow-hidden border-0 bg-white dark:bg-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer h-80">
                         {/* Thumbnail Section - Thu nhỏ lại */}

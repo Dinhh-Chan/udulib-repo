@@ -209,14 +209,7 @@ export default function ProfilePage() {
 
   if (!user && !isLoading && isAuthenticated) {
     return (
-      <div className="container py-8 px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-          <p className="text-muted-foreground">Không tìm thấy thông tin người dùng</p>
-          <Button onClick={() => window.location.reload()}>
-            Tải lại trang
-          </Button>
-        </div>
-      </div>
+      <Loading />
     )
   }
 

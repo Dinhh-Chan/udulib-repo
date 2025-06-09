@@ -12,7 +12,8 @@ import {
   createDocument,
   deleteDocument,
   Document, 
-  DocumentUpdateData
+  DocumentUpdateData,
+  getPublicDocumentFullPreview
 } from "@/lib/api/documents"
 import { getSubjects } from "@/lib/api/subject"
 import { Subject } from "@/types/subject"
@@ -64,7 +65,7 @@ export default function EditDocumentModal({ documentId, isOpen, onClose, onSucce
       
       // Generate preview URL
       try {
-        const preview = `${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/preview?size=medium`
+        const preview = getPublicDocumentFullPreview(documentId!)
         setPreviewUrl(preview)
       } catch (error) {
         console.error("Error generating preview:", error)
@@ -278,31 +279,35 @@ export default function EditDocumentModal({ documentId, isOpen, onClose, onSucce
               {/* Preview */}
               <div className="space-y-4">
                 <h4 className="font-medium">Xem trước:</h4>
-                <div className="border rounded-lg p-4 bg-gray-50 min-h-[300px] flex items-center justify-center">
+                <div className="border rounded-lg bg-gray-50 overflow-hidden" style={{ height: '500px' }}>
                   {previewUrl ? (
-                    <div className="w-full">
+                    <div className="w-full h-full">
                       {newFile && newFile.type.startsWith('image/') ? (
-                        <img 
-                          src={previewUrl} 
-                          alt="Preview" 
-                          className="max-w-full max-h-[400px] object-contain mx-auto rounded"
-                        />
-                      ) : (
-                        <div className="w-full">
-                          <iframe
-                            src={previewUrl}
-                            className="w-full h-[400px] border-0 rounded"
-                            title="Document Preview"
+                        <div className="w-full h-full flex items-center justify-center p-6">
+                          <img 
+                            src={previewUrl} 
+                            alt="Preview" 
+                            className="max-w-[90%] max-h-[90%] object-contain rounded shadow-sm"
+                            style={{ maxWidth: '400px', maxHeight: '400px' }}
                           />
                         </div>
+                      ) : (
+                        <iframe
+                          src={previewUrl}
+                          className="w-full h-full border-0"
+                          title="Document Preview"
+                          style={{ minHeight: '500px' }}
+                        />
                       )}
                     </div>
                   ) : (
-                    <div className="text-center text-muted-foreground">
-                      <p>Không có xem trước</p>
-                      <p className="text-sm">
-                        {newFile ? "File được chọn không hỗ trợ xem trước" : "Tải file để xem trước"}
-                      </p>
+                    <div className="w-full h-full flex items-center justify-center text-center text-muted-foreground p-4">
+                      <div>
+                        <p className="text-lg mb-2">Không có xem trước</p>
+                        <p className="text-sm">
+                          {newFile ? "File được chọn không hỗ trợ xem trước" : "Tải file để xem trước"}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronRight, FileText } from "lucide-react"
 import React from "react"
+import Loading from "../../loading"
 
 interface Major {
   major_id: number;
@@ -90,7 +91,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
       })
   }, [selectedYear, major])
 
-  if (!major) return <div>Đang tải ngành học...</div>
+  if (!major) return <Loading />
 
   return (
     <div className="container py-8 px-4 md:px-6">
@@ -117,7 +118,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
           {[1,2,3,4].map(year => (
             <TabsContent key={year} value={year.toString()} className="mt-6">
               {loading ? (
-                <div>Đang tải...</div>
+                <Loading />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {subjects.map(subject => (

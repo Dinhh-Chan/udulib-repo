@@ -11,6 +11,7 @@ import { ChevronRight, Plus, MessageSquare, Search, Filter, X } from "lucide-rea
 import { useAuth } from "@/contexts/auth-context"
 import { getForums, getSubjects } from "@/lib/api/forum"
 import type { Forum } from "@/types/forum"
+import Loading from "@/app/loading"
 
 interface Subject {
   subject_id: number
@@ -107,7 +108,7 @@ export default function ForumPage() {
   }
 
   if (isLoading || isLoadingForums) {
-    return <div>Đang tải...</div>
+    return <Loading />
   }
 
   const hasActiveFilters = searchTerm.trim() || (selectedSubjectId && selectedSubjectId !== "all")

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronRight, FileText, Download, Eye, Calendar, User } from "lucide-react"
 import React from "react"
+import Loading from "../../../../loading"
 
 type Document = {
   document_id: number;
@@ -89,7 +90,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
   }, [slug, courseSlug, mounted]);
 
   if (!mounted) return null;
-  if (loading) return <div>Đang tải...</div>
+  if (loading) return <Loading />
   if (!subject || !major) return <div>Không tìm thấy thông tin môn học</div>
 
   return (

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { BookOpen, Search } from "lucide-react"
+import Loading from "../loading"
 
 type Major = {
   major_id: number;
@@ -115,7 +116,7 @@ export default function DepartmentsPage() {
     major.major_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div>Đang tải...</div>
+  if (loading) return <Loading />
 
   return (
     <div className="container py-8 px-4 md:px-6">
