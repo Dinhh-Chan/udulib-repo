@@ -38,6 +38,27 @@ export async function getUser(id: number): Promise<{
 }
 
 // Subject APIs
+export async function getSubjects(): Promise<Array<{ subject_id: number; subject_name: string; subject_code: string }>> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/subjects/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể lấy danh sách môn học")
+    }
+    return response.json()
+  } catch (error) {
+    console.error("Error fetching subjects:", error)
+    throw error
+  }
+}
+
 export async function getSubject(id: number): Promise<{ subject_id: number; subject_name: string }> {
   const token = getAuthToken()
   if (!token) throw new Error("Unauthorized")
@@ -60,12 +81,26 @@ export async function getSubject(id: number): Promise<{ subject_id: number; subj
 }
 
 // Forum APIs
-export async function getForums(): Promise<Forum[]> {
+export async function getForums(params?: {
+  search?: string
+  subject_id?: number
+  page?: number
+  per_page?: number
+}): Promise<Forum[]> {
   const token = getAuthToken()
   if (!token) throw new Error("Unauthorized")
 
   try {
-    const response = await fetch(`${API_URL}/forums`, {
+    // Xây dựng URL với query parameters
+    const searchParams = new URLSearchParams()
+    if (params?.search) searchParams.append('search', params.search)
+    if (params?.subject_id) searchParams.append('subject_id', params.subject_id.toString())
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.per_page) searchParams.append('per_page', params.per_page.toString())
+
+    const url = `${API_URL}/forums${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+    
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -78,18 +113,26 @@ export async function getForums(): Promise<Forum[]> {
     
     // Lấy thông tin môn học cho mỗi forum
     const forumsWithSubjects = await Promise.all(
-      forums.map(async (forum: Forum) => {
+      forums.map(async (forum: any) => {
         try {
           const subject = await getSubject(forum.subject_id)
           return {
-            ...forum,
-            subject_name: subject.subject_name
+            forum_id: forum.forum_id,
+            subject_id: forum.subject_id,
+            subject_name: subject.subject_name,
+            post_count: forum.post_count || 0,
+            description: forum.description,
+            created_at: forum.created_at
           }
         } catch (error) {
           console.error(`Error fetching subject for forum ${forum.forum_id}:`, error)
           return {
-            ...forum,
-            subject_name: "Không xác định"
+            forum_id: forum.forum_id,
+            subject_id: forum.subject_id,
+            subject_name: "Không xác định",
+            post_count: forum.post_count || 0,
+            description: forum.description,
+            created_at: forum.created_at
           }
         }
       })

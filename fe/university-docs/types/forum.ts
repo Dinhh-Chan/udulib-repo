@@ -3,6 +3,7 @@ export interface Forum {
   subject_id: number
   subject_name: string
   post_count: number
+  description?: string
 }
 
 export interface ForumPost {
