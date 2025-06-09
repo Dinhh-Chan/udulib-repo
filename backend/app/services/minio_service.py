@@ -108,5 +108,42 @@ class MinIOService:
                 detail="Error creating download URL"
             )
 
+    def get_file_stream(self, file_path: str):
+        """Stream file trực tiếp từ MinIO"""
+        try:
+            if file_path.startswith("minio://"):
+                path_parts = file_path.replace("minio://", "").split("/", 1)
+                if len(path_parts) == 2:
+                    bucket, object_name = path_parts
+                    # Lấy file object từ MinIO
+                    response = self.client.get_object(bucket, object_name)
+                    return response
+            return None
+        except S3Error as e:
+            logging.error(f"Error streaming file from MinIO: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found"
+            )
+    
+    def get_file_info(self, file_path: str) -> Optional[dict]:
+        """Lấy thông tin file từ MinIO"""
+        try:
+            if file_path.startswith("minio://"):
+                path_parts = file_path.replace("minio://", "").split("/", 1)
+                if len(path_parts) == 2:
+                    bucket, object_name = path_parts
+                    stat = self.client.stat_object(bucket, object_name)
+                    return {
+                        "size": stat.size,
+                        "content_type": stat.content_type,
+                        "etag": stat.etag,
+                        "last_modified": stat.last_modified
+                    }
+            return None
+        except S3Error as e:
+            logging.error(f"Error getting file info: {e}")
+            return None
+
 
 minio_service = MinIOService() 
