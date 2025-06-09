@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { ChevronRight, ArrowLeft, MessageSquare, Eye, Clock, User, Reply } from "lucide-react"
+import { ChevronRight, ArrowLeft, MessageSquare, Eye, Clock, User, Reply, Heart, Bookmark, MoreHorizontal, ChevronDown, ChevronUp } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
-import { getForum, getForumPost, getForumReplies, createForumReply, createReplyToComment } from "@/lib/api/forum"
+import { getForum, getForumPost, getForumReplies, createForumReply, createReplyToComment, getForumPosts } from "@/lib/api/forum"
 import { toast } from "sonner"
 import type { Forum, ForumPost, ForumReply } from "@/types/forum"
+import { Separator } from "@/components/ui/separator"
 
 export default function ForumPostDetailPage({ params }: { params: Promise<{ id: string; postId: string }> }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -30,6 +31,11 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
   const [replyToCommentContent, setReplyToCommentContent] = useState("")
   const [isSubmittingReplyToComment, setIsSubmittingReplyToComment] = useState(false)
   const [totalPages, setTotalPages] = useState(0)
+  const [isContentExpanded, setIsContentExpanded] = useState(false)
+  const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set())
+  const [visibleReplies, setVisibleReplies] = useState(3) // Hiển thị 3 comments đầu tiên
+  const [forumPostsCount, setForumPostsCount] = useState(0) // Số bài viết trong forum
+  const [expandedNestedReplies, setExpandedNestedReplies] = useState<Set<number>>(new Set()) // Track nested replies expansion
   const resolvedParams = use(params)
 
   useEffect(() => {
@@ -53,12 +59,14 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
 
   const loadPost = async () => {
     try {
-      const [forumData, postData] = await Promise.all([
+      const [forumData, postData, forumPostsData] = await Promise.all([
         getForum(parseInt(resolvedParams.id)),
-        getForumPost(parseInt(resolvedParams.postId))
+        getForumPost(parseInt(resolvedParams.postId)),
+        getForumPosts(parseInt(resolvedParams.id))
       ])
       setForum(forumData)
       setPost(postData)
+      setForumPostsCount(forumPostsData.length)
     } catch (error) {
       console.error("Error loading data:", error)
       toast.error("Không thể tải thông tin bài viết")
@@ -71,7 +79,13 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
     try {
       // Lấy tất cả replies một lần
       const repliesData = await getForumReplies(parseInt(resolvedParams.postId), 1, 1000)
-      setAllReplies(repliesData.replies)
+      
+      // Sắp xếp replies theo thời gian mới nhất trước
+      const sortedReplies = repliesData.replies.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      
+      setAllReplies(sortedReplies)
       
       // Tính tổng số tất cả replies (bao gồm child replies)
       const countAllReplies = (repliesList: ForumReply[]): number => {
@@ -84,33 +98,15 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
         return count
       }
       
-      const totalAllReplies = countAllReplies(repliesData.replies)
+      const totalAllReplies = countAllReplies(sortedReplies)
       setTotalReplies(totalAllReplies)
       
-      // Tính phân trang cho main replies
-      const totalPages = Math.ceil(repliesData.replies.length / 5)
-      setTotalPages(totalPages)
-      
-      // Hiển thị replies cho trang hiện tại
-      updateCurrentPageReplies(repliesData.replies, currentPage)
+      // Hiển thị replies theo số lượng visibleReplies
+      setReplies(sortedReplies.slice(0, visibleReplies))
     } catch (error) {
       console.error("Error loading replies:", error)
     }
   }
-
-  const updateCurrentPageReplies = (allRepliesList: ForumReply[], page: number) => {
-    const startIndex = (page - 1) * 5
-    const endIndex = startIndex + 5
-    const currentPageReplies = allRepliesList.slice(startIndex, endIndex)
-    setReplies(currentPageReplies)
-  }
-
-  // Cập nhật replies khi chuyển trang
-  useEffect(() => {
-    if (allReplies.length > 0) {
-      updateCurrentPageReplies(allReplies, currentPage)
-    }
-  }, [currentPage, allReplies])
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -176,19 +172,54 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
     setReplyToCommentContent("")
   }
 
+  const toggleReplyExpanded = (replyId: number) => {
+    const newExpandedReplies = new Set(expandedReplies)
+    if (newExpandedReplies.has(replyId)) {
+      newExpandedReplies.delete(replyId)
+    } else {
+      newExpandedReplies.add(replyId)
+    }
+    setExpandedReplies(newExpandedReplies)
+  }
+
+  const loadMoreReplies = () => {
+    const newVisibleCount = Math.min(visibleReplies + 5, allReplies.length)
+    setVisibleReplies(newVisibleCount)
+    setReplies(allReplies.slice(0, newVisibleCount))
+  }
+
+  const showLessReplies = () => {
+    setVisibleReplies(3)
+    setReplies(allReplies.slice(0, 3))
+  }
+
+  // Hàm để cắt ngắn nội dung
+  const truncateContent = (content: string, maxLength: number = 300) => {
+    if (content.length <= maxLength) return content
+    return content.substring(0, maxLength) + "..."
+  }
+
+  const toggleNestedRepliesExpanded = (replyId: number) => {
+    const newExpandedNestedReplies = new Set(expandedNestedReplies)
+    if (newExpandedNestedReplies.has(replyId)) {
+      newExpandedNestedReplies.delete(replyId)
+    } else {
+      newExpandedNestedReplies.add(replyId)
+    }
+    setExpandedNestedReplies(newExpandedNestedReplies)
+  }
+
   if (isLoading || isLoadingData) {
     return (
-      <div className="container py-8 px-4 md:px-6">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
+      <div className="min-h-screen bg-background flex justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   if (!forum || !post) {
     return (
-      <div className="container py-8 px-4 md:px-6">
+      <div className="min-h-screen bg-background flex justify-center items-center">
         <div className="text-center">
           <p>Không tìm thấy bài viết</p>
           <Button asChild className="mt-4">
@@ -200,161 +231,189 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <div className="container py-8 px-4 md:px-6">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <Link href="/" className="hover:underline">
-              Trang chủ
-            </Link>
-            <ChevronRight className="h-4 w-4" />
-            <Link href="/forum" className="hover:underline">
-              Diễn đàn
-            </Link>
-            <ChevronRight className="h-4 w-4" />
-            <Link href={`/forum/${resolvedParams.id}`} className="hover:underline">
-              {forum.subject_name}
-            </Link>
-            <ChevronRight className="h-4 w-4" />
-            <span>{post.title}</span>
-          </div>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
-            </div>
-            <Button variant="outline" asChild>
-              <Link href={`/forum/${resolvedParams.id}`}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Quay lại diễn đàn
-              </Link>
-            </Button>
-          </div>
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-7xl mx-auto py-6 px-4">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+          <Link href="/" className="hover:underline">Trang chủ</Link>
+          <ChevronRight className="h-4 w-4" />
+          <Link href="/forum" className="hover:underline">Diễn đàn</Link>
+          <ChevronRight className="h-4 w-4" />
+          <Link href={`/forum/${resolvedParams.id}`} className="hover:underline">
+            {forum.subject_name}
+          </Link>
+          <ChevronRight className="h-4 w-4" />
+          <span className="truncate">{post.title}</span>
         </div>
 
-        <div className="flex flex-col gap-6">
-          {/* Bài viết chính */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage 
-                      src={"/placeholder.svg"} 
-                      alt={post.author?.username || "Người dùng"} 
-                    />
-                    <AvatarFallback>
+        <div className="flex gap-8">
+          {/* Main Content */}
+          <div className="flex-1 max-w-4xl">
+            {/* Post Card */}
+            <Card className="shadow-sm mb-6">
+              <CardContent className="p-6">
+                {/* Post Header */}
+                <div className="flex items-start gap-4 mb-4">
+                  <Avatar className="h-12 w-12 ring-2 ring-border">
+                    <AvatarImage src="/placeholder.svg" alt={post.author?.username || "Người dùng"} />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                       {post.author?.full_name?.substring(0, 2) || "ND"}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium">{post.author?.full_name || "Người dùng"}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-semibold text-lg">{post.author?.full_name || "Người dùng"}</h3>
+                    </div>
                     <p className="text-sm text-muted-foreground">@{post.author?.username || "user"}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={post.status === "approved" ? "default" : "secondary"}>
-                    {post.status === "approved" ? "Đã duyệt" : 
-                     post.status === "pending" ? "Chờ duyệt" : "Từ chối"}
-                  </Badge>
+
+                {/* Post Title */}
+                <h1 className="text-2xl font-bold mb-4 leading-tight">{post.title}</h1>
+
+                {/* Post Content */}
+                <div className="prose max-w-none mb-6 dark:prose-invert">
+                  <p className="whitespace-pre-wrap text-foreground leading-relaxed">
+                    {isContentExpanded || post.content.length <= 300 
+                      ? post.content 
+                      : truncateContent(post.content, 300)
+                    }
+                  </p>
+                  {post.content.length > 300 && (
+                    <Button 
+                      variant="link" 
+                      className="p-0 h-auto text-primary hover:text-primary/80"
+                      onClick={() => setIsContentExpanded(!isContentExpanded)}
+                    >
+                      {isContentExpanded ? "Thu gọn" : "Xem thêm"}
+                    </Button>
+                  )}
                 </div>
+
+                <Separator className="my-4" />
+
+                {/* Post Stats & Actions */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{totalReplies} bình luận</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      <span>0 lượt xem</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                      <Heart className="h-4 w-4 mr-1" />
+                      Thích
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Reply Form */}
+            <Card className="shadow-sm mb-6">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src="/placeholder.svg" alt="You" />
+                    <AvatarFallback className="bg-gradient-to-br from-green-500 to-teal-600 text-white">
+                      BẠN
+                    </AvatarFallback>
+                  </Avatar>
+                  <form onSubmit={handleSubmitReply} className="flex-1">
+                    <Textarea
+                      placeholder="Viết bình luận của bạn..."
+                      rows={3}
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      className="mb-3 resize-none"
+                      required
+                    />
+                    <div className="flex justify-end">
+                      <Button 
+                        type="submit" 
+                        disabled={isSubmittingReply}
+                      >
+                        {isSubmittingReply ? "Đang đăng..." : "Đăng bình luận"}
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Comments Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">Bình luận ({totalReplies})</h3>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="prose max-w-none">
-                  <p className="whitespace-pre-wrap">{post.content}</p>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground border-t pt-4">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{new Date(post.created_at).toLocaleDateString("vi-VN")}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>{totalReplies} phản hồi</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    <span>0 lượt xem</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Form phản hồi */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Reply className="h-5 w-5" />
-                Viết phản hồi
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitReply} className="space-y-4">
-                <Textarea
-                  placeholder="Viết phản hồi của bạn..."
-                  rows={4}
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  required
-                />
-                <Button type="submit" disabled={isSubmittingReply}>
-                  {isSubmittingReply ? "Đang đăng..." : "Đăng phản hồi"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+              {replies.length > 0 ? (
+                <>
+                  {replies.map((reply) => (
+                    <Card key={reply.reply_id} className="shadow-sm">
+                      <CardContent className="p-6">
+                        <div className="flex gap-4">
+                          <Avatar className="h-10 w-10 ring-2 ring-border">
+                            <AvatarImage src="/placeholder.svg" alt={reply.author?.username || "Người dùng"} />
+                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                              {reply.author?.full_name?.substring(0, 2) || "ND"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <p className="font-semibold">{reply.author?.full_name || "Người dùng"}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(reply.created_at).toLocaleDateString("vi-VN", {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                            
+                            <div className="prose max-w-none mb-3 dark:prose-invert">
+                              <p className="whitespace-pre-wrap text-foreground leading-relaxed">
+                                {expandedReplies.has(reply.reply_id) || reply.content.length <= 200
+                                  ? reply.content
+                                  : truncateContent(reply.content, 200)
+                                }
+                              </p>
+                              {reply.content.length > 200 && (
+                                <Button 
+                                  variant="link" 
+                                  className="p-0 h-auto text-primary hover:text-primary/80 text-sm"
+                                  onClick={() => toggleReplyExpanded(reply.reply_id)}
+                                >
+                                  {expandedReplies.has(reply.reply_id) ? "Thu gọn" : "Xem thêm"}
+                                </Button>
+                              )}
+                            </div>
+                            
+                            {/* Comment Actions */}
+                            <div className="flex items-center gap-4 text-sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReplyClick(reply.reply_id)}
+                                className="text-muted-foreground hover:text-primary p-0 h-auto"
+                              >
+                                <Reply className="h-4 w-4 mr-1" />
+                                Phản hồi
+                              </Button>
+                            </div>
 
-          {/* Danh sách phản hồi */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Phản hồi ({totalReplies})</h3>
-            {replies.length > 0 ? (
-              <>
-                {replies.map((reply) => (
-                  <Card key={reply.reply_id}>
-                    <CardContent className="pt-6">
-                      <div className="flex gap-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage 
-                            src={"/placeholder.svg"} 
-                            alt={reply.author?.username || "Người dùng"} 
-                          />
-                          <AvatarFallback>
-                            {reply.author?.full_name?.substring(0, 2) || "ND"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{reply.author?.full_name || "Người dùng"}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(reply.created_at).toLocaleDateString("vi-VN")}
-                            </p>
-                          </div>
-                          <div className="prose max-w-none">
-                            <p className="whitespace-pre-wrap">{reply.content}</p>
-                          </div>
-                          
-                          {/* Nút Reply */}
-                          <div className="pt-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReplyClick(reply.reply_id)}
-                              className="text-sm text-muted-foreground hover:text-foreground"
-                            >
-                              <Reply className="h-3 w-3 mr-1" />
-                              Phản hồi
-                            </Button>
-                          </div>
-
-                          {/* Form reply inline */}
-                          {replyingTo === reply.reply_id && (
-                            <Card className="mt-3 bg-muted/30">
-                              <CardContent className="pt-4">
+                            {/* Reply Form */}
+                            {replyingTo === reply.reply_id && (
+                              <div className="mt-4 p-4 bg-muted/30 rounded-lg">
                                 <form onSubmit={(e) => handleSubmitReplyToComment(e, reply.reply_id)} className="space-y-3">
                                   <Textarea
-                                    placeholder={`Phản hồi ${reply.author?.full_name || "comment này"}...`}
+                                    placeholder={`Phản hồi ${reply.author?.full_name || "bình luận này"}...`}
                                     rows={3}
                                     value={replyToCommentContent}
                                     onChange={(e) => setReplyToCommentContent(e.target.value)}
@@ -378,75 +437,194 @@ export default function ForumPostDetailPage({ params }: { params: Promise<{ id: 
                                     </Button>
                                   </div>
                                 </form>
-                              </CardContent>
-                            </Card>
-                          )}
+                              </div>
+                            )}
 
-                          {/* Hiển thị nested replies nếu có */}
-                          {reply.child_replies && reply.child_replies.length > 0 && (
-                            <div className="ml-6 mt-4 space-y-3 border-l-2 border-muted pl-4">
-                              {reply.child_replies.map((nestedReply) => (
-                                <div key={nestedReply.reply_id} className="flex gap-3">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage 
-                                      src={"/placeholder.svg"} 
-                                      alt={nestedReply.author?.username || "Người dùng"} 
-                                    />
-                                    <AvatarFallback>
-                                      {nestedReply.author?.full_name?.substring(0, 2) || "ND"}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1 space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-medium text-sm">{nestedReply.author?.full_name || "Người dùng"}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {new Date(nestedReply.created_at).toLocaleDateString("vi-VN")}
-                                      </p>
+                            {/* Nested Replies */}
+                            {reply.child_replies && reply.child_replies.length > 0 && (
+                              <div className="mt-4 ml-6 border-l-2 border-border pl-4">
+                                <div className="space-y-3">
+                                  {/* Sắp xếp nested replies theo thời gian mới nhất và hiển thị 2 đầu tiên hoặc tất cả nếu đã expand */}
+                                  {(expandedNestedReplies.has(reply.reply_id) 
+                                    ? reply.child_replies.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                                    : reply.child_replies.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 2)
+                                  ).map((nestedReply, index) => (
+                                    <div 
+                                      key={nestedReply.reply_id} 
+                                      className={`flex gap-3 p-3 rounded-lg bg-muted/20 ${
+                                        index > 0 ? 'border-t border-border/50' : ''
+                                      }`}
+                                    >
+                                      <Avatar className="h-8 w-8 ring-1 ring-border/50">
+                                        <AvatarImage src="/placeholder.svg" alt={nestedReply.author?.username || "Người dùng"} />
+                                        <AvatarFallback className="bg-gradient-to-br from-pink-500 to-rose-600 text-white text-xs">
+                                          {nestedReply.author?.full_name?.substring(0, 2) || "ND"}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <p className="font-medium text-sm truncate">{nestedReply.author?.full_name || "Người dùng"}</p>
+                                          <span className="text-xs text-muted-foreground">•</span>
+                                          <p className="text-xs text-muted-foreground flex-shrink-0">
+                                            {new Date(nestedReply.created_at).toLocaleDateString("vi-VN", {
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </p>
+                                        </div>
+                                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                                          {nestedReply.content}
+                                        </p>
+                                      </div>
                                     </div>
-                                    <div className="prose max-w-none">
-                                      <p className="text-sm whitespace-pre-wrap">{nestedReply.content}</p>
+                                  ))}
+                                  
+                                  {/* Nút xem thêm/thu gọn nested replies */}
+                                  {reply.child_replies.length > 2 && (
+                                    <div className="pt-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => toggleNestedRepliesExpanded(reply.reply_id)}
+                                        className="text-xs text-muted-foreground hover:text-primary h-auto p-2"
+                                      >
+                                        {expandedNestedReplies.has(reply.reply_id) ? (
+                                          <>
+                                            <ChevronUp className="h-3 w-3 mr-1" />
+                                            Thu gọn phản hồi
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDown className="h-3 w-3 mr-1" />
+                                            Xem thêm {reply.child_replies.length - 2} phản hồi
+                                          </>
+                                        )}
+                                      </Button>
                                     </div>
-                                  </div>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {/* Phân trang */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Trước
-                    </Button>
-                    <span className="flex items-center px-4">
-                      Trang {currentPage} / {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Sau
-                    </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {/* Load More/Less Buttons */}
+                  {allReplies.length > 3 && (
+                    <div className="flex justify-center gap-2 pt-4">
+                      {visibleReplies < allReplies.length && (
+                        <Button
+                          variant="outline"
+                          onClick={loadMoreReplies}
+                          className="flex items-center gap-2"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                          Xem thêm bình luận ({allReplies.length - visibleReplies} còn lại)
+                        </Button>
+                      )}
+                      {visibleReplies > 3 && (
+                        <Button
+                          variant="outline"
+                          onClick={showLessReplies}
+                          className="flex items-center gap-2"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                          Thu gọn
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Card className="shadow-sm">
+                  <CardContent className="p-12 text-center">
+                    <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg">Chưa có bình luận nào</p>
+                    <p className="text-muted-foreground text-sm">Hãy là người đầu tiên bình luận về bài viết này!</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="w-80 space-y-6">
+            {/* Author Info */}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Thông tin tác giả</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-16 w-16 ring-2 ring-border">
+                    <AvatarImage src="/placeholder.svg" alt={post.author?.username || "Người dùng"} />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-lg font-semibold">
+                      {post.author?.full_name?.substring(0, 2) || "ND"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4 className="font-semibold text-lg">{post.author?.full_name || "Người dùng"}</h4>
+                    <p className="text-sm text-muted-foreground">@{post.author?.username || "user"}</p>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Chưa có phản hồi nào. Hãy là người đầu tiên phản hồi!
-              </div>
-            )}
+                </div>
+                <Separator />
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Vai trò:</span>
+                    <span>{post.author?.role || "Sinh viên"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Mã trường:</span>
+                    <span>{post.author?.university_id || "N/A"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ngày tham gia:</span>
+                    <span>{new Date(post.author?.created_at).toLocaleDateString("vi-VN", {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Post Info */}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Thông tin bài viết</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Danh mục:</span>
+                  <Badge variant="secondary">{forum.subject_name}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ngày đăng:</span>
+                  <span>{new Date(post.created_at).toLocaleDateString("vi-VN")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Lượt xem:</span>
+                  <span>0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Bình luận:</span>
+                  <span>{totalReplies}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Back Button */}
+            <Button variant="outline" asChild className="w-full">
+              <Link href={`/forum/${resolvedParams.id}`}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Quay lại diễn đàn
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

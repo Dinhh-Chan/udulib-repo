@@ -34,59 +34,21 @@ import {
   isUserAuthenticated,
   getCurrentUser
 } from "@/lib/api/documents"
-
-interface Document {
-  document_id: number
-  title: string
-  description: string
-  file_path: string
-  file_size: number
-  file_type: string
-  created_at: string
-  updated_at: string
-  view_count: number
-  download_count: number
-  average_rating: number
-  subject: {
-    subject_id: number
-    subject_name: string
-    subject_code: string
-    description: string
-    major_id: number
-    year_id: number
-  }
-  user: {
-    user_id: number
-    username: string
-    full_name: string
-    email: string
-  }
-  tags: Array<{
-    tag_id: number
-    tag_name: string
-  }>
-}
-
-interface Rating {
-  rating_id: number;
-  document_id: number;
-  user_id: number;
-  score: number;
-  comment?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface Comment {
-  comment_id: number;
-  document_id: number;
-  user_id: number;
-  content: string;
-  created_at: string;
-  updated_at?: string;
-  user?: { full_name: string; username: string };
-  replies?: Comment[];
-}
+import {
+  fetchDocument,
+  fetchRatings,
+  createRating,
+  fetchComments,
+  createComment,
+  checkUserViewHistory,
+  increaseViewCount,
+  formatFileSize,
+  formatDate,
+  buildCommentTree,
+  fillUserInfoForComments
+} from "@/lib/api/document-detail"
+import { Document, Rating, Comment, PreviewSupport } from "@/lib/api/types"
+import Loading from "../../loading"
 
 export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
@@ -109,102 +71,21 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [replyingToId, setReplyingToId] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
-  const userCache = useRef<{ [userId: number]: { full_name: string; username: string } }>({});
-  const [showComments, setShowComments] = useState(false);
+
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
   
   // Thêm state mới cho logic preview
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [previewSupport, setPreviewSupport] = useState<{
-    is_supported: boolean;
-    file_category: string;
-    document_id?: number;
-    file_type?: string;
-    filename?: string;
-  } | null>(null);
+  const [previewSupport, setPreviewSupport] = useState<PreviewSupport | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-
-  const getPreviewUrl = (filePath: string, fileType: string) => {
-    if (!filePath) return "";
-    
-    console.log("Processing file path:", filePath, "type:", fileType)
-    
-    // Skip MinIO files - they will be handled separately with signed URLs
-    if (filePath.startsWith('minio://')) {
-      console.log("MinIO file detected, should use signed URL instead")
-      return "";
-    }
-    
-    // Nếu là Google Drive file (docs, sheets, slides)
-    if (filePath.includes("docs.google.com") || filePath.includes("drive.google.com")) {
-      // Google Docs
-      if (filePath.includes("docs.google.com/document")) {
-        return filePath.replace(/\/(edit|view)(\?.*)?$/, "/preview");
-      }
-      // Google Sheets
-      if (filePath.includes("docs.google.com/spreadsheets")) {
-        return filePath.replace(/\/(edit|view)(\?.*)?$/, "/preview");
-      }
-      // Google Slides
-      if (filePath.includes("docs.google.com/presentation")) {
-        return filePath.replace(/\/(edit|view)(\?.*)?$/, "/preview");
-      }
-      // Google Drive general files
-      if (filePath.includes("drive.google.com")) {
-        const fileIdMatch = filePath.match(/[-\w]{25,}/);
-        if (fileIdMatch) {
-          return `https://drive.google.com/file/d/${fileIdMatch[0]}/preview`;
-        }
-      }
-    }
-    
-    // Nếu là file PDF (bao gồm cả từ MinIO với signed URL)
-    if (fileType?.toLowerCase().includes("pdf") || filePath.toLowerCase().includes(".pdf")) {
-      console.log("Detected PDF file")
-      return filePath;
-    }
-    
-    // Nếu là file ảnh (bao gồm cả từ MinIO)
-    if (fileType?.toLowerCase().includes("image") || 
-        /\.(jpeg|jpg|png|gif|webp|bmp|svg)$/i.test(filePath)) {
-      console.log("Detected image file")
-      return filePath;
-    }
-    
-    // Nếu là file text
-    if (fileType?.toLowerCase().includes("text") || 
-        /\.(txt|md|csv)$/i.test(filePath)) {
-      console.log("Detected text file")
-      return filePath;
-    }
-    
-    // Nếu là file Office (Word, Excel, PowerPoint) - có thể preview qua Office Online
-    if (fileType?.includes("officedocument") || 
-        /\.(docx|xlsx|pptx|doc|xls|ppt)$/i.test(filePath)) {
-      console.log("Detected Office file")
-      // Office files từ MinIO có thể preview được nếu browser hỗ trợ
-      return filePath;
-    }
-    
-    // Nếu là signed URL từ S3/MinIO (có chứa signed URL parameters)
-    if (filePath.includes("X-Amz-Algorithm")) {
-      console.log("Detected signed URL")
-      return filePath;
-    }
-    
-    console.log("Cannot preview this file type")
-    return "";
-  };
 
   const renderPreview = () => {
     if (previewLoading) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p>Đang tải preview...</p>
-        </div>
+          <Loading />
       );
     }
 
@@ -237,11 +118,42 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       );
     }
 
-    if (!previewUrl) {
+    if (!previewUrl || previewError) {
+      const retryPreview = async () => {
+        try {
+          setPreviewLoading(true);
+          setPreviewError(false);
+          
+          let previewUrlToUse = "";
+          if (isAuthenticated) {
+            previewUrlToUse = getDocumentFullPreviewUrl(Number(id));
+          } else {
+            previewUrlToUse = getPublicDocumentPreviewUrl(Number(id), "medium");
+          }
+          
+          setPreviewUrl(previewUrlToUse);
+        } catch (error) {
+          console.error("Error retrying preview:", error);
+          setPreviewError(true);
+        } finally {
+          setPreviewLoading(false);
+        }
+      };
+
       return (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
           <FileText className="h-16 w-16 mb-4" />
-          <p>Đang tải preview...</p>
+          <p>Không thể tải preview</p>
+          <p className="text-sm">Thử tải lại preview hoặc tải xuống tài liệu</p>
+          <div className="flex gap-2 mt-4">
+            <Button 
+              onClick={retryPreview} 
+              variant="outline"
+              disabled={previewLoading}
+            >
+              {previewLoading ? "Đang tải..." : "Thử lại"}
+            </Button>
+          </div>
         </div>
       );
     }
@@ -276,72 +188,30 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   };
 
   const renderPreviewContent = () => {
-    const fileType = document?.file_type || "";
-    
-    // PDF files
-    if (fileType.toLowerCase().includes("pdf") || previewUrl.toLowerCase().includes(".pdf")) {
-      return (
-        <iframe
-          src={previewUrl}
-          width="100%"
-          height="100%"
-          style={{ border: 0, minHeight: 500 }}
-          title="PDF Preview"
-          onError={(e) => {
-            console.error("Failed to load PDF preview:", e)
-            setPreviewUrl("")
-          }}
-        />
-      );
-    }
-    
-    // Image files
-    if (fileType.toLowerCase().includes("image") || /\.(jpeg|jpg|png|gif|webp|bmp|svg)$/i.test(previewUrl)) {
-      return (
+    // API luôn trả về ảnh với content-type: image/jpeg
+    return (
+      <div className="w-full overflow-y-auto max-h-[80vh]">
         <img
           src={previewUrl}
           alt="Document preview"
-          className="max-w-full max-h-full object-contain"
-          style={{ maxHeight: 500 }}
+          className="w-full h-auto rounded-lg"
           onError={(e) => {
-            console.error("Failed to load image preview:", e)
-            setPreviewUrl("")
+            console.error("Failed to load image preview:", {
+              url: previewUrl,
+              error: e,
+              target: e.target,
+              isAuthenticated,
+              documentId: id
+            });
+            setPreviewError(true);
+            setPreviewUrl("");
+          }}
+          onLoad={() => {
+            console.log("Image preview loaded successfully:", previewUrl);
+            setPreviewError(false);
           }}
         />
-      );
-    }
-    
-    // Text files
-    if (fileType.toLowerCase().includes("text") || /\.(txt|md|csv)$/i.test(previewUrl)) {
-      return (
-        <iframe
-          src={previewUrl}
-          width="100%"
-          height="100%"
-          style={{ border: 0, minHeight: 500 }}
-          title="Text Preview"
-          onError={(e) => {
-            console.error("Failed to load text preview:", e)
-            setPreviewUrl("")
-          }}
-        />
-      );
-    }
-    
-    // Other embeddable content
-    return (
-      <iframe
-        src={previewUrl}
-        width="100%"
-        height="100%"
-        style={{ border: 0, minHeight: 500 }}
-        allow="autoplay"
-        title="Document Preview"
-        onError={(e) => {
-          console.error("Failed to load document preview:", e)
-          setPreviewUrl("")
-        }}
-      />
+      </div>
     );
   };
 
@@ -363,41 +233,29 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     if (!id || !userId || hasIncreasedView.current) return;
 
     const checkAndIncreaseView = async () => {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const checkRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/history/?document_id=${id}&user_id=${userId}&page=1&per_page=1`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-      const history = await checkRes.json();
-
-      if (!Array.isArray(history) || history.length === 0) {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}/view`, {
-          method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+      try {
+        const history = await checkUserViewHistory(id, userId);
+        if (!Array.isArray(history) || history.length === 0) {
+          await increaseViewCount(id);
+        }
+        hasIncreasedView.current = true;
+      } catch (error) {
+        console.error("Error checking/increasing view count:", error);
       }
-      hasIncreasedView.current = true;
     };
 
     checkAndIncreaseView();
   }, [id, userId]);
 
   useEffect(() => {
-    const fetchDocument = async () => {
+    const loadDocument = async () => {
       try {
         setLoading(true)
         setError(null)
         
         // Lấy thông tin tài liệu
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`,
-          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-        )
-        if (!response.ok) {
-          throw new Error(`Lỗi khi tải dữ liệu: ${response.status}`)
-        }
-        const data = await response.json()
-        setDocument(data)
+        const data = await fetchDocument(id);
+        setDocument(data);
         
         // Kiểm tra xem file có hỗ trợ preview không
         try {
@@ -434,21 +292,14 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       }
     }
 
-    fetchDocument();
-
-    const fetchRatings = async () => {
+    const loadRatings = async () => {
       try {
         setRatingLoading(true)
         setRatingError(null)
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings/?document_id=${id}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
-        if (!res.ok) throw new Error("Không thể tải đánh giá")
-        const data = await res.json()
-        setRatings(Array.isArray(data) ? data : [])
+        const data = await fetchRatings(id);
+        setRatings(data);
         if (userId) {
-          const found = (Array.isArray(data) ? data : []).find((r: Rating) => r.user_id === userId)
+          const found = data.find((r: Rating) => r.user_id === userId)
           if (found) {
             setUserRating(found.score)
             setUserRatingId(found.rating_id)
@@ -463,40 +314,22 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         setRatingLoading(false)
       }
     }
-    fetchRatings()
-  }, [id, isAuthenticated])
 
-  const fetchUserInfo = async (userId: number, token: string | null) => {
-    if (userCache.current[userId]) return userCache.current[userId];
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.ok) {
-        const userData = await res.json();
-        userCache.current[userId] = { full_name: userData.full_name, username: userData.username };
-        return userCache.current[userId];
-      }
-    } catch {}
-    return { full_name: "Ẩn danh", username: "" };
-  };
+    loadDocument();
+    loadRatings();
+  }, [id, isAuthenticated, userId])
 
   useEffect(() => {
     if (!id) return;
-    const fetchComments = async () => {
+    const loadComments = async () => {
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/?document_id=${id}&include_replies=true&page=1&per_page=20`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) throw new Error("Không thể tải bình luận");
-        let data = await res.json();
+        let data = await fetchComments(id);
         const tree = buildCommentTree(data);
-        await fillUserInfoForComments(tree, token, fetchUserInfo);
+        await fillUserInfoForComments(tree);
         setComments(tree);
       } catch (err) {}
     };
-    fetchComments();
+    loadComments();
   }, [id]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -504,32 +337,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     if (!commentContent.trim() || !userId) return;
     setCommentLoading(true);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          document_id: Number(id),
-          content: commentContent,
-        }),
-      });
-      if (!res.ok) throw new Error("Không thể gửi bình luận");
-      let newComment = await res.json();
-      // Nếu comment chưa có user, fetch user info
-      if (!newComment.user && newComment.user_id) {
-        try {
-          const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${newComment.user_id}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          });
-          if (userRes.ok) {
-            const userData = await userRes.json();
-            newComment.user = { full_name: userData.full_name, username: userData.username };
-          }
-        } catch {}
-      }
+      let newComment = await createComment(id, commentContent);
       setComments((prev) => [newComment, ...prev]);
       setCommentContent("");
     } catch (err) {
@@ -551,20 +359,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     setRatingLoading(true)
     setRatingError(null)
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          document_id: Number(id),
-          score: pendingScore,
-        }),
-      })
-      if (!res.ok) throw new Error("Không thể gửi đánh giá")
-      const newRating = await res.json()
+      const newRating = await createRating(id, pendingScore);
       setRatings((prev) => [...prev, newRating])
       setUserRating(pendingScore)
       setUserRatingId(newRating.rating_id)
@@ -576,65 +371,12 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    const size = bytes / Math.pow(k, i)
-    return `${size.toFixed(1)} ${sizes[i]}`
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-  }
-
-  const fetchReplies = async (parentId: number) => {
-    try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/?parent_comment_id=${parentId}&page=1&per_page=20`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("Không thể tải replies");
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    } catch {
-      return [];
-    }
-  };
-
   const handleSubmitReply = async (e: React.FormEvent, parentId: number) => {
     e.preventDefault();
     if (!replyContent.trim() || !userId) return;
     setReplyLoading(true);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          document_id: Number(id),
-          content: replyContent,
-          parent_comment_id: parentId,
-        }),
-      });
-      if (!res.ok) throw new Error("Không thể gửi reply");
-      const newReply = await res.json();
-      if (!newReply.user && newReply.user_id) {
-        newReply.user = await fetchUserInfo(newReply.user_id, token);
-      }
+      const newReply = await createComment(id, replyContent, parentId);
       setComments((prev) =>
         prev.map((c) =>
           c.comment_id === parentId
@@ -649,87 +391,109 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   };
 
   const renderComment = (comment: Comment) => (
-    <div key={comment.comment_id} className="border rounded-lg p-3">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="font-medium text-sm">{comment.user?.full_name || comment.user?.username || "Ẩn danh"}</span>
-        <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
-      </div>
-      <div className="text-sm">{comment.content}</div>
-      <Button
-        variant="link"
-        size="sm"
-        className="px-0 text-xs"
-        onClick={() => setReplyingToId(comment.comment_id)}
-      >
-        Trả lời
-      </Button>
-      {/* Hiển thị replies nếu có */}
-      {comment.replies && comment.replies.length > 0 && (
-        <div className="pl-4 mt-2 border-l space-y-2">
-          {comment.replies.map((reply) => renderComment(reply))}
-        </div>
-      )}
-      {/* Form trả lời */}
-      {replyingToId === comment.comment_id && (
-        <form
-          onSubmit={(e) => handleSubmitReply(e, comment.comment_id)}
-          className="flex flex-col gap-2 mt-2"
-        >
-          <Textarea
-            value={replyContent}
-            onChange={(e) => setReplyContent(e.target.value)}
-            placeholder="Nhập trả lời..."
-            rows={2}
-            required
-            disabled={replyLoading}
-          />
-          <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={replyLoading || !replyContent.trim()}>
-              {replyLoading ? "Đang gửi..." : "Gửi trả lời"}
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => setReplyingToId(null)}>
-              Hủy
-            </Button>
+    <Card key={comment.comment_id} className="shadow-sm">
+      <CardContent className="p-6">
+        <div className="flex gap-4">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+            {comment.user?.full_name?.substring(0, 2) || "ND"}
           </div>
-        </form>
-      )}
-    </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <p className="font-semibold">{comment.user?.full_name || comment.user?.username || "Ẩn danh"}</p>
+              <p className="text-sm text-muted-foreground">
+                {formatDate(comment.created_at)}
+              </p>
+            </div>
+            
+            <div className="prose max-w-none mb-3 dark:prose-invert">
+              <p className="whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+                {comment.content}
+              </p>
+            </div>
+            
+            {/* Comment Actions */}
+            <div className="flex items-center gap-4 text-sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReplyingToId(comment.comment_id)}
+                className="text-muted-foreground hover:text-primary p-0 h-auto"
+              >
+                <MessageSquare className="h-4 w-4 mr-1" />
+                Phản hồi
+              </Button>
+            </div>
+
+            {/* Reply Form */}
+            {replyingToId === comment.comment_id && (
+              <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                <form onSubmit={(e) => handleSubmitReply(e, comment.comment_id)} className="space-y-3">
+                  <Textarea
+                    placeholder={`Phản hồi ${comment.user?.full_name || "bình luận này"}...`}
+                    rows={3}
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    required
+                    disabled={replyLoading}
+                    className="resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      type="submit" 
+                      size="sm" 
+                      disabled={replyLoading || !replyContent.trim()}
+                    >
+                      {replyLoading ? "Đang gửi..." : "Gửi phản hồi"}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setReplyingToId(null)}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Nested Replies */}
+            {comment.replies && comment.replies.length > 0 && (
+              <div className="mt-4 ml-6 border-l-2 border-border pl-4">
+                <div className="space-y-3">
+                  {comment.replies.map((reply) => (
+                    <div 
+                      key={reply.comment_id} 
+                      className="flex gap-3 p-3 rounded-lg bg-muted/20"
+                    >
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-semibold text-xs">
+                        {reply.user?.full_name?.substring(0, 2) || "ND"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-sm truncate">{reply.user?.full_name || reply.user?.username || "Ẩn danh"}</p>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <p className="text-xs text-muted-foreground flex-shrink-0">
+                            {formatDate(reply.created_at)}
+                          </p>
+                        </div>
+                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                          {reply.content}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
-  function buildCommentTree(flatComments: any[]) {
-    const map: { [id: number]: any } = {};
-    const roots: any[] = [];
 
-    // Tạo map comment_id -> comment
-    flatComments.forEach(comment => {
-      map[comment.comment_id] = { ...comment, replies: [] };
-    });
-
-    // Gắn replies vào comment cha
-    flatComments.forEach(comment => {
-      if (comment.parent_comment_id) {
-        const parent = map[comment.parent_comment_id];
-        if (parent) {
-          parent.replies.push(map[comment.comment_id]);
-        }
-      } else {
-        roots.push(map[comment.comment_id]);
-      }
-    });
-
-    return roots;
-  }
-
-  async function fillUserInfoForComments(comments: any[], token: string | null, fetchUserInfo: any) {
-    for (const comment of comments) {
-      if (!comment.user && comment.user_id) {
-        comment.user = await fetchUserInfo(comment.user_id, token);
-      }
-      if (comment.replies && comment.replies.length > 0) {
-        await fillUserInfoForComments(comment.replies, token, fetchUserInfo);
-      }
-    }
-  }
 
   const handleDownloadClick = async () => {
     if (!document) return;
@@ -765,11 +529,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
 
   if (loading) {
     return (
-      <div className="container py-8 px-4 md:px-6">
-        <div className="flex justify-center items-center h-[500px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
+      <Loading />
     )
   }
 
@@ -830,14 +590,10 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                   <ThumbsUp className="h-4 w-4 mr-2" />
                   Thích
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowComments((v) => !v)}
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Bình luận
-                </Button>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>{comments.length} bình luận</span>
+                </div>
                 <Button variant="ghost" size="sm">
                   <Share2 className="h-4 w-4 mr-2" />
                   Chia sẻ
@@ -934,31 +690,49 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           </div>
         </div>
 
-        {showComments && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">Bình luận</h2>
-            <form onSubmit={handleSubmitComment} className="flex flex-col gap-2 mb-4">
+        {/* Comment Form */}
+        <Card className="shadow-sm mb-6">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Viết bình luận</h3>
+            <form onSubmit={handleSubmitComment} className="space-y-4">
               <Textarea
                 value={commentContent}
                 onChange={e => setCommentContent(e.target.value)}
                 placeholder="Nhập bình luận của bạn..."
-                rows={3}
+                rows={4}
                 required
                 disabled={commentLoading}
+                className="resize-none"
               />
-              <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
-                {commentLoading ? "Đang gửi..." : "Gửi bình luận"}
-              </Button>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
+                  {commentLoading ? "Đang gửi..." : "Đăng bình luận"}
+                </Button>
+              </div>
             </form>
-            <div className="space-y-4">
-              {comments.length === 0 ? (
-                <div className="text-muted-foreground">Chưa có bình luận nào.</div>
-              ) : (
-                comments.map((comment) => renderComment(comment))
-              )}
-            </div>
+          </CardContent>
+        </Card>
+
+        {/* Comments Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold">Bình luận ({comments.length})</h3>
           </div>
-        )}
+
+          {comments.length > 0 ? (
+            <div className="space-y-4">
+              {comments.map((comment) => renderComment(comment))}
+            </div>
+          ) : (
+            <Card className="shadow-sm">
+              <CardContent className="p-12 text-center">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg">Chưa có bình luận nào</p>
+                <p className="text-muted-foreground text-sm">Hãy là người đầu tiên bình luận về tài liệu này!</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
       {/* Modal xác nhận đánh giá */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>

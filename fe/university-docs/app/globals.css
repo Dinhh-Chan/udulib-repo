@@ -197,6 +197,11 @@ img {
   font-size: 14px;
 }
 
+.loading-large {
+  transform: scale(1.5);
+  font-size: 18px;
+}
+
 .wheel,
 .hamster,
 .hamster div,
