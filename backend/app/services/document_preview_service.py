@@ -12,6 +12,22 @@ from fastapi.responses import StreamingResponse
 from app.services.minio_service import minio_service
 from app.core.config import settings
 
+# Thêm import cho việc xử lý Office files
+try:
+    import docx
+except ImportError:
+    docx = None
+
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None
+
+try:
+    from pptx import Presentation
+except ImportError:
+    Presentation = None
+
 
 class DocumentPreviewService:
     """Service để xử lý preview cho tất cả loại documents"""
@@ -99,6 +115,130 @@ class DocumentPreviewService:
             self.logger.error(f"LibreOffice conversion error: {e}")
             return None
     
+    def _extract_docx_content(self, file_path: str) -> str:
+        """Trích xuất nội dung text từ file DOCX"""
+        try:
+            if docx is None:
+                return "File DOCX - Cần cài đặt python-docx để đọc nội dung.\n\nBạn có thể:\n- Tải file về để mở bằng Microsoft Word\n- Chuyển đổi sang PDF để preview tốt hơn"
+            
+            doc = docx.Document(file_path)
+            text_content = []
+            
+            # Đọc các paragraph
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    text_content.append(paragraph.text.strip())
+            
+            # Đọc nội dung từ tables nếu có
+            for table in doc.tables:
+                text_content.append("\n--- TABLE ---")
+                for row in table.rows:
+                    row_text = []
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            row_text.append(cell.text.strip())
+                    if row_text:
+                        text_content.append(" | ".join(row_text))
+                text_content.append("--- END TABLE ---\n")
+            
+            return "\n\n".join(text_content) if text_content else "File DOCX trống hoặc không có nội dung text."
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting DOCX content: {e}")
+            return f"Lỗi khi đọc file DOCX: {str(e)}\n\nBạn có thể tải file về để mở bằng Microsoft Word."
+    
+    def _extract_xlsx_content(self, file_path: str) -> str:
+        """Trích xuất nội dung từ file XLSX"""
+        try:
+            if openpyxl is None:
+                return "File XLSX - Cần cài đặt openpyxl để đọc nội dung.\n\nBạn có thể:\n- Tải file về để mở bằng Microsoft Excel\n- Chuyển đổi sang PDF để preview tốt hơn"
+            
+            workbook = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+            text_content = []
+            
+            # Duyệt qua tất cả worksheets (giới hạn 3 sheets đầu)
+            for sheet_name in workbook.sheetnames[:3]:
+                worksheet = workbook[sheet_name]
+                text_content.append(f"=== SHEET: {sheet_name} ===")
+                
+                # Đọc dữ liệu từ sheet (giới hạn 30 rows để tránh quá dài)
+                row_count = 0
+                for row in worksheet.iter_rows(max_row=30, values_only=True):
+                    if row_count >= 30:
+                        break
+                    row_data = []
+                    for cell in row:
+                        if cell is not None:
+                            # Giới hạn độ dài text mỗi cell
+                            cell_text = str(cell)
+                            if len(cell_text) > 50:
+                                cell_text = cell_text[:50] + "..."
+                            row_data.append(cell_text)
+                    if any(cell.strip() for cell in row_data if cell.strip()):
+                        text_content.append(" | ".join(row_data))
+                        row_count += 1
+                
+                if len(workbook.sheetnames) > 3:
+                    text_content.append(f"\n... và {len(workbook.sheetnames) - 3} sheet khác ...")
+                text_content.append("")  # Thêm dòng trống
+            
+            workbook.close()
+            return "\n".join(text_content) if text_content else "File Excel trống hoặc không có dữ liệu."
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting XLSX content: {e}")
+            return f"Lỗi khi đọc file XLSX: {str(e)}\n\nBạn có thể tải file về để mở bằng Microsoft Excel."
+    
+    def _extract_pptx_content(self, file_path: str) -> str:
+        """Trích xuất nội dung từ file PPTX"""
+        try:
+            if Presentation is None:
+                return "File PPTX - Cần cài đặt python-pptx để đọc nội dung.\n\nBạn có thể:\n- Tải file về để mở bằng Microsoft PowerPoint\n- Chuyển đổi sang PDF để preview tốt hơn"
+            
+            prs = Presentation(file_path)
+            text_content = []
+            
+            # Duyệt qua các slides (giới hạn 10 slides đầu)
+            for i, slide in enumerate(prs.slides[:10]):
+                text_content.append(f"=== SLIDE {i + 1} ===")
+                
+                # Đọc text từ các shapes
+                slide_text = []
+                for shape in slide.shapes:
+                    if hasattr(shape, "text") and shape.text.strip():
+                        slide_text.append(shape.text.strip())
+                
+                if slide_text:
+                    text_content.extend(slide_text)
+                else:
+                    text_content.append("(Slide không có nội dung text hoặc chỉ có hình ảnh)")
+                
+                text_content.append("")  # Thêm dòng trống
+            
+            if len(prs.slides) > 10:
+                text_content.append(f"\n... và {len(prs.slides) - 10} slide khác ...")
+            
+            return "\n".join(text_content) if text_content else "File PowerPoint không có nội dung text."
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting PPTX content: {e}")
+            return f"Lỗi khi đọc file PPTX: {str(e)}\n\nBạn có thể tải file về để mở bằng Microsoft PowerPoint."
+    
+    def _extract_office_content_fallback(self, file_path: str, file_ext: str) -> str:
+        """Fallback: trích xuất nội dung từ các loại file Office khi LibreOffice không có"""
+        filename = os.path.basename(file_path)
+        
+        if file_ext.lower() == '.docx':
+            return self._extract_docx_content(file_path)
+        elif file_ext.lower() == '.xlsx':
+            return self._extract_xlsx_content(file_path)
+        elif file_ext.lower() == '.pptx':
+            return self._extract_pptx_content(file_path)
+        elif file_ext.lower() in ['.doc', '.xls', '.ppt']:
+            return f"File {file_ext.upper()} (định dạng cũ)\n\nĐể preview file này, bạn có thể:\n- Tải file về để mở bằng Microsoft Office\n- Chuyển đổi sang định dạng mới ({file_ext.replace('.', '.').replace('doc', 'docx').replace('xls', 'xlsx').replace('ppt', 'pptx')})\n- Xuất file dưới dạng PDF"
+        else:
+            return f"Định dạng file Office không được hỗ trợ: {file_ext}"
+    
     def _pdf_to_images(self, pdf_path: str, max_pages: int = 5) -> List[Image.Image]:
         """Chuyển PDF thành danh sách hình ảnh"""
         try:
@@ -135,6 +275,17 @@ class DocumentPreviewService:
         except:
             font = None
         
+        # Xử lý encoding cho tiếng Việt
+        try:
+            # Đảm bảo text_content là string UTF-8 hợp lệ
+            if isinstance(text_content, bytes):
+                text_content = text_content.decode('utf-8', errors='replace')
+            elif not isinstance(text_content, str):
+                text_content = str(text_content)
+        except Exception as e:
+            self.logger.warning(f"Text encoding issue: {e}")
+            text_content = "Không thể hiển thị nội dung do lỗi encoding"
+        
         # Chuẩn bị text dựa trên loại preview
         if is_full_preview:
             # Full preview: hiển thị nhiều nội dung hơn
@@ -150,16 +301,58 @@ class DocumentPreviewService:
         if len(text_to_draw) > max_chars:
             text_to_draw = text_to_draw[:max_chars] + "..."
         
+        # Xử lý Unicode cho tiếng Việt - chuyển thành ASCII safe
+        import unicodedata
+        try:
+            # Thử normalize và loại bỏ dấu trước
+            text_normalized = unicodedata.normalize('NFD', text_to_draw)
+            text_no_accents = ''.join(c for c in text_normalized if unicodedata.category(c) != 'Mn')
+            
+            # Thay thế một số ký tự đặc biệt của tiếng Việt
+            vietnamese_replacements = {
+                'Đ': 'D', 'đ': 'd',
+                'Ă': 'A', 'ă': 'a',
+                'Â': 'A', 'â': 'a', 
+                'Ê': 'E', 'ê': 'e',
+                'Ô': 'O', 'ô': 'o',
+                'Ơ': 'O', 'ơ': 'o',
+                'Ư': 'U', 'ư': 'u',
+                'Ỳ': 'Y', 'ỳ': 'y',
+                'Ý': 'Y', 'ý': 'y'
+            }
+            
+            for vn_char, ascii_char in vietnamese_replacements.items():
+                text_no_accents = text_no_accents.replace(vn_char, ascii_char)
+            
+            # Cuối cùng, encode thành ASCII và thay thế ký tự không hỗ trợ
+            text_to_draw = text_no_accents.encode('ascii', errors='replace').decode('ascii')
+            
+        except Exception as e:
+            self.logger.warning(f"Unicode normalization failed: {e}")
+            # Fallback cuối cùng: chỉ giữ ASCII cơ bản
+            text_to_draw = text_to_draw.encode('ascii', errors='replace').decode('ascii')
+        
         # Tính toán chiều cao cần thiết cho text
         margin = 20
         line_height = 15  # Ước tính chiều cao mỗi dòng
         estimated_lines = len(text_to_draw.split('\n'))
         estimated_height = margin * 2 + estimated_lines * line_height
         
+        # Giới hạn chiều cao tối đa để tránh lỗi PIL
+        MAX_HEIGHT = 60000  # Giới hạn dưới 65500 pixels
+        
         # Điều chỉnh kích thước image cho full preview
         if is_full_preview and estimated_height > size[1]:
-            # Tạo image cao hơn để chứa full text
-            final_size = (size[0], max(estimated_height, size[1]))
+            # Tạo image cao hơn để chứa full text, nhưng không vượt quá giới hạn
+            desired_height = max(estimated_height, size[1])
+            final_height = min(desired_height, MAX_HEIGHT)
+            final_size = (size[0], final_height)
+            
+            # Nếu text quá dài, cắt bớt để fit
+            if estimated_height > MAX_HEIGHT:
+                max_lines = (MAX_HEIGHT - margin * 2) // line_height
+                lines = text_to_draw.split('\n')[:max_lines]
+                text_to_draw = '\n'.join(lines) + "\n\n[... Nội dung bị cắt do quá dài ...]"
         else:
             final_size = size
         
@@ -167,8 +360,14 @@ class DocumentPreviewService:
         img = Image.new('RGB', final_size, color='white')
         draw = ImageDraw.Draw(img)
         
-        # Vẽ text lên image
-        draw.text((margin, margin), text_to_draw, fill='black', font=font)
+        # Vẽ text lên image với error handling
+        try:
+            draw.text((margin, margin), text_to_draw, fill='black', font=font)
+        except Exception as e:
+            self.logger.warning(f"Error drawing text: {e}")
+            # Fallback: vẽ thông báo lỗi
+            error_text = f"Lỗi hiển thị text: {str(e)[:100]}"
+            draw.text((margin, margin), error_text, fill='red', font=font)
         
         return img
     
@@ -202,8 +401,14 @@ class DocumentPreviewService:
         else:
             max_width = 800
         
+        # Giới hạn chiều cao tối đa để tránh lỗi PIL
+        MAX_HEIGHT = 60000  # Giới hạn dưới 65500 pixels
+        
         # Resize tất cả images về cùng width
         resized_images = []
+        current_height = 0
+        spacing = 20
+        
         for img in images:
             # Chuyển về RGB nếu cần
             if img.mode in ('RGBA', 'LA', 'P'):
@@ -220,21 +425,43 @@ class DocumentPreviewService:
             ratio = max_width / img.width
             new_height = int(img.height * ratio)
             resized_img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Kiểm tra xem thêm ảnh này có vượt quá giới hạn không
+            expected_height = current_height + new_height + (spacing if resized_images else 0)
+            if expected_height > MAX_HEIGHT:
+                self.logger.warning(f"Giới hạn chiều cao đã đạt ({expected_height} > {MAX_HEIGHT}), dừng thêm trang")
+                break
+                
             resized_images.append(resized_img)
+            current_height = expected_height
         
-        # Tính tổng chiều cao
+        # Tính tổng chiều cao thực tế
         total_height = sum(img.height for img in resized_images)
-        
-        # Thêm khoảng cách giữa các trang
-        spacing = 20
         total_height += spacing * (len(resized_images) - 1)
         
+        # Đảm bảo không vượt quá giới hạn
+        if total_height > MAX_HEIGHT:
+            total_height = MAX_HEIGHT
+        
         # Tạo canvas lớn
-        combined_image = Image.new('RGB', (max_width, total_height), color='white')
+        try:
+            combined_image = Image.new('RGB', (max_width, total_height), color='white')
+        except Exception as e:
+            self.logger.error(f"Lỗi tạo canvas kích thước {max_width}x{total_height}: {e}")
+            # Fallback: chỉ return trang đầu tiên đã resize
+            return resized_images[0] if resized_images else images[0]
         
         # Dán các trang vào canvas
         y_offset = 0
         for img in resized_images:
+            if y_offset + img.height > total_height:
+                # Cắt ảnh nếu vượt quá chiều cao canvas
+                remaining_height = total_height - y_offset
+                if remaining_height > 0:
+                    cropped_img = img.crop((0, 0, img.width, remaining_height))
+                    combined_image.paste(cropped_img, (0, y_offset))
+                break
+            
             combined_image.paste(img, (0, y_offset))
             y_offset += img.height + spacing
         
@@ -413,13 +640,50 @@ class DocumentPreviewService:
         file_stream.close()
         
         try:
-            # Chuyển Office sang PDF
+            # Thử chuyển Office sang PDF trước
             pdf_path = self._convert_office_to_pdf(temp_office_path)
             
             if not pdf_path:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Không thể chuyển đổi file Office. Vui lòng kiểm tra LibreOffice đã được cài đặt."
+                # Fallback: đọc trực tiếp nội dung text từ Office file
+                self.logger.info(f"LibreOffice không có, chuyển sang đọc trực tiếp file {file_ext}")
+                
+                # Trích xuất nội dung text
+                text_content = self._extract_office_content_fallback(temp_office_path, file_ext)
+                
+                # Thêm thông tin file vào đầu nội dung
+                filename = file_path.split('/')[-1]
+                file_info = f"=== PREVIEW FILE: {filename} ===\n"
+                file_info += f"Loai file: {file_ext.upper()}\n"
+                file_info += f"Preview noi dung text (LibreOffice khong co san)\n"
+                file_info += "="*60 + "\n\n"
+                
+                # Đảm bảo encoding UTF-8
+                try:
+                    full_content = file_info + text_content
+                    # Test encoding
+                    full_content.encode('utf-8')
+                except UnicodeEncodeError as e:
+                    self.logger.warning(f"Unicode encoding issue: {e}")
+                    # Fallback: dùng ASCII safe strings
+                    file_info_safe = f"=== PREVIEW FILE: {filename} ===\n"
+                    file_info_safe += f"File type: {file_ext.upper()}\n"
+                    file_info_safe += f"Text preview (no LibreOffice)\n"
+                    file_info_safe += "="*60 + "\n\n"
+                    full_content = file_info_safe + str(text_content)
+                
+                # Tạo image từ text content
+                preview_size = target_size or self.MAX_PREVIEW_SIZE
+                text_image = self._create_text_preview_image(full_content, preview_size, is_full_preview)
+                
+                # Chuyển thành JPEG và return StreamingResponse
+                output = io.BytesIO()
+                text_image.save(output, format='JPEG', quality=85, optimize=True)
+                output.seek(0)
+                
+                return StreamingResponse(
+                    io.BytesIO(output.getvalue()),
+                    media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=3600", "Content-Disposition": "inline"}
                 )
             
             try:
