@@ -19,21 +19,26 @@ export interface DocumentHistory {
 }
 
 export interface DocumentHistoryResponse {
-  histories: DocumentHistory[]
+  items: DocumentHistory[]
   total: number
   page: number
   per_page: number
+  pages: number
 }
 
 export const getDocumentHistory = async (
   userId: number,
   action?: string,
+  page: number = 1,
+  perPage: number = 5
 ) => {
   const token = getAuthToken()
   if (!token) throw new Error("Không có token xác thực")
 
   const params = new URLSearchParams({
     user_id: userId.toString(),
+    page: page.toString(),
+    per_page: perPage.toString(),
   })
 
   if (action) {
@@ -59,17 +64,22 @@ export const getDocumentHistory = async (
   }
 
   const data = await response.json()
-  return Array.isArray(data) ? data : []
+  // API trả về object với structure: {items: [], total: number, page: number, per_page: number, pages: number}
+  return data
 }
 
 export const getViewedDocuments = async (
   userId: number,
+  page: number = 1,
+  perPage: number = 5
 ) => {
-  return getDocumentHistory(userId, "view")
+  return getDocumentHistory(userId, "view", page, perPage)
 }
 
 export const getDownloadedDocuments = async (
   userId: number,
+  page: number = 1,
+  perPage: number = 5
 ) => {
-  return getDocumentHistory(userId, "download")
+  return getDocumentHistory(userId, "download", page, perPage)
 } 
