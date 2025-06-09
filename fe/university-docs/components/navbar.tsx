@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import ThemeToggle from "@/components/theme-toggle"
 import NotificationDropdown from "@/components/notification-dropdown"
+import UploadModal from "@/components/upload-modal"
 import { useAuth } from "@/contexts/auth-context"
 
 const mainNavItems = [
@@ -22,6 +23,7 @@ const mainNavItems = [
 
 export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const pathname = usePathname()
   const { isAuthenticated, user, logout } = useAuth()
   const [mounted, setMounted] = useState(false);
@@ -104,11 +106,14 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <NotificationDropdown />
-                <Button variant="ghost" size="icon" asChild className="hidden md:flex">
-                  <Link href="/upload">
-                    <Upload className="h-5 w-5" />
-            <span className="sr-only">Tải lên tài liệu</span>
-                  </Link>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="hidden md:flex"
+                  onClick={() => setIsUploadModalOpen(true)}
+                >
+                  <Upload className="h-5 w-5" />
+                  <span className="sr-only">Tải lên tài liệu</span>
                 </Button>
               </>
             ) : null}
@@ -147,6 +152,7 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+      <UploadModal open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen} />
     </header>
   )
 }

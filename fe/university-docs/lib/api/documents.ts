@@ -318,4 +318,101 @@ export const getDocumentPreviewUrl = async (documentId: number) => {
     console.error("Error getting preview URL:", error)
     return null
   }
+}
+
+// Kiểm tra tài liệu có hỗ trợ preview không
+export const checkDocumentPreviewSupport = async (documentId: number) => {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/is-supported`
+    )
+
+    if (!response.ok) {
+      return { is_supported: false, file_category: 'unsupported' }
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error("Error checking document preview support:", error)
+    return { is_supported: false, file_category: 'unsupported' }
+  }
+}
+
+// Lấy preview cho tài liệu công khai (không cần đăng nhập)
+export const getPublicDocumentPreviewUrl = (documentId: number, size: string = "medium") => {
+  return `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/preview?size=${size}`
+}
+
+// Lấy full preview cho tài liệu (cần đăng nhập)
+export const getDocumentFullPreviewUrl = (documentId: number) => {
+  return `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/full-preview`
+}
+
+// Download tài liệu công khai (cần đăng nhập ở frontend)
+export const downloadPublicDocument = async (documentId: number) => {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/download`
+    )
+
+    if (!response.ok) {
+      throw new Error("Không thể tải xuống tài liệu")
+    }
+
+    // Trả về URL để download
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    return url
+  } catch (error) {
+    console.error("Error downloading document:", error)
+    throw error
+  }
+}
+
+// Kiểm tra người dùng đã đăng nhập chưa
+export const isUserAuthenticated = () => {
+  if (typeof window === "undefined") return false
+  return !!localStorage.getItem("access_token")
+}
+
+// Lấy thông tin user hiện tại
+export const getCurrentUser = () => {
+  if (typeof window === "undefined") return null
+  try {
+    const userStr = localStorage.getItem("user")
+    return userStr ? JSON.parse(userStr) : null
+  } catch {
+    return null
+  }
+}
+
+// Lấy thumbnail của tài liệu công khai (không cần đăng nhập)
+export const getPublicDocumentThumbnail = (documentId: number) => {
+  return `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/thumbnail`
+}
+
+// Lấy preview của tài liệu công khai với kích thước tùy chọn
+export const getPublicDocumentPreview = (documentId: number, size: string = "medium") => {
+  return `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/preview?size=${size}`
+}
+
+// Lấy full preview của tài liệu công khai
+export const getPublicDocumentFullPreview = (documentId: number) => {
+  return `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/full-preview`
+}
+
+// Lấy thumbnail cho tài liệu riêng tư (cần đăng nhập)
+export const getDocumentThumbnail = (documentId: number) => {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
+  
+  return `${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/thumbnail`
+}
+
+// Lấy preview cho tài liệu riêng tư (cần đăng nhập)
+export const getDocumentPreview = (documentId: number, size: string = "medium") => {
+  const token = getAuthToken()
+  if (!token) throw new Error("Không có token xác thực")
+  
+  return `${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/preview?size=${size}`
 } 
