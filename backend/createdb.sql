@@ -171,6 +171,8 @@ CREATE TABLE forum_posts (
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     status forum_status DEFAULT 'approved',
+    views INTEGER DEFAULT 0 NOT NULL,
+    like_count INTEGER DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -184,6 +186,16 @@ CREATE TABLE forum_replies (
     status forum_status DEFAULT 'approved',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 14.1. Create forum_post_likes table (for tracking who liked what)
+CREATE TABLE forum_post_likes (
+    like_id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL REFERENCES forum_posts(post_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Ensure one like per user per post
+    CONSTRAINT uix_forum_post_like UNIQUE(post_id, user_id)
 );
 
 -- 15. Create notifications table
@@ -210,7 +222,11 @@ CREATE TABLE system_config (
 -- Create additional indexes for performance
 CREATE INDEX idx_document_history_document_user ON document_history(document_id, user_id);
 CREATE INDEX idx_forum_posts_forum_id ON forum_posts(forum_id);
+CREATE INDEX idx_forum_posts_views ON forum_posts(views);
+CREATE INDEX idx_forum_posts_like_count ON forum_posts(like_count);
 CREATE INDEX idx_forum_replies_post_id ON forum_replies(post_id);
+CREATE INDEX idx_forum_post_likes_post_id ON forum_post_likes(post_id);
+CREATE INDEX idx_forum_post_likes_user_id ON forum_post_likes(user_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_shared_links_document_id ON shared_links(document_id);
 
@@ -340,6 +356,16 @@ ALTER TABLE forum_replies
     REFERENCES users(user_id) 
     ON DELETE RESTRICT;
 
+ALTER TABLE forum_post_likes
+    ADD CONSTRAINT fk_forum_post_likes_post 
+    FOREIGN KEY (post_id) 
+    REFERENCES forum_posts(post_id) 
+    ON DELETE CASCADE,
+    ADD CONSTRAINT fk_forum_post_likes_user 
+    FOREIGN KEY (user_id) 
+    REFERENCES users(user_id) 
+    ON DELETE CASCADE;
+
 ALTER TABLE notifications
     ADD CONSTRAINT fk_notifications_user 
     FOREIGN KEY (user_id) 
@@ -351,10 +377,15 @@ COMMENT ON TABLE users IS 'Stores user information including students, lecturers
 COMMENT ON TABLE documents IS 'Stores document metadata and file information';
 COMMENT ON TABLE subjects IS 'Stores subject/course information linked to majors and academic years';
 COMMENT ON TABLE forums IS 'One-to-one relationship with subjects for forum functionality';
+COMMENT ON TABLE forum_posts IS 'Forum posts with like and view tracking';
+COMMENT ON TABLE forum_post_likes IS 'Tracks individual likes for forum posts - prevents duplicate likes';
 COMMENT ON TABLE ratings IS 'Stores user ratings for documents (0-5 scale, 0 means like without rating)';
 COMMENT ON TABLE document_history IS 'Tracks document views and downloads by users';
 COMMENT ON TABLE shared_links IS 'Stores shareable links for documents with optional expiration';
 COMMENT ON TABLE system_config IS 'Stores system configuration key-value pairs';
+
+COMMENT ON COLUMN forum_posts.views IS 'Number of times this post has been viewed';
+COMMENT ON COLUMN forum_posts.like_count IS 'Cached count of likes for performance';
 
 -- Add some useful views
 CREATE VIEW active_documents AS
@@ -411,5 +442,36 @@ BEGIN
     LEFT JOIN comments c ON d.document_id = c.document_id
     WHERE d.document_id = doc_id
     GROUP BY d.document_id, d.view_count, d.download_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to check if user liked a forum post
+CREATE OR REPLACE FUNCTION user_liked_forum_post(post_id_param INTEGER, user_id_param INTEGER)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS(
+        SELECT 1 FROM forum_post_likes 
+        WHERE post_id = post_id_param AND user_id = user_id_param
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to get forum post stats
+CREATE OR REPLACE FUNCTION get_forum_post_stats(post_id_param INTEGER)
+RETURNS TABLE (
+    views INTEGER,
+    like_count INTEGER,
+    reply_count INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        fp.views,
+        fp.like_count,
+        COUNT(fr.reply_id)::INTEGER as reply_count
+    FROM forum_posts fp
+    LEFT JOIN forum_replies fr ON fp.post_id = fr.post_id
+    WHERE fp.post_id = post_id_param
+    GROUP BY fp.post_id, fp.views, fp.like_count;
 END;
 $$ LANGUAGE plpgsql;
