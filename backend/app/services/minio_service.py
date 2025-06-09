@@ -108,5 +108,103 @@ class MinIOService:
                 detail="Error creating download URL"
             )
 
+    def get_file_stream(self, file_path: str):
+        """Stream file trực tiếp từ MinIO"""
+        try:
+            if file_path.startswith("minio://"):
+                path_parts = file_path.replace("minio://", "").split("/", 1)
+                if len(path_parts) == 2:
+                    bucket, object_name = path_parts
+                    # Lấy file object từ MinIO
+                    response = self.client.get_object(bucket, object_name)
+                    return response
+            return None
+        except S3Error as e:
+            logging.error(f"Error streaming file from MinIO: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found"
+            )
+    
+    def get_file_info(self, file_path: str) -> Optional[dict]:
+        """Lấy thông tin file từ MinIO"""
+        try:
+            if file_path.startswith("minio://"):
+                path_parts = file_path.replace("minio://", "").split("/", 1)
+                if len(path_parts) == 2:
+                    bucket, object_name = path_parts
+                    stat = self.client.stat_object(bucket, object_name)
+                    return {
+                        "size": stat.size,
+                        "content_type": stat.content_type,
+                        "etag": stat.etag,
+                        "last_modified": stat.last_modified
+                    }
+            return None
+        except S3Error as e:
+            logging.error(f"Error getting file info: {e}")
+            return None
+
+    def get_download_response(self, file_path: str, download_filename: str = None):
+        """Tạo streaming response để download file trực tiếp từ MinIO"""
+        try:
+            if not file_path.startswith("minio://"):
+                return None
+                
+            path_parts = file_path.replace("minio://", "").split("/", 1)
+            if len(path_parts) != 2:
+                return None
+                
+            bucket, object_name = path_parts
+            
+            # Lấy thông tin file
+            try:
+                stat = self.client.stat_object(bucket, object_name)
+                file_size = stat.size
+                content_type = stat.content_type or 'application/octet-stream'
+            except S3Error:
+                file_size = None
+                content_type = 'application/octet-stream'
+            
+            # Lấy file stream từ MinIO
+            response = self.client.get_object(bucket, object_name)
+            
+            # Xác định filename để download
+            if download_filename:
+                # Sử dụng title từ document, thêm extension từ file gốc nếu cần
+                original_filename = object_name.split('/')[-1]
+                original_ext = self.get_file_extension(original_filename)
+                
+                # Nếu download_filename chưa có extension, thêm vào
+                if not self.get_file_extension(download_filename) and original_ext:
+                    final_filename = f"{download_filename}{original_ext}"
+                else:
+                    final_filename = download_filename
+            else:
+                # Fallback to original filename
+                final_filename = object_name.split('/')[-1]
+            
+            # Escape filename để tránh lỗi header
+            safe_filename = final_filename.replace('"', '\\"')
+            
+            # Tạo headers
+            headers = {
+                "Content-Disposition": f'attachment; filename="{safe_filename}"',
+                "Cache-Control": "no-cache"
+            }
+            
+            if file_size:
+                headers["Content-Length"] = str(file_size)
+            
+            return {
+                "stream": response,
+                "media_type": content_type,
+                "headers": headers
+            }
+            
+        except S3Error as e:
+            logging.error(f"Error creating download response: {e}")
+            return None
+
 
 minio_service = MinIOService() 

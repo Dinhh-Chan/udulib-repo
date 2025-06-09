@@ -1,12 +1,16 @@
 from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import json
+import io
+import urllib.parse
 
 from app.models.base import get_db
 from app.dependencies.auth import get_current_user, require_role
 from app.core.config import settings
 from app.services.minio_service import minio_service
+from app.services.document_preview_service import document_preview_service
 
 from app.models.user import User
 from app.services.crud.document import document
@@ -44,6 +48,12 @@ def get_file_type(filename: str) -> str:
         return 'IMAGE'
     else:
         return 'OTHER'
+
+def get_actual_filename(doc) -> str:
+    """Lấy filename thực tế từ file_path thay vì title"""
+    if doc.file_path and '/' in doc.file_path:
+        return doc.file_path.split('/')[-1]
+    return doc.title
 
 @router.get("/", response_model=DocumentListResponse)
 async def get_documents(
@@ -248,15 +258,15 @@ async def record_document_view(
     await document.record_view(db, document_id=id, user_id=current_user.user_id)
     return {"message": "Ghi nhận lượt xem thành công"}
 
-@router.post("/{id}/download")
-async def record_document_download(
+@router.get("/{id}/download")
+async def download_document(
     *,
     db: Session = Depends(get_db),
     id: int,
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """
-    Ghi nhận lượt tải tài liệu.
+    Tải tài liệu trực tiếp từ MinIO.
     """
     doc = await document.get(db, id=id)
     if not doc:
@@ -265,8 +275,23 @@ async def record_document_download(
             detail="Tài liệu không tồn tại"
         )
     
+    # Lấy download response từ MinIO
+    download_data = minio_service.get_download_response(doc.file_path, doc.title)
+    if not download_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể tải file từ MinIO"
+        )
+    
+    # Ghi nhận lượt tải
     await document.record_download(db, document_id=id, user_id=current_user.user_id)
-    return {"message": "Ghi nhận lượt tải thành công"}
+    
+    # Trả về file stream
+    return StreamingResponse(
+        download_data["stream"],
+        media_type=download_data["media_type"],
+        headers=download_data["headers"]
+    )
 
 @router.get("/{id}/download-url")
 async def get_document_download_url(
@@ -276,7 +301,7 @@ async def get_document_download_url(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """
-    Lấy URL tải tài liệu từ MinIO.
+    Lấy URL tải tài liệu từ MinIO (Deprecated - sử dụng /download để tải trực tiếp).
     """
     doc = await document.get(db, id=id)
     if not doc:
@@ -294,3 +319,380 @@ async def get_document_download_url(
     
     await document.record_download(db, document_id=id, user_id=current_user.user_id)
     return {"download_url": download_url}
+
+@router.get("/{id}/preview")
+async def get_document_preview(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    size: Optional[str] = Query("medium", description="Kích thước preview: small, medium, large, original, full"),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Xem trước tài liệu.
+    Hỗ trợ: hình ảnh (jpg, jpeg, png, gif, bmp, webp), PDF, Office documents (doc, docx, xls, xlsx, ppt, pptx), text files (txt, md, csv).
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    # Kiểm tra xem có hỗ trợ preview không
+    if not document_preview_service.is_supported_file(actual_filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Định dạng file không được hỗ trợ preview"
+        )
+    
+    # Ghi nhận lượt xem
+    await document.record_view(db, document_id=id, user_id=current_user.user_id)
+    
+    # Trả về preview
+    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, size)
+
+@router.get("/{id}/thumbnail")
+async def get_document_thumbnail(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy thumbnail của tài liệu.
+    Hỗ trợ: hình ảnh, PDF, Office documents, text files.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    # Kiểm tra xem có hỗ trợ preview không
+    if not document_preview_service.is_supported_file(actual_filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Định dạng file không được hỗ trợ preview"
+        )
+    
+    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "small")
+
+@router.get("/{id}/full-preview")
+async def get_document_full_preview(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Xem trước đầy đủ tài liệu (tất cả các trang).
+    Hỗ trợ: PDF (nhiều trang), Office documents (nhiều trang), text files (full content), hình ảnh.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    # Kiểm tra xem có hỗ trợ preview không
+    if not document_preview_service.is_supported_file(actual_filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Định dạng file không được hỗ trợ preview"
+        )
+    
+    # Ghi nhận lượt xem
+    await document.record_view(db, document_id=id, user_id=current_user.user_id)
+    
+    # Trả về full preview
+    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "full")
+
+@router.get("/{id}/is-supported")
+async def check_document_preview_support(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Kiểm tra xem tài liệu có hỗ trợ preview không.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    is_supported = document_preview_service.is_supported_file(actual_filename)
+    file_category = document_preview_service.get_file_type_category(actual_filename)
+    
+    return {
+        "document_id": id,
+        "is_supported": is_supported,
+        "file_category": file_category,
+        "file_type": doc.file_type,
+        "filename": actual_filename
+    }
+
+@router.get("/public/{id}/preview")
+async def get_public_document_preview(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    size: Optional[str] = Query("medium", description="Kích thước preview: small, medium, large, original, full")
+) -> Any:
+    """
+    Xem trước tài liệu công khai (không cần đăng nhập).
+    Hỗ trợ: hình ảnh, PDF, Office documents, text files.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    # Kiểm tra xem có hỗ trợ preview không
+    if not document_preview_service.is_supported_file(actual_filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Định dạng file không được hỗ trợ preview"
+        )
+    
+    # Trả về preview
+    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, size)
+
+@router.get("/public/{id}/thumbnail")
+async def get_public_document_thumbnail(
+    *,
+    db: Session = Depends(get_db),
+    id: int
+) -> Any:
+    """
+    Lấy thumbnail của tài liệu công khai (không cần đăng nhập).
+    Hỗ trợ: hình ảnh, PDF, Office documents, text files.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    # Kiểm tra xem có hỗ trợ preview không
+    if not document_preview_service.is_supported_file(actual_filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Định dạng file không được hỗ trợ preview"
+        )
+    
+    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "small")
+
+@router.get("/public/{id}/full-preview")
+async def get_public_document_full_preview(
+    *,
+    db: Session = Depends(get_db),
+    id: int
+) -> Any:
+    """
+    Xem trước đầy đủ tài liệu công khai (tất cả các trang).
+    Hỗ trợ: PDF (nhiều trang), Office documents (nhiều trang), text files (full content), hình ảnh.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    # Kiểm tra xem có hỗ trợ preview không
+    if not document_preview_service.is_supported_file(actual_filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Định dạng file không được hỗ trợ preview"
+        )
+    
+    # Trả về full preview
+    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "full")
+
+@router.get("/public/{id}/download")
+async def download_public_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int
+) -> Any:
+    """
+    Tải tài liệu công khai trực tiếp từ MinIO (không cần đăng nhập).
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy download response từ MinIO
+    download_data = minio_service.get_download_response(doc.file_path, doc.title)
+    if not download_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể tải file từ MinIO"
+        )
+    
+    # Trả về file stream (không cần record download cho public)
+    return StreamingResponse(
+        download_data["stream"],
+        media_type=download_data["media_type"],
+        headers=download_data["headers"]
+    )
+
+@router.get("/public/{id}/is-supported")
+async def check_public_document_preview_support(
+    *,
+    db: Session = Depends(get_db),
+    id: int
+) -> Any:
+    """
+    Kiểm tra xem tài liệu công khai có hỗ trợ preview không (không cần đăng nhập).
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy filename thực tế từ file_path
+    actual_filename = get_actual_filename(doc)
+    
+    is_supported = document_preview_service.is_supported_file(actual_filename)
+    file_category = document_preview_service.get_file_type_category(actual_filename)
+    
+    return {
+        "document_id": id,
+        "is_supported": is_supported,
+        "file_category": file_category,  # 'image', 'pdf', 'office', 'text', 'unsupported'
+        "file_type": doc.file_type,
+        "filename": actual_filename
+    }
+
+@router.get("/by-tag/{tag_name}", response_model=DocumentListResponse)
+async def get_documents_by_tag(
+    *,
+    db: Session = Depends(get_db),
+    tag_name: str,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query("approved", description="Status của document: approved, pending, rejected"),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần"),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy danh sách tài liệu theo tag.
+    """
+    filter_request = DocumentFilterRequest(
+        tags=[tag_name],
+        status=status,
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.get("/public/by-tag/{tag_name}", response_model=DocumentListResponse)
+async def get_public_documents_by_tag(
+    *,
+    db: Session = Depends(get_db),
+    tag_name: str,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần")
+) -> Any:
+    """
+    Lấy danh sách tài liệu công khai theo tag (không cần đăng nhập).
+    """
+    filter_request = DocumentFilterRequest(
+        tags=[tag_name],
+        status="approved",  # Chỉ lấy tài liệu đã được phê duyệt
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.get("/by-tags", response_model=DocumentListResponse)
+async def get_documents_by_multiple_tags(
+    *,
+    db: Session = Depends(get_db),
+    tags: List[str] = Query(..., description="Danh sách tags (VD: ?tags=python&tags=web&tags=tutorial)"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query("approved", description="Status của document: approved, pending, rejected"),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần"),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy danh sách tài liệu theo nhiều tag (documents phải có ít nhất 1 trong các tag được chỉ định).
+    """
+    filter_request = DocumentFilterRequest(
+        tags=tags,
+        status=status,
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.get("/public/by-tags", response_model=DocumentListResponse)
+async def get_public_documents_by_multiple_tags(
+    *,
+    db: Session = Depends(get_db),
+    tags: List[str] = Query(..., description="Danh sách tags (VD: ?tags=python&tags=web&tags=tutorial)"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần")
+) -> Any:
+    """
+    Lấy danh sách tài liệu công khai theo nhiều tag (không cần đăng nhập).
+    """
+    filter_request = DocumentFilterRequest(
+        tags=tags,
+        status="approved",  # Chỉ lấy tài liệu đã được phê duyệt
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
