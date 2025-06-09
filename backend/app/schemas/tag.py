@@ -17,3 +17,6 @@ class Tag(TagBase):
 
     class Config:
         from_attributes = True
+
+class TagWithDocumentCount(Tag):
+    document_count: int = 0

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.models.base import get_db
 from app.services.crud.tag_crud import tag_crud
-from app.schemas.tag import Tag, TagCreate, TagUpdate
+from app.schemas.tag import Tag, TagCreate, TagUpdate, TagWithDocumentCount
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 
@@ -21,6 +21,20 @@ async def get_tags(
     """
     skip = (page - 1) * per_page
     tags = await tag_crud.get_all(db, skip=skip, limit=per_page)
+    return tags
+
+@router.get("/with-document-count", response_model=List[TagWithDocumentCount])
+async def get_tags_with_document_count(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    # current_user: User = Depends(get_current_user)
+):
+    """
+    Lấy danh sách các thẻ kèm theo số lượng tài liệu.
+    """
+    skip = (page - 1) * per_page
+    tags = await tag_crud.get_all_with_document_count(db, skip=skip, limit=per_page)
     return tags
 
 @router.get("/{tag_id}", response_model=Tag)
