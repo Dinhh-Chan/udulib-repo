@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { getUserDocuments, Document } from "@/lib/api/documents"
+import { getUserDocuments, Document, deleteDocument } from "@/lib/api/documents"
 import { getViewedDocuments, getDownloadedDocuments, DocumentHistory } from "@/lib/api/document-history"
 import { toast } from "sonner"
+import EditDocumentModal from "./EditDocumentModal"
 
 interface DocumentsTabProps {
   userId: number
@@ -27,6 +28,10 @@ export default function DocumentsTab({ userId }: DocumentsTabProps) {
   const [viewedTotalPages, setViewedTotalPages] = useState(1)
   const [downloadedCurrentPage, setDownloadedCurrentPage] = useState(1)
   const [downloadedTotalPages, setDownloadedTotalPages] = useState(1)
+
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editingDocumentId, setEditingDocumentId] = useState<number | null>(null)
 
   const fetchUserDocuments = async () => {
     setIsLoadingDocuments(true)
@@ -85,16 +90,30 @@ export default function DocumentsTab({ userId }: DocumentsTabProps) {
     fetchDownloadedDocuments()
   }, [userId, downloadedCurrentPage])
 
-  const handleDeleteDocument = (documentId: number) => {
-    // Emit event để parent component xử lý
-    const event = new CustomEvent('deleteDocument', { detail: { documentId } })
-    window.dispatchEvent(event)
+  const handleDeleteDocument = async (documentId: number) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa tài liệu này?")) {
+      return
+    }
+    
+    try {
+      await deleteDocument(documentId)
+      toast.success("Xóa tài liệu thành công")
+      fetchUserDocuments() // Refresh the list
+    } catch (error) {
+      console.error("Error deleting document:", error)
+      toast.error("Không thể xóa tài liệu")
+    }
   }
 
   const handleEditDocument = (documentId: number) => {
-    // Emit event để parent component xử lý
-    const event = new CustomEvent('editDocument', { detail: { documentId } })
-    window.dispatchEvent(event)
+    setEditingDocumentId(documentId)
+    setEditModalOpen(true)
+  }
+
+  const handleEditSuccess = () => {
+    fetchUserDocuments() // Refresh the list
+    setEditModalOpen(false)
+    setEditingDocumentId(null)
   }
 
   return (
@@ -301,6 +320,17 @@ export default function DocumentsTab({ userId }: DocumentsTabProps) {
           </TabsContent>
         </Tabs>
       </CardContent>
+      
+      {/* Edit Document Modal */}
+      <EditDocumentModal
+        documentId={editingDocumentId}
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false)
+          setEditingDocumentId(null)
+        }}
+        onSuccess={handleEditSuccess}
+      />
     </Card>
   )
 } 

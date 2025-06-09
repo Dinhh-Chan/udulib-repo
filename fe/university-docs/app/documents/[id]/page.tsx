@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,6 +16,7 @@ import {
   Bookmark,
   Flag,
   Eye,
+  Lock,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useState, useRef } from "react"
@@ -22,7 +24,16 @@ import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import React from "react"
 import { Textarea } from "@/components/ui/textarea"
-import { getDocumentDownloadUrl, getDocumentPreviewUrl } from "@/lib/api/documents"
+import { 
+  getDocumentDownloadUrl, 
+  getDocumentPreviewUrl,
+  checkDocumentPreviewSupport,
+  getPublicDocumentPreviewUrl,
+  getDocumentFullPreviewUrl,
+  downloadPublicDocument,
+  isUserAuthenticated,
+  getCurrentUser
+} from "@/lib/api/documents"
 
 interface Document {
   document_id: number
@@ -100,10 +111,20 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [replyLoading, setReplyLoading] = useState(false);
   const userCache = useRef<{ [userId: number]: { full_name: string; username: string } }>({});
   const [showComments, setShowComments] = useState(false);
-  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
+  
+  // Thêm state mới cho logic preview
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [previewSupport, setPreviewSupport] = useState<{
+    is_supported: boolean;
+    file_category: string;
+    document_id?: number;
+    file_type?: string;
+    filename?: string;
+  } | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const getPreviewUrl = (filePath: string, fileType: string) => {
     if (!filePath) return "";
@@ -183,7 +204,35 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
           <p>Đang tải preview...</p>
-          <p className="text-sm">Đang lấy signed URL từ MinIO...</p>
+        </div>
+      );
+    }
+
+    // Nếu file không hỗ trợ preview
+    if (!previewSupport?.is_supported) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <FileText className="h-16 w-16 mb-4" />
+          <p>Không thể xem trước tài liệu này</p>
+          <p className="text-sm">Vui lòng tải xuống để xem</p>
+          {isAuthenticated ? (
+            <Button 
+              onClick={handleDownloadClick} 
+              className="mt-4"
+              disabled={downloadLoading}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {downloadLoading ? "Đang tải..." : "Tải xuống"}
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => setShowLoginPrompt(true)} 
+              className="mt-4"
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              Đăng nhập để tải xuống
+            </Button>
+          )}
         </div>
       );
     }
@@ -192,23 +241,41 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       return (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
           <FileText className="h-16 w-16 mb-4" />
-          <p>Không thể xem trước tài liệu này</p>
-          <p className="text-sm">Vui lòng tải xuống để xem</p>
-          {document && (
-            <div className="mt-4 text-xs text-center max-w-md">
-              <p>Loại file: {document.file_type}</p>
-              <p>Đường dẫn: {document.file_path?.substring(0, 80)}{document.file_path?.length > 80 ? '...' : ''}</p>
-              {document.file_path?.startsWith('minio://') && (
-                <p className="mt-2 text-amber-600">
-                  File từ MinIO - cần signed URL để preview
-                </p>
-              )}
-            </div>
-          )}
+          <p>Đang tải preview...</p>
         </div>
       );
     }
 
+    // Hiển thị preview với overlay nếu chưa đăng nhập
+    return (
+      <div className="relative h-full">
+        {renderPreviewContent()}
+        
+        {/* Overlay cho người dùng chưa đăng nhập */}
+        {!isAuthenticated && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+            <div className="bg-white rounded-lg p-6 max-w-sm text-center">
+              <Lock className="h-12 w-12 mx-auto mb-4 text-primary" />
+              <h3 className="text-lg font-semibold mb-2">Đăng nhập để xem đầy đủ</h3>
+              <p className="text-muted-foreground mb-4">
+                Đăng nhập để xem toàn bộ nội dung và tải xuống tài liệu
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => router.push('/auth/login')} className="flex-1">
+                  Đăng nhập
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/auth/register')} className="flex-1">
+                  Đăng ký
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPreviewContent = () => {
     const fileType = document?.file_type || "";
     
     // PDF files
@@ -261,7 +328,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       );
     }
     
-    // Google Drive files or other embeddable content
+    // Other embeddable content
     return (
       <iframe
         src={previewUrl}
@@ -279,11 +346,13 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   };
 
   useEffect(() => {
+    // Kiểm tra authentication status
+    setIsAuthenticated(isUserAuthenticated());
+    
     if (typeof window !== "undefined") {
       try {
-        const userStr = localStorage.getItem("user");
-        if (userStr) {
-          const user = JSON.parse(userStr);
+        const user = getCurrentUser();
+        if (user) {
           setUserId(user.user_id);
         }
       } catch {}
@@ -296,7 +365,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     const checkAndIncreaseView = async () => {
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
       const checkRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/history?document_id=${id}&user_id=${userId}&page=1&per_page=1`,
+        `${process.env.NEXT_PUBLIC_API_URL}/history/?document_id=${id}&user_id=${userId}&page=1&per_page=1`,
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       const history = await checkRes.json();
@@ -318,6 +387,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       try {
         setLoading(true)
         setError(null)
+        
+        // Lấy thông tin tài liệu
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${id}`,
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
@@ -328,51 +399,33 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         const data = await response.json()
         setDocument(data)
         
-        // Lấy preview URL nếu có
-        if (data.file_path) {
-          console.log("File path:", data.file_path)
-          console.log("File type:", data.file_type)
+        // Kiểm tra xem file có hỗ trợ preview không
+        try {
+          const supportInfo = await checkDocumentPreviewSupport(Number(id));
+          setPreviewSupport(supportInfo);
           
-          // Nếu file từ MinIO, sử dụng download URL làm preview URL
-          if (data.file_path.startsWith('minio://')) {
-            console.log("File from MinIO, getting signed URL for preview")
-            setPreviewLoading(true)
-            try {
-              const downloadUrl = await getDocumentDownloadUrl(Number(id))
-              if (downloadUrl) {
-                console.log("Using MinIO signed URL for preview:", downloadUrl)
-                setPreviewUrl(downloadUrl)
-              } else {
-                console.log("Could not get MinIO signed URL")
-                setPreviewUrl("")
-              }
-            } catch (error) {
-              console.log("Error getting MinIO signed URL:", error)
-              setPreviewUrl("")
-            } finally {
-              setPreviewLoading(false)
+          if (supportInfo.is_supported) {
+            setPreviewLoading(true);
+            
+            // Lấy URL preview phù hợp
+            let previewUrlToUse = "";
+            
+            if (isAuthenticated) {
+              // Người dùng đã đăng nhập - sử dụng full preview
+              previewUrlToUse = getDocumentFullPreviewUrl(Number(id));
+            } else {
+              // Người dùng chưa đăng nhập - sử dụng preview cơ bản
+              previewUrlToUse = getPublicDocumentPreviewUrl(Number(id), "medium");
             }
-          } else {
-            // Thử lấy preview URL từ server trước cho các file khác
-            try {
-              const serverPreviewUrl = await getDocumentPreviewUrl(Number(id))
-              if (serverPreviewUrl) {
-                console.log("Using server preview URL:", serverPreviewUrl)
-                setPreviewUrl(serverPreviewUrl)
-              } else {
-                // Fallback về logic client-side
-                const previewUrlResult = getPreviewUrl(data.file_path, data.file_type)
-                console.log("Using client preview URL:", previewUrlResult)
-                setPreviewUrl(previewUrlResult)
-              }
-            } catch (error) {
-              console.log("Server preview not available, using client-side logic")
-              const previewUrlResult = getPreviewUrl(data.file_path, data.file_type)
-              console.log("Preview URL:", previewUrlResult)
-              setPreviewUrl(previewUrlResult)
-            }
+            
+            setPreviewUrl(previewUrlToUse);
+            setPreviewLoading(false);
           }
+        } catch (error) {
+          console.error("Error checking preview support:", error);
+          setPreviewSupport({ is_supported: false, file_category: 'unsupported' });
         }
+        
       } catch (err) {
         console.error("Error fetching document:", err)
         setError(err instanceof Error ? err.message : "Có lỗi xảy ra khi tải dữ liệu")
@@ -388,7 +441,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         setRatingLoading(true)
         setRatingError(null)
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings?document_id=${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ratings/?document_id=${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
         if (!res.ok) throw new Error("Không thể tải đánh giá")
@@ -411,7 +464,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       }
     }
     fetchRatings()
-  }, [id, userId])
+  }, [id, isAuthenticated])
 
   const fetchUserInfo = async (userId: number, token: string | null) => {
     if (userCache.current[userId]) return userCache.current[userId];
@@ -433,7 +486,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     const fetchComments = async () => {
       try {
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments?document_id=${id}&include_replies=true&page=1&per_page=20`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/?document_id=${id}&include_replies=true&page=1&per_page=20`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error("Không thể tải bình luận");
@@ -548,7 +601,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const fetchReplies = async (parentId: number) => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments?parent_comment_id=${parentId}&page=1&per_page=20`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comments/?parent_comment_id=${parentId}&page=1&per_page=20`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Không thể tải replies");
@@ -681,53 +734,33 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const handleDownloadClick = async () => {
     if (!document) return;
     
-    setDownloadLoading(true);
-    try {
-      await getDocumentDownloadUrl(Number(id));
-      setShowDownloadConfirm(true);
-    } catch (error) {
-      console.error("Error getting download URL:", error);
-      // Fallback về phương thức cũ nếu API mới không hoạt động
-      setShowDownloadConfirm(true);
-    } finally {
-      setDownloadLoading(false);
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true);
+      return;
     }
-  };
-
-  const confirmDownload = async () => {
-    setShowDownloadConfirm(false);
-    setDownloadLoading(true);
     
+    setDownloadLoading(true);
     try {
-      const downloadUrl = await getDocumentDownloadUrl(Number(id));
-      if (downloadUrl) {
-        // Mở tab mới để download từ MinIO
-        window.open(downloadUrl, '_blank', 'noopener,noreferrer');
-        return;
-      }
+      const downloadUrl = await downloadPublicDocument(Number(id));
       
-      // Fallback về phương thức cũ
-      const fallbackUrl = getDownloadUrl(document?.file_path || "");
-      window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      // Tạo link download
+      const link = window.document.createElement('a');
+      link.href = downloadUrl;
+      link.download = document.title || 'document';
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+      
+      // Cleanup URL
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toast.success("Tải xuống thành công!");
     } catch (error) {
       console.error("Error downloading:", error);
-      // Fallback về phương thức cũ
-      if (document?.file_path) {
-        const fallbackUrl = getDownloadUrl(document.file_path);
-        window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
-      }
+      toast.error("Không thể tải xuống tài liệu");
     } finally {
       setDownloadLoading(false);
     }
-  };
-
-  const getDownloadUrl = (url: string) => {
-    // Nếu là Google Docs, chuyển sang link export PDF
-    const match = url.match(/https:\/\/docs\.google\.com\/document\/d\/([\w-]+)/);
-    if (match) {
-      return `https://docs.google.com/document/d/${match[1]}/export?format=pdf`;
-    }
-    return url;
   };
 
   if (loading) {
@@ -859,14 +892,24 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}
                 {ratingError && <div className="text-xs text-red-500 mt-1">{ratingError}</div>}
                 <br />
-                <Button
-                  className="w-full"
-                  onClick={handleDownloadClick}
-                  disabled={downloadLoading}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {downloadLoading ? "Đang tải..." : "Tải xuống"}
-                </Button>
+                {isAuthenticated ? (
+                  <Button
+                    className="w-full"
+                    onClick={handleDownloadClick}
+                    disabled={downloadLoading}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {downloadLoading ? "Đang tải..." : "Tải xuống"}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={() => setShowLoginPrompt(true)}
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Đăng nhập để tải xuống
+                  </Button>
+                )}
                 <p className="text-xs text-muted-foreground mt-2">
                   Đã có {document.download_count} lượt tải xuống
                 </p>
@@ -930,17 +973,28 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Modal xác nhận tải xuống */}
-      <Dialog open={showDownloadConfirm} onOpenChange={setShowDownloadConfirm}>
+
+      {/* Modal yêu cầu đăng nhập */}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận tải xuống</DialogTitle>
+            <DialogTitle>Yêu cầu đăng nhập</DialogTitle>
           </DialogHeader>
-          <div>Bạn có chắc chắn muốn tải tài liệu này về máy không?</div>
+          <div className="text-center py-4">
+            <Lock className="h-12 w-12 mx-auto mb-4 text-primary" />
+            <p className="mb-4">
+              Bạn cần đăng nhập để tải xuống tài liệu và xem đầy đủ nội dung.
+            </p>
+          </div>
           <DialogFooter>
-            <Button onClick={() => setShowDownloadConfirm(false)} variant="outline">Huỷ</Button>
-            <Button onClick={confirmDownload} disabled={downloadLoading}>
-              {downloadLoading ? "Đang tải..." : "Xác nhận"}
+            <Button onClick={() => setShowLoginPrompt(false)} variant="outline">
+              Hủy
+            </Button>
+            <Button onClick={() => router.push('/auth/login')}>
+              Đăng nhập
+            </Button>
+            <Button onClick={() => router.push('/auth/register')} variant="outline">
+              Đăng ký
             </Button>
           </DialogFooter>
         </DialogContent>
