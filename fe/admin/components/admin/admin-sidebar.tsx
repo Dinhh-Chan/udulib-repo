@@ -13,7 +13,8 @@ import {
   Settings,
   ChevronLeft,
   Home,
-  Bell
+  Bell,
+  Tag
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
@@ -74,7 +75,15 @@ const routes = [
     href: "/admin/settings",
     color: "text-gray-700",
     bgColor: "bg-gray-700/10"
-  }
+  },
+  {
+    label: "Quản lý Tag",
+    href: "/admin/tags",
+    icon: Tag,
+    role: ["admin"],
+    color: "text-gray-700",
+    bgColor: "bg-gray-700/10"
+  },
 ]
 
 export function AdminSidebar() {

@@ -1,20 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/admin/courses/page": "app/admin/courses/page.js",
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/documents/[id]/edit/page": "app/admin/documents/[id]/edit/page.js",
-  "/admin/documents/[id]/page": "app/admin/documents/[id]/page.js",
-  "/admin/documents/page": "app/admin/documents/page.js",
-  "/admin/forum/[id]/page": "app/admin/forum/[id]/page.js",
-  "/admin/forum/page": "app/admin/forum/page.js",
-  "/admin/forum/post/[id]/page": "app/admin/forum/post/[id]/page.js",
-  "/admin/majors/page": "app/admin/majors/page.js",
-  "/admin/notifications/page": "app/admin/notifications/page.js",
-  "/admin/settings/page": "app/admin/settings/page.js",
-  "/admin/users/page": "app/admin/users/page.js",
-  "/admin/docments/page": "app/admin/docments/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/admin/subjects/page": "app/admin/subjects/page.js"
+  "/admin/tags/page": "app/admin/tags/page.js"
 }
