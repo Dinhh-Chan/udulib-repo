@@ -258,15 +258,17 @@ async def record_document_view(
     await document.record_view(db, document_id=id, user_id=current_user.user_id)
     return {"message": "Ghi nhận lượt xem thành công"}
 
-@router.post("/{id}/download")
-async def record_document_download(
+
+
+@router.get("/{id}/download")
+async def download_document(
     *,
     db: Session = Depends(get_db),
     id: int,
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """
-    Ghi nhận lượt tải tài liệu.
+    Tải tài liệu trực tiếp từ MinIO.
     """
     doc = await document.get(db, id=id)
     if not doc:
@@ -275,8 +277,23 @@ async def record_document_download(
             detail="Tài liệu không tồn tại"
         )
     
+    # Lấy download response từ MinIO
+    download_data = minio_service.get_download_response(doc.file_path, doc.title)
+    if not download_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể tải file từ MinIO"
+        )
+    
+    # Ghi nhận lượt tải
     await document.record_download(db, document_id=id, user_id=current_user.user_id)
-    return {"message": "Ghi nhận lượt tải thành công"}
+    
+    # Trả về file stream
+    return StreamingResponse(
+        download_data["stream"],
+        media_type=download_data["media_type"],
+        headers=download_data["headers"]
+    )
 
 @router.get("/{id}/download-url")
 async def get_document_download_url(
@@ -524,6 +541,37 @@ async def get_public_document_full_preview(
     
     # Trả về full preview
     return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "full")
+
+@router.get("/public/{id}/download")
+async def download_public_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int
+) -> Any:
+    """
+    Tải tài liệu công khai trực tiếp từ MinIO (không cần đăng nhập).
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Lấy download response từ MinIO
+    download_data = minio_service.get_download_response(doc.file_path, doc.title)
+    if not download_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể tải file từ MinIO"
+        )
+    
+    # Trả về file stream (không cần record download cho public)
+    return StreamingResponse(
+        download_data["stream"],
+        media_type=download_data["media_type"],
+        headers=download_data["headers"]
+    )
 
 @router.get("/public/{id}/is-supported")
 async def check_public_document_preview_support(
