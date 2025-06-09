@@ -17,6 +17,7 @@ class Document(Base):
     status = Column(Enum("approved", "pending", "rejected", name="document_status"), default="pending")
     view_count = Column(Integer, default=0)
     download_count = Column(Integer, default=0)
+    like_count = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -25,3 +26,4 @@ class Document(Base):
     user = relationship("User", back_populates="documents")
     document_tags = relationship("DocumentTag", back_populates="document", overlaps="tags,document_tags")
     tags = relationship("Tag", secondary="document_tags", back_populates="documents", overlaps="document_tags")
+    likes = relationship("DocumentLike", back_populates="document", cascade="all, delete-orphan")

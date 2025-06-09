@@ -83,6 +83,7 @@ CREATE TABLE documents (
     status document_status DEFAULT 'pending',
     view_count INTEGER DEFAULT 0,
     download_count INTEGER DEFAULT 0,
+    like_count INTEGER DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -93,6 +94,7 @@ CREATE INDEX idx_document_file_type ON documents(file_type);
 CREATE INDEX idx_document_subject_id ON documents(subject_id);
 CREATE INDEX idx_document_user_id ON documents(user_id);
 CREATE INDEX idx_document_status ON documents(status);
+CREATE INDEX idx_document_like_count ON documents(like_count);
 
 -- 6. Create tags table
 CREATE TABLE tags (
@@ -111,6 +113,16 @@ CREATE TABLE document_tags (
     tag_id INTEGER NOT NULL REFERENCES tags(tag_id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uix_document_tag UNIQUE (document_id, tag_id)
+);
+
+-- 7.1. Create document_likes table (for tracking who liked what document)
+CREATE TABLE document_likes (
+    like_id SERIAL PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(document_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Ensure one like per user per document
+    CONSTRAINT uix_document_like UNIQUE(document_id, user_id)
 );
 
 -- 8. Create comments table
@@ -221,6 +233,8 @@ CREATE TABLE system_config (
 
 -- Create additional indexes for performance
 CREATE INDEX idx_document_history_document_user ON document_history(document_id, user_id);
+CREATE INDEX idx_document_likes_document_id ON document_likes(document_id);
+CREATE INDEX idx_document_likes_user_id ON document_likes(user_id);
 CREATE INDEX idx_forum_posts_forum_id ON forum_posts(forum_id);
 CREATE INDEX idx_forum_posts_views ON forum_posts(views);
 CREATE INDEX idx_forum_posts_like_count ON forum_posts(like_count);
@@ -316,6 +330,16 @@ ALTER TABLE document_tags
     REFERENCES tags(tag_id) 
     ON DELETE CASCADE;
 
+ALTER TABLE document_likes
+    ADD CONSTRAINT fk_document_likes_document 
+    FOREIGN KEY (document_id) 
+    REFERENCES documents(document_id) 
+    ON DELETE CASCADE,
+    ADD CONSTRAINT fk_document_likes_user 
+    FOREIGN KEY (user_id) 
+    REFERENCES users(user_id) 
+    ON DELETE CASCADE;
+
 ALTER TABLE document_history
     ADD CONSTRAINT fk_document_history_document 
     FOREIGN KEY (document_id) 
@@ -374,7 +398,8 @@ ALTER TABLE notifications
 
 -- Add comments to tables and columns for documentation
 COMMENT ON TABLE users IS 'Stores user information including students, lecturers, and admins';
-COMMENT ON TABLE documents IS 'Stores document metadata and file information';
+COMMENT ON TABLE documents IS 'Stores document metadata and file information with like tracking';
+COMMENT ON TABLE document_likes IS 'Tracks individual likes for documents - prevents duplicate likes';
 COMMENT ON TABLE subjects IS 'Stores subject/course information linked to majors and academic years';
 COMMENT ON TABLE forums IS 'One-to-one relationship with subjects for forum functionality';
 COMMENT ON TABLE forum_posts IS 'Forum posts with like and view tracking';
@@ -384,6 +409,7 @@ COMMENT ON TABLE document_history IS 'Tracks document views and downloads by use
 COMMENT ON TABLE shared_links IS 'Stores shareable links for documents with optional expiration';
 COMMENT ON TABLE system_config IS 'Stores system configuration key-value pairs';
 
+COMMENT ON COLUMN documents.like_count IS 'Cached count of likes for performance';
 COMMENT ON COLUMN forum_posts.views IS 'Number of times this post has been viewed';
 COMMENT ON COLUMN forum_posts.like_count IS 'Cached count of likes for performance';
 
