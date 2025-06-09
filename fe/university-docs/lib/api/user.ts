@@ -48,4 +48,32 @@ export const updateUserProfile = async (userId: number, userData: {
   }
 
   return response.json()
+}
+
+export const changePassword = async (passwordData: {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}) => {
+  const token = getAuthToken()
+  
+  if (!token) {
+    throw new Error("Không tìm thấy token xác thực")
+  }
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/change-password`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(passwordData),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Không thể thay đổi mật khẩu")
+  }
+
+  return response.json()
 } 
