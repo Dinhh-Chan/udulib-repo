@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     role: UserRole = UserRole.student
     university_id: Optional[str] = Field(None, max_length=50)
     avatar_url: Optional[str] = None
+    is_private: bool = False
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
@@ -27,7 +28,13 @@ class UserUpdate(BaseModel):
     status: Optional[UserStatus] = None
     university_id: Optional[str] = Field(None, max_length=50)
     avatar_url: Optional[str] = None
+    is_private: Optional[bool] = None
     password: Optional[str] = None
+
+class UserPasswordChange(BaseModel):
+    current_password: str = Field(..., description="Mật khẩu hiện tại")
+    new_password: str = Field(..., min_length=6, description="Mật khẩu mới (tối thiểu 6 ký tự)")
+    confirm_password: str = Field(..., description="Xác nhận mật khẩu mới")
 
 class User(UserBase, TimeStampBase):
     user_id: int

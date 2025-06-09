@@ -26,6 +26,7 @@ CREATE TABLE majors (
     major_name VARCHAR(100) NOT NULL,
     major_code VARCHAR(20) NOT NULL UNIQUE,
     description TEXT,
+    image_url VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -44,6 +45,7 @@ CREATE TABLE users (
     status user_status DEFAULT 'active' NOT NULL,
     google_id VARCHAR(100),
     university_id VARCHAR(50),
+    avatar_url VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP
@@ -117,6 +119,7 @@ CREATE TABLE comments (
     document_id INTEGER NOT NULL REFERENCES documents(document_id),
     user_id INTEGER NOT NULL REFERENCES users(user_id),
     content TEXT NOT NULL,
+    parent_comment_id INTEGER REFERENCES comments(comment_id) ON DELETE CASCADE,
     status forum_status DEFAULT 'approved',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -156,6 +159,7 @@ CREATE TABLE shared_links (
 CREATE TABLE forums (
     forum_id SERIAL PRIMARY KEY,
     subject_id INTEGER NOT NULL UNIQUE REFERENCES subjects(subject_id),
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

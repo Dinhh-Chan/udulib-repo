@@ -17,26 +17,42 @@ class ForumCRUD(CRUDBase[Forum, ForumCreate, ForumUpdate]):
         super().__init__(Forum)
         self.db = db
 
-    async def get_all(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+    async def get_all(self, skip: int = 0, limit: int = 100, search: Optional[str] = None, subject_id: Optional[int] = None) -> List[Dict[str, Any]]:
         try:
             query = (
-                select(self.model, func.count(ForumPost.post_id).label("post_count"))
+                select(self.model, func.count(ForumPost.post_id).label("post_count"), Subject)
                 .outerjoin(ForumPost, ForumPost.forum_id == self.model.forum_id)
-                .group_by(self.model.forum_id)
-                .offset(skip)
-                .limit(limit)
+                .join(Subject, Subject.subject_id == self.model.subject_id)
+                .group_by(self.model.forum_id, Subject.subject_id)
             )
+            
+            # Thêm filter theo subject_id nếu có
+            if subject_id:
+                query = query.where(self.model.subject_id == subject_id)
+            
+            # Thêm tìm kiếm nếu có
+            if search:
+                search_pattern = f"%{search}%"
+                query = query.where(
+                    (self.model.description.ilike(search_pattern)) |
+                    (Subject.subject_name.ilike(search_pattern)) |
+                    (Subject.subject_code.ilike(search_pattern))
+                )
+            
+            query = query.offset(skip).limit(limit)
             result = await self.db.execute(query)
             forums_with_count = result.all()
 
             result_list = []
-            for forum, post_count in forums_with_count:
+            for forum, post_count, subject in forums_with_count:
                 result_list.append({
                     "forum_id": forum.forum_id,
                     "subject_id": forum.subject_id,
                     "description": forum.description,
                     "created_at": forum.created_at,
-                    "post_count": post_count or 0
+                    "post_count": post_count or 0,
+                    "subject_name": subject.subject_name,
+                    "subject_code": subject.subject_code
                 })
             return result_list
         except Exception as e:
