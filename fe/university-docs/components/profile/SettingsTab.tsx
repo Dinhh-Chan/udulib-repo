@@ -126,12 +126,6 @@ export default function SettingsTab() {
               <Button variant="outline" className="w-full sm:w-auto">Liên kết</Button>
             </div>
           </div>
-
-          <Separator />
-
-          <div className="pt-3 sm:pt-4">
-            <Button variant="destructive" className="w-full sm:w-auto">Xóa tài khoản</Button>
-          </div>
         </div>
       </CardContent>
     </Card>
