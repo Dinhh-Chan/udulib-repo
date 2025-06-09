@@ -30,8 +30,8 @@ const contactMethods = [
     icon: Mail,
     title: "Email",
     description: "Gửi email cho chúng tôi",
-    contact: "support@udulib.edu.vn",
-    action: "mailto:support@udulib.edu.vn"
+    contact: "thuvienudu@gmail.com",
+    action: "mailto:thuvienudu@gmail.com"
   },
   {
     icon: Phone,
@@ -44,7 +44,7 @@ const contactMethods = [
     icon: MapPin,
     title: "Địa chỉ",
     description: "Đến trực tiếp văn phòng",
-    contact: "Tầng 3, Thư viện Trung tâm, Trường Đại học ABC",
+    contact: "122, Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
     action: null
   },
   {

@@ -28,15 +28,15 @@ export default function Footer() {
               <div className="flex flex-col gap-2 text-sm text-muted-foreground items-center md:items-start">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  <span>support@udulib.edu.vn</span>
+                  <span>thuvienudu@gmail.com</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  <span>024 1234 5678</span>
+                  <span>012 3456 7890</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
-                  <span>Học viện PTIT, Hà Nội</span>
+                  <span>Viện Khoa Học Kỹ Thuật Bưu Điện, Hà Nội</span>
                 </div>
               </div>
             </div>
