@@ -258,8 +258,6 @@ async def record_document_view(
     await document.record_view(db, document_id=id, user_id=current_user.user_id)
     return {"message": "Ghi nhận lượt xem thành công"}
 
-
-
 @router.get("/{id}/download")
 async def download_document(
     *,
@@ -602,3 +600,99 @@ async def check_public_document_preview_support(
         "file_type": doc.file_type,
         "filename": actual_filename
     }
+
+@router.get("/by-tag/{tag_name}", response_model=DocumentListResponse)
+async def get_documents_by_tag(
+    *,
+    db: Session = Depends(get_db),
+    tag_name: str,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query("approved", description="Status của document: approved, pending, rejected"),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần"),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy danh sách tài liệu theo tag.
+    """
+    filter_request = DocumentFilterRequest(
+        tags=[tag_name],
+        status=status,
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.get("/public/by-tag/{tag_name}", response_model=DocumentListResponse)
+async def get_public_documents_by_tag(
+    *,
+    db: Session = Depends(get_db),
+    tag_name: str,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần")
+) -> Any:
+    """
+    Lấy danh sách tài liệu công khai theo tag (không cần đăng nhập).
+    """
+    filter_request = DocumentFilterRequest(
+        tags=[tag_name],
+        status="approved",  # Chỉ lấy tài liệu đã được phê duyệt
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.get("/by-tags", response_model=DocumentListResponse)
+async def get_documents_by_multiple_tags(
+    *,
+    db: Session = Depends(get_db),
+    tags: List[str] = Query(..., description="Danh sách tags (VD: ?tags=python&tags=web&tags=tutorial)"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query("approved", description="Status của document: approved, pending, rejected"),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần"),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy danh sách tài liệu theo nhiều tag (documents phải có ít nhất 1 trong các tag được chỉ định).
+    """
+    filter_request = DocumentFilterRequest(
+        tags=tags,
+        status=status,
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.get("/public/by-tags", response_model=DocumentListResponse)
+async def get_public_documents_by_multiple_tags(
+    *,
+    db: Session = Depends(get_db),
+    tags: List[str] = Query(..., description="Danh sách tags (VD: ?tags=python&tags=web&tags=tutorial)"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    sort_by: str = Query("created_at", description="Sắp xếp theo: created_at, title, view_count, download_count"),
+    sort_desc: bool = Query(True, description="Sắp xếp giảm dần")
+) -> Any:
+    """
+    Lấy danh sách tài liệu công khai theo nhiều tag (không cần đăng nhập).
+    """
+    filter_request = DocumentFilterRequest(
+        tags=tags,
+        status="approved",  # Chỉ lấy tài liệu đã được phê duyệt
+        page=page,
+        per_page=per_page,
+        order_by=sort_by,
+        order_desc=sort_desc
+    )
+    return await document.get_filtered_documents(db, filter_request=filter_request)
