@@ -33,4 +33,5 @@ class User(Base):
     shared_links = relationship("SharedLink", back_populates="user")
     forum_posts = relationship("ForumPost", back_populates="user")
     forum_replies = relationship("ForumReply", back_populates="user")
+    forum_post_likes = relationship("ForumPostLike", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
