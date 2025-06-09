@@ -19,7 +19,8 @@ from app.schemas.document import (
     DocumentCreate,
     DocumentUpdate,
     DocumentListResponse,
-    DocumentFilterRequest
+    DocumentFilterRequest,
+    DocumentStats
 )
 
 router = APIRouter()
@@ -133,6 +134,10 @@ async def get_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tài liệu không tồn tại"
         )
+    
+    # Kiểm tra user đã like chưa
+    doc.is_liked = await document.check_user_liked(db, document_id=id, user_id=current_user.user_id)
+    
     return doc
 
 @router.post("/", response_model=Document, status_code=status.HTTP_201_CREATED)
@@ -696,3 +701,56 @@ async def get_public_documents_by_multiple_tags(
         order_desc=sort_desc
     )
     return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.post("/{id}/like")
+async def like_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Like một tài liệu.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    result = await document.like_document(db, document_id=id, user_id=current_user.user_id)
+    return result
+
+@router.delete("/{id}/like")
+async def unlike_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Bỏ like một tài liệu.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    result = await document.unlike_document(db, document_id=id, user_id=current_user.user_id)
+    return result
+
+@router.get("/{id}/stats", response_model=DocumentStats)
+async def get_document_stats(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy thống kê của tài liệu (views, downloads, likes, comments).
+    """
+    stats = await document.get_document_stats(db, document_id=id, user_id=current_user.user_id)
+    return stats
