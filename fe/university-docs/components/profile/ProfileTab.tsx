@@ -25,7 +25,8 @@ export default function ProfileTab({ user, onUserUpdate }: ProfileTabProps) {
       firstName: nameParts[0] || "",
       lastName: nameParts.slice(1).join(" ") || "",
       email: user.email || "",
-      studentId: user.university_id?.toString() || ""
+      studentId: user.university_id?.toString() || "",
+      username: user.username || ""
     }
   })
 
@@ -99,14 +100,16 @@ export default function ProfileTab({ user, onUserUpdate }: ProfileTabProps) {
       const updatedUser = await updateUserProfile(user.user_id, {
         full_name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
-        university_id: formData.studentId
+        university_id: formData.studentId,
+        username: formData.username
       })
 
       const updatedUserData = {
         ...user,
         full_name: updatedUser.full_name,
         email: updatedUser.email,
-        university_id: updatedUser.university_id
+        university_id: updatedUser.university_id,
+        username: updatedUser.username
       }
       
       localStorage.setItem("user", JSON.stringify(updatedUserData))
@@ -184,6 +187,15 @@ export default function ProfileTab({ user, onUserUpdate }: ProfileTabProps) {
                 className="w-full"
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="username" className="text-sm font-medium">Tên đăng nhập</Label>
+            <Input 
+              id="username" 
+              value={formData.username}
+              onChange={handleInputChange}
+              className="w-full"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-medium">Email</Label>

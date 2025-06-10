@@ -98,7 +98,7 @@ export async function getForums(params?: {
     if (params?.page) searchParams.append('page', params.page.toString())
     if (params?.per_page) searchParams.append('per_page', params.per_page.toString())
 
-    const url = `${API_URL}/forums${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+    const url = `${API_URL}/forums/${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
     
     const response = await fetch(url, {
       headers: {

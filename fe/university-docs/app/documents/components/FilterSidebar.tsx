@@ -109,7 +109,7 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
       subject_id: undefined,
     }
     setAppliedFilters(resetFilters)
-    onFilter({})
+    onFilter(resetFilters)
   }
 
   const fileTypes = [

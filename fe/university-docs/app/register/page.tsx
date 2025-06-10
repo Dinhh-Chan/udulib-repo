@@ -10,10 +10,11 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Toaster } from "sonner"
-import { FcGoogle } from "react-icons/fc"
 import { AuthContainer } from "@/components/ui/auth-container"
 import { motion } from "framer-motion"
 import { handleGoogleLogin } from "@/lib/api/auth"
+import { FcGoogle } from "react-icons/fc"
+
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -32,6 +33,18 @@ export default function RegisterPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
+    
+    // Xử lý đặc biệt cho số điện thoại
+    if (name === 'phone_number') {
+      // Chỉ cho phép nhập số
+      const numericValue = value.replace(/[^0-9]/g, '')
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }))
+      return
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -70,6 +83,17 @@ export default function RegisterPage() {
       return
     }
 
+    // Kiểm tra số điện thoại
+    if (formData.phone_number.length < 10 || formData.phone_number.length > 11) {
+      toast.error("Số điện thoại phải có 10-11 số")
+      return
+    }
+
+    if (!formData.phone_number.startsWith('0')) {
+      toast.error("Số điện thoại phải bắt đầu bằng số 0")
+      return
+    }
+
     if (!formData.terms) {
       toast.error("Vui lòng đồng ý với điều khoản sử dụng")
       return
@@ -82,6 +106,12 @@ export default function RegisterPage() {
 
     if (!['student', 'lecturer', 'admin'].includes(formData.role)) {
       toast.error("Vai trò không hợp lệ")
+      return
+    }
+
+    // Kiểm tra university_id chỉ khi role là student hoặc lecturer
+    if (['student', 'lecturer'].includes(formData.role) && !formData.university_id) {
+      toast.error(`Vui lòng nhập ${formData.role === 'student' ? 'mã sinh viên' : 'mã giảng viên'}`)
       return
     }
 
@@ -139,22 +169,21 @@ export default function RegisterPage() {
     >
       <Toaster position="top-center" richColors />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="w-full flex items-center justify-center gap-2"
-            onClick={handleGoogleLogin}
+         <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            <FcGoogle size={20} />
-            Đăng ký bằng Google
-          </Button>
-        </motion.div>
-
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full flex items-center justify-center gap-2"
+              onClick={handleGoogleLogin}
+            >
+              <FcGoogle size={20} />
+              Đăng ký bằng Google
+            </Button>
+          </motion.div>
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
@@ -230,6 +259,7 @@ export default function RegisterPage() {
               type="tel"
               value={formData.phone_number}
               onChange={handleChange}
+              maxLength={11}
               required 
             />
           </motion.div>
@@ -303,8 +333,8 @@ export default function RegisterPage() {
               name="university_id"
               value={formData.university_id}
               onChange={handleChange}
-              required 
-              placeholder={formData.role === "student" ? "Nhập mã sinh viên" : formData.role === "lecturer" ? "Nhập mã giảng viên" : "Nhập mã"}
+              required={formData.role !== 'admin'}
+              placeholder={formData.role === "student" ? "Nhập mã sinh viên" : formData.role === "lecturer" ? "Nhập mã giảng viên" : "Nhập mã (không bắt buộc)"}
             />
           </motion.div>
         </div>

@@ -29,6 +29,16 @@ export interface Document {
   download_count: number;
   created_at?: string;
   updated_at?: string;
-  subject?: { major_id: number };
+  subject?: {
+    subject_id: number;
+    subject_name: string;
+    subject_code?: string;
+    major_id: number;
+  };
+  user?: {
+    user_id: number;
+    full_name: string;
+    username: string;
+  };
   tags?: { tag_id: number; tag_name: string; created_at?: string }[];
 } 

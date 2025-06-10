@@ -12,6 +12,7 @@ import { Major } from "@/types/major"
 import { DocumentThumbnail } from "@/components/ui/document-thumbnail"
 import { MajorImage } from "@/components/ui/major-image"
 import Loading from "./loading"
+import UploadModal from "@/components/upload-modal"
 
 export default function Home() {
   const { isAuthenticated } = useAuth()
@@ -19,6 +20,7 @@ export default function Home() {
   const [popularDepartments, setPopularDepartments] = useState<Major[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isPageReady, setIsPageReady] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,8 +108,8 @@ export default function Home() {
               </p>
             </CardContent>
             <CardFooter>
-              <Button variant="ghost" asChild className="w-full">
-                <Link href="/upload">Tải lên tài liệu</Link>
+              <Button variant="ghost" className="w-full" onClick={() => setShowUploadModal(true)}>
+                Tải lên tài liệu
               </Button>
             </CardFooter>
           </Card>
@@ -351,6 +353,11 @@ export default function Home() {
         </div>
         </section>
       )}
+
+      <UploadModal 
+        open={showUploadModal}
+        onOpenChange={setShowUploadModal}
+      />
     </div>
   )
 }

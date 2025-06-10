@@ -9,6 +9,7 @@ import React from "react"
 import Loading from "../../../../loading"
 import { Document, Subject, Major } from "@/types"
 import { fetchSubject, fetchMajor, fetchDocuments } from "@/lib/api/api"
+import { DocumentThumbnail } from "@/components/ui/document-thumbnail"
 
 export default function CoursePage({ params }: { params: Promise<{ slug: string; courseSlug: string }> }) {
   const { slug, courseSlug } = React.use(params);
@@ -71,7 +72,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
           <p className="text-muted-foreground max-w-3xl">{subject.description}</p>
         </div>
 
-        <div className="flex flex-col gap-4 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
           {documents.map((doc) => (
             <DocumentCard key={doc.document_id} document={doc} />
           ))}
@@ -83,63 +84,102 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
 
 function DocumentCard({ document }: { document: Document }) {
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0) return '0 B'
     const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return ''
-    return new Date(dateString).toLocaleDateString('vi-VN')
+    const size = bytes / Math.pow(k, i)
+    return `${size.toFixed(1)} ${sizes[i]}`
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">{document.title}</CardTitle>
-            <CardDescription>{document.description}</CardDescription>
+    <Link href={`/documents/${document.document_id}`}>
+      <Card className="group relative overflow-hidden border-0 bg-white dark:bg-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer h-80">
+        {/* Thumbnail Section */}
+        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+          <DocumentThumbnail
+            documentId={document.document_id}
+            title={document.title}
+            fileType={document.file_type}
+            size="large"
+            className="w-full h-full !w-full !h-full"
+          />
+          
+          {/* Gradient overlay on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          
+          {/* Badges ở góc trên */}
+          <div className="absolute top-3 right-3 flex flex-col gap-1">
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/90 text-white backdrop-blur-sm">
+              {document.file_type?.split('/')[1]?.toUpperCase() || document.file_type?.toUpperCase() || 'UNKNOWN'}
+            </span>
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/90 text-white backdrop-blur-sm">
+              {formatFileSize(document.file_size)}
+            </span>
           </div>
-          <div className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium">
-            {document.file_type}
+          
+          {/* Subject badge ở góc trái */}
+          <div className="absolute top-3 left-3">
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-800 dark:bg-gray-900/90 dark:text-white backdrop-blur-sm">
+              {document.subject?.subject_name?.slice(0, 15)}...
+            </span>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="pb-2">
-        <div className="flex flex-wrap gap-4 text-sm">
-          <div className="flex items-center gap-1">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{formatFileSize(document.file_size)}</span>
+        
+        {/* Content Section */}
+        <div className="p-4 h-40 flex flex-col">
+          {/* Title */}
+          <h3 className="font-bold text-base leading-tight line-clamp-2 group-hover:text-primary transition-colors duration-200 mb-2">
+            {document.title}
+          </h3>
+          
+          {/* Description */}
+          <div className="flex-1 mb-2">
+            <p className="text-sm text-muted-foreground line-clamp-3 overflow-hidden" 
+               style={{
+                 display: '-webkit-box',
+                 WebkitLineClamp: 3,
+                 WebkitBoxOrient: 'vertical',
+                 textOverflow: 'ellipsis'
+               }}>
+              {document.description}
+            </p>
           </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{formatDate(document.created_at)}</span>
+          
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1 mb-2 min-h-[20px]">
+            {document.tags?.slice(0, 2).map((tag) => (
+              <span
+                key={tag.tag_id}
+                className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-full font-medium"
+              >
+                {tag.tag_name}
+              </span>
+            ))}
+            {document.tags && document.tags.length > 2 && (
+              <span className="text-xs text-muted-foreground self-center">+{document.tags.length - 2}</span>
+            )}
           </div>
-          <div className="flex items-center gap-1">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{document.view_count} lượt xem</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Download className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{document.download_count} lượt tải</span>
+          
+          {/* Stats footer */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-auto">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                <span>{document.view_count}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Download className="h-3 w-3" />
+                <span>{document.download_count}</span>
+              </div>
+            </div>
+            
+            <div className="text-xs text-muted-foreground/70 truncate max-w-[100px]">
+              {document.user?.full_name}
+            </div>
           </div>
         </div>
-      </CardContent>
-      <CardFooter className="flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1" asChild>
-          <Link href={`/documents/${document.document_id}`}>
-            <Eye className="h-4 w-4 mr-2" />
-            Xem trước
-          </Link>
-        </Button>
-        <Button size="sm" className="flex-1">
-          <Download className="h-4 w-4 mr-2" />
-          Tải xuống
-        </Button>
-      </CardFooter>
-    </Card>
+      </Card>
+    </Link>
   )
 }

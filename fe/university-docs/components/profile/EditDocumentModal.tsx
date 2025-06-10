@@ -216,51 +216,8 @@ export default function EditDocumentModal({ documentId, isOpen, onClose, onSucce
                   />
                 </div>
                 
-                <div>
-                  <Label htmlFor="subject">Môn học</Label>
-                  <select
-                    id="subject"
-                    value={subjectId}
-                    onChange={(e) => setSubjectId(Number(e.target.value))}
-                    disabled={document.status === "approved"}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value={0}>Chọn môn học</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.subject_id} value={subject.subject_id}>
-                        {subject.subject_name} ({subject.subject_code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="tags">Tags (phân cách bởi dấu phẩy)</Label>
-                  <Input
-                    id="tags"
-                    value={tags.join(", ")}
-                    onChange={(e) => handleTagsChange(e.target.value)}
-                    disabled={document.status === "approved"}
-                    placeholder="tag1, tag2, tag3"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="file">File mới (tùy chọn)</Label>
-                  <Input
-                    id="file"
-                    type="file"
-                    onChange={handleFileChange}
-                    disabled={document.status === "approved"}
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Bỏ trống nếu không muốn thay đổi file
-                  </p>
-                </div>
-                
                 {/* Current file info */}
-                <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="p-3 rounded-lg bg-background border">
                   <h4 className="font-medium mb-2">File hiện tại:</h4>
                   <div className="text-sm space-y-1">
                     <p><strong>Tên:</strong> {document.title}</p>

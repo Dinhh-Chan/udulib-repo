@@ -145,18 +145,22 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
     }
   }
 
+  const resetForm = () => {
+    setFile(null)
+    setFormData({
+      title: "",
+      description: "",
+      subject_id: "",
+      type: ""
+    })
+  }
+
   const handleClose = () => {
     onOpenChange(false)
     // Reset sau một chút để tránh hiệu ứng visual khi đóng
     setTimeout(() => {
       setUploadSuccess(false)
-      setFile(null)
-      setFormData({
-        title: "",
-        description: "",
-        subject_id: "",
-        type: ""
-      })
+      resetForm()
     }, 300)
   }
 
@@ -206,7 +210,10 @@ export default function UploadModal({ open, onOpenChange }: UploadModalProps) {
               <Button variant="outline" onClick={handleClose}>
                 Đóng
               </Button>
-              <Button onClick={() => setUploadSuccess(false)}>
+              <Button onClick={() => {
+                setUploadSuccess(false)
+                resetForm()
+              }}>
                 Tải lên tài liệu khác
               </Button>
             </div>

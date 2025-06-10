@@ -26,6 +26,7 @@ export const updateUserProfile = async (userId: number, userData: {
   full_name: string;
   email: string;
   university_id: string;
+  username: string;
 }) => {
   const token = getAuthToken()
   

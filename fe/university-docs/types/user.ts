@@ -63,6 +63,7 @@ export interface User {
     full_name?: string
     email?: string
     university_id?: string
+    username?: string
   }
   
   // Enum types for better type safety
