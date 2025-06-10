@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -7,11 +7,17 @@ from app.models.base import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.user import UserCreate
 from pydantic import BaseModel
+from fastapi.responses import RedirectResponse
+from httpx import AsyncClient
+from sqlalchemy import select
 
 from app.services.crud.user_crud import user_crud
 from app.core.config import settings
-from app.schemas.common import LoginResponse
-from app.schemas.auth import RegisterRequest 
+from app.schemas.common import LoginResponse, UserRole, UserStatus
+from app.schemas.auth import RegisterRequest
+from app.core.security import create_access_token
+from app.models.user import User
+from app.schemas.token import Token
 
 class LoginRequest(BaseModel):
     username: str
@@ -33,6 +39,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
         algorithm=settings.ALGORITHM  # Using ALGORITHM from .env
     )
     return encoded_jwt
+
 router = APIRouter()
 
 @router.post("/login", response_model=LoginResponse)
@@ -84,6 +91,7 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             "status": user.status
         }
     }
+
 @router.post("/register")
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing_user = await user_crud.get_by_email(db=db, email=request.email)
@@ -133,3 +141,90 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}"
         )
+
+@router.get("/google/login")
+async def google_login():
+    """
+    Redirect to Google OAuth login page
+    """
+    google_auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={settings.GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
+        f"&response_type=code"
+        f"&scope={' '.join(settings.GOOGLE_SCOPES)}"
+        f"&access_type=offline"
+        f"&prompt=consent"
+    )
+    return RedirectResponse(google_auth_url)
+
+@router.get("/google/callback")
+async def google_callback(
+    request: Request,
+    code: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Handle Google OAuth callback
+    """
+    # Exchange code for tokens
+    async with AsyncClient() as client:
+        token_response = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            }
+        )
+        
+        if token_response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Could not validate Google credentials")
+        
+        tokens = token_response.json()
+        
+        # Get user info from Google
+        user_response = await client.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"}
+        )
+        
+        if user_response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Could not get user info from Google")
+        
+        user_info = user_response.json()
+        
+        # Check if user exists
+        stmt = select(User).where(User.email == user_info["email"])
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            # Create new user
+            user = User(
+                email=user_info["email"],
+                username=user_info["email"].split("@")[0],
+                full_name=user_info.get("name", ""),
+                status=UserStatus.active,
+                role=UserRole.student,
+                google_id=user_info.get("id"),
+                avatar_url=user_info.get("picture")
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": user.email})
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "email": user.email,
+                "username": user.username,
+                "full_name": user.full_name
+            }
+        }
