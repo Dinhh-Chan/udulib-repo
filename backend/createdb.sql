@@ -171,7 +171,9 @@ CREATE TABLE shared_links (
 CREATE TABLE forums (
     forum_id SERIAL PRIMARY KEY,
     subject_id INTEGER NOT NULL UNIQUE REFERENCES subjects(subject_id),
+    parent_id INTEGER REFERENCES forums(forum_id) ON DELETE CASCADE,
     description TEXT,
+    is_private BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -241,6 +243,8 @@ CREATE INDEX idx_forum_posts_like_count ON forum_posts(like_count);
 CREATE INDEX idx_forum_replies_post_id ON forum_replies(post_id);
 CREATE INDEX idx_forum_post_likes_post_id ON forum_post_likes(post_id);
 CREATE INDEX idx_forum_post_likes_user_id ON forum_post_likes(user_id);
+CREATE INDEX idx_forums_parent_id ON forums(parent_id);
+CREATE INDEX idx_forums_is_private ON forums(is_private);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_shared_links_document_id ON shared_links(document_id);
 
@@ -401,7 +405,7 @@ COMMENT ON TABLE users IS 'Stores user information including students, lecturers
 COMMENT ON TABLE documents IS 'Stores document metadata and file information with like tracking';
 COMMENT ON TABLE document_likes IS 'Tracks individual likes for documents - prevents duplicate likes';
 COMMENT ON TABLE subjects IS 'Stores subject/course information linked to majors and academic years';
-COMMENT ON TABLE forums IS 'One-to-one relationship with subjects for forum functionality';
+COMMENT ON TABLE forums IS 'Forums for subjects with support for subforums (parent_id) and private forums';
 COMMENT ON TABLE forum_posts IS 'Forum posts with like and view tracking';
 COMMENT ON TABLE forum_post_likes IS 'Tracks individual likes for forum posts - prevents duplicate likes';
 COMMENT ON TABLE ratings IS 'Stores user ratings for documents (0-5 scale, 0 means like without rating)';
@@ -412,6 +416,8 @@ COMMENT ON TABLE system_config IS 'Stores system configuration key-value pairs';
 COMMENT ON COLUMN documents.like_count IS 'Cached count of likes for performance';
 COMMENT ON COLUMN forum_posts.views IS 'Number of times this post has been viewed';
 COMMENT ON COLUMN forum_posts.like_count IS 'Cached count of likes for performance';
+COMMENT ON COLUMN forums.parent_id IS 'References another forum to create subforum hierarchy';
+COMMENT ON COLUMN forums.is_private IS 'Whether this forum is private (requires permission to access)';
 
 -- Add some useful views
 CREATE VIEW active_documents AS
