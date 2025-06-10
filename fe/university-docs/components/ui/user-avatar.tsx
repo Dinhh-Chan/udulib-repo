@@ -44,7 +44,14 @@ export function UserAvatar({
       {avatarUrl && !isLoading && (
         <AvatarImage 
           src={avatarUrl} 
-          alt={username || fullName || "User avatar"} 
+          alt={username || fullName || "User avatar"}
+          className="object-cover"
+          style={{ 
+            objectFit: "cover",
+            width: "100%",
+            height: "100%",
+            display: "block"
+          }}
         />
       )}
       <AvatarFallback className={cn(

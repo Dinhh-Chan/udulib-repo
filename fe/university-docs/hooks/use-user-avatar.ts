@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { getUserAvatarById } from "@/lib/api/user"
+import { getUserAvatarById, getUserAvatar } from "@/lib/api/user"
+import { useAuth } from "@/contexts/auth-context"
 
 interface UseUserAvatarReturn {
   avatarUrl: string | null
@@ -12,6 +13,7 @@ export const useUserAvatar = (userId?: number): UseUserAvatarReturn => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   const fetchAvatar = useCallback(async () => {
     if (!userId) {
@@ -23,7 +25,10 @@ export const useUserAvatar = (userId?: number): UseUserAvatarReturn => {
     setError(null)
 
     try {
-      const url = await getUserAvatarById(userId)
+      // Nếu là user hiện tại thì gọi API /users/avatar
+      const url = userId === user?.user_id 
+        ? await getUserAvatar()
+        : await getUserAvatarById(userId)
       setAvatarUrl(url)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể lấy avatar")
@@ -31,7 +36,7 @@ export const useUserAvatar = (userId?: number): UseUserAvatarReturn => {
     } finally {
       setIsLoading(false)
     }
-  }, [userId])
+  }, [userId, user?.user_id])
 
   useEffect(() => {
     fetchAvatar()

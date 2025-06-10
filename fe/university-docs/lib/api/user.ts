@@ -59,12 +59,29 @@ export const getUserAvatar = async (): Promise<string | null> => {
 
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/avatar`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Authorization": `Bearer ${token}`,
+        "Accept": "image/jpeg,image/png,image/gif,image/webp,image/*",
       }
     })
 
     if (!response.ok) {
+      return null
+    }
+
+    // Kiểm tra content type
+    const contentType = response.headers.get("content-type")
+    const validImageTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml"
+    ]
+
+    if (!contentType || !validImageTypes.some(type => contentType.includes(type))) {
+      console.error("Invalid content type:", contentType)
       return null
     }
 
@@ -86,7 +103,9 @@ export const getUserAvatarById = async (userId: number): Promise<string | null> 
 
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/avatar`, {
+      method: "GET",
       headers: {
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       }
     })
@@ -111,6 +130,21 @@ export const uploadAvatar = async (file: File): Promise<User> => {
     throw new Error("Không tìm thấy token xác thực")
   }
 
+  try {
+    const deleteResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/avatar`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!deleteResponse.ok) {
+      console.log("User chưa có avatar")
+    }
+  } catch (error) {
+    console.log("User chưa có avatar")
+  }
+
+  // Upload avatar mới
   const formData = new FormData()
   formData.append("file", file)
 
@@ -123,8 +157,9 @@ export const uploadAvatar = async (file: File): Promise<User> => {
   })
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || "Không thể upload avatar")
+    const errorData = await response.json()
+    const errorMessage = typeof errorData === 'object' ? JSON.stringify(errorData) : errorData
+    throw new Error(`Không thể upload avatar: ${errorMessage}`)
   }
 
   return response.json()

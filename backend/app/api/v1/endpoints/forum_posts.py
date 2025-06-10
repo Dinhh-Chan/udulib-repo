@@ -119,7 +119,7 @@ async def create_forum_post(
     Tạo forum post mới.
     """
     crud = ForumPostCRUD(db)
-    post = await crud.create(obj_in=post_in, user_id=1)
+    post = await crud.create(obj_in=post_in, user_id=current_user.user_id)
     return post
 
 @router.put("/{post_id}", response_model=ForumPost)

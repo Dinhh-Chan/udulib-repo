@@ -11,12 +11,14 @@ import { getMajors } from "@/lib/api/major"
 import { Major } from "@/types/major"
 import { DocumentThumbnail } from "@/components/ui/document-thumbnail"
 import { MajorImage } from "@/components/ui/major-image"
+import Loading from "./loading"
 
 export default function Home() {
   const { isAuthenticated } = useAuth()
   const [recentDocuments, setRecentDocuments] = useState<Document[]>([])
   const [popularDepartments, setPopularDepartments] = useState<Major[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isPageReady, setIsPageReady] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,25 +33,34 @@ export default function Home() {
         console.error("Error fetching data:", error)
       } finally {
         setIsLoading(false)
+        setTimeout(() => {
+          setIsPageReady(true)
+        }, 100)
       }
     }
 
     fetchData()
   }, [])
 
+  if (!isPageReady) {
+    return (
+      <Loading />
+    )
+  }
+
   return (
-    <div className="flex flex-col gap-12 pb-8">
+    <div className="flex flex-col gap-8 pb-8 opacity-0 animate-fade-in">
       {/* Hero Section */}
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-background">
+      <section className="w-full py-8 md:py-16 lg:py-20 bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-background">
         <div className="container px-4 md:px-6 flex flex-col items-center text-center space-y-4">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tighter animate-slide-up">
             Hệ Thống Quản Lý Tài Liệu Học Tập
           </h1>
-          <p className="max-w-[700px] text-muted-foreground md:text-xl">
+          <p className="max-w-[700px] text-muted-foreground md:text-xl animate-slide-up delay-100">
             Truy cập, chia sẻ và quản lý tài liệu học tập cho tất cả các ngành học một cách dễ dàng
           </p>
           {!isAuthenticated && (
-            <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <div className="flex flex-col sm:flex-row gap-4 mt-4 animate-slide-up delay-200">
               <Button size="lg" asChild>
                 <Link href="/departments">Khám phá tài liệu</Link>
               </Button>
@@ -62,9 +73,9 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="container px-4 md:px-6 py-8">
+      <section className="container px-4 md:px-6 py-6 animate-fade-in delay-200">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
+          <Card className="animate-slide-up delay-300">
             <CardHeader className="space-y-1">
               <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center mb-2">
                 <BookOpen className="h-6 w-6 text-primary" />
@@ -82,7 +93,7 @@ export default function Home() {
               </Button>
             </CardFooter>
           </Card>
-          <Card>
+          <Card className="animate-slide-up delay-400">
             <CardHeader className="space-y-1">
               <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center mb-2">
                 <Upload className="h-6 w-6 text-primary" />
@@ -100,7 +111,7 @@ export default function Home() {
               </Button>
             </CardFooter>
           </Card>
-          <Card>
+          <Card className="animate-slide-up delay-500">
             <CardHeader className="space-y-1">
               <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center mb-2">
                 <Search className="h-6 w-6 text-primary" />
@@ -118,7 +129,7 @@ export default function Home() {
               </Button>
             </CardFooter>
           </Card>
-          <Card>
+          <Card className="animate-slide-up delay-600">
             <CardHeader className="space-y-1">
               <div className="bg-primary/10 w-12 h-12 rounded-lg flex items-center justify-center mb-2">
                 <Users className="h-6 w-6 text-primary" />
@@ -140,7 +151,7 @@ export default function Home() {
       </section>
 
       {/* Recent Documents Section */}
-      <section className="container px-4 md:px-6 py-8">
+      <section className="container px-4 md:px-6 py-6 animate-fade-in delay-300">
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Tài liệu mới nhất</h2>
@@ -268,7 +279,7 @@ export default function Home() {
       </section>
 
       {/* Departments Section */}
-      <section className="container px-4 md:px-6 py-8">
+      <section className="container px-4 md:px-6 py-6 animate-fade-in delay-400">
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Ngành học phổ biến</h2>
@@ -322,7 +333,7 @@ export default function Home() {
       </section>
 
     {!isAuthenticated && (
-      <section className="w-full py-12 md:py-24 bg-primary/5">
+      <section className="w-full py-8 md:py-16 bg-primary/5 animate-fade-in delay-500">
         <div className="container px-4 md:px-6 flex flex-col items-center text-center space-y-4">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tighter">Bắt đầu chia sẻ tài liệu ngay hôm nay</h2>
           <p className="max-w-[600px] text-muted-foreground">
