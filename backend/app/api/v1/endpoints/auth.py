@@ -218,7 +218,7 @@ async def google_callback(
             await db.refresh(user)
         
         # Create access token
-        access_token = create_access_token(data={"sub": user.email})
+        access_token = create_access_token(data={"sub": str(user.user_id)})
         
         # Redirect về frontend kèm token
         params = urlencode({
