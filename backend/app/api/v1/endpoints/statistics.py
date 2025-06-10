@@ -53,7 +53,7 @@ async def get_documents_by_subject(
 @router.get("/documents/by-major")
 async def get_documents_by_major(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     """
     Thống kê số lượng tài liệu theo ngành học
