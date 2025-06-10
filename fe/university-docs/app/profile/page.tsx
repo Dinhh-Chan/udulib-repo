@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { getUserProfile, getUserAvatar } from "@/lib/api/user"
 import { User as UserType } from "@/types/user"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
 import Loading from "@/app/loading"
 import { getDocumentDetail, updateDocument, deleteDocument, DocumentUpdateData } from "@/lib/api/documents"
@@ -211,7 +211,7 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
           <p className="text-muted-foreground">Vui lòng đăng nhập để truy cập trang này</p>
           <Button asChild>
-            <Link href="/auth/login">Đăng nhập</Link>
+            <Link href="/login">Đăng nhập</Link>
           </Button>
         </div>
       </div>

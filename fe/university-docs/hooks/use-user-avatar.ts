@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { getUserAvatarById, getUserAvatar } from "@/lib/api/user"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth } from "@/contexts/auth-context"
 
 interface UseUserAvatarReturn {
   avatarUrl: string | null

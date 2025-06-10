@@ -87,34 +87,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
 
     // Nếu file không hỗ trợ preview
-    if (!previewSupport?.is_supported) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-          <FileText className="h-16 w-16 mb-4" />
-          <p>Không thể xem trước tài liệu này</p>
-          <p className="text-sm">Vui lòng tải xuống để xem</p>
-          {isAuthenticated ? (
-            <Button 
-              onClick={handleDownloadClick} 
-              className="mt-4"
-              disabled={downloadLoading}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {downloadLoading ? "Đang tải..." : "Tải xuống"}
-            </Button>
-          ) : (
-            <Button 
-              onClick={() => setShowLoginPrompt(true)} 
-              className="mt-4"
-            >
-              <Lock className="h-4 w-4 mr-2" />
-              Đăng nhập để tải xuống
-            </Button>
-          )}
-        </div>
-      );
-    }
-
     if (!previewUrl || previewError) {
       const retryPreview = async () => {
         try {
@@ -170,10 +142,10 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 Đăng nhập để xem toàn bộ nội dung và tải xuống tài liệu
               </p>
               <div className="flex gap-2">
-                <Button onClick={() => router.push('/auth/login')} className="flex-1">
+                <Button onClick={() => router.push('/login')} className="flex-1">
                   Đăng nhập
                 </Button>
-                <Button variant="outline" onClick={() => router.push('/auth/register')} className="flex-1">
+                <Button variant="outline" onClick={() => router.push('/register')} className="flex-1">
                   Đăng ký
                 </Button>
               </div>
@@ -755,10 +727,10 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
             <Button onClick={() => setShowLoginPrompt(false)} variant="outline">
               Hủy
             </Button>
-            <Button onClick={() => router.push('/auth/login')}>
+            <Button onClick={() => router.push('/login')}>
               Đăng nhập
             </Button>
-            <Button onClick={() => router.push('/auth/register')} variant="outline">
+            <Button onClick={() => router.push('/register')} variant="outline">
               Đăng ký
             </Button>
           </DialogFooter>

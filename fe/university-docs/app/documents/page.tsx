@@ -195,7 +195,7 @@ export default function DocumentsPage() {
                           {/* Subject badge ở góc trái */}
                           <div className="absolute top-3 left-3">
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-800 dark:bg-gray-900/90 dark:text-white backdrop-blur-sm">
-                              {doc.subject.subject_name}
+                              {doc.subject.subject_name.slice(0, 15)}...
                             </span>
                           </div>
                         </div>

@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -12,6 +11,8 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Toaster } from "sonner"
 import { FcGoogle } from "react-icons/fc"
+import { AuthContainer } from "@/components/ui/auth-container"
+import { motion } from "framer-motion"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -55,7 +56,7 @@ export default function RegisterPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
     if (formData.password !== formData.confirmPassword) {
@@ -107,7 +108,6 @@ export default function RegisterPage() {
         if (response.status === 400 && data.detail === "Email already registered") {
           toast.error("Email đã được đăng ký")
         } else if (response.status === 422) {
-          // Xử lý lỗi validation
           const errorMessage = data.detail?.[0]?.msg || "Dữ liệu không hợp lệ"
           toast.error(errorMessage)
         } else {
@@ -122,7 +122,6 @@ export default function RegisterPage() {
         position: "top-center"
       })
 
-      // Thêm độ trễ 2 giây trước khi chuyển trang
       setTimeout(() => {
         router.push('/login')
       }, 2000)
@@ -133,169 +132,237 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="container flex items-center justify-center min-h-[calc(100vh-16rem)] py-8 px-4 md:px-6">
+    <AuthContainer
+      title="Đăng ký tài khoản"
+      subtitle="Tạo tài khoản để tải lên và quản lý tài liệu học tập"
+    >
       <Toaster position="top-center" richColors />
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Đăng ký tài khoản</CardTitle>
-          <CardDescription>Tạo tài khoản để tải lên và quản lý tài liệu học tập</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full flex items-center justify-center gap-2"
-              onClick={() => {
-                // TODO: Implement Google login
-                toast.info("Tính năng đang được phát triển")
-              }}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full flex items-center justify-center gap-2"
+            onClick={() => {
+              toast.info("Tính năng đang được phát triển")
+            }}
+          >
+            <FcGoogle size={20} />
+            Đăng ký bằng Google
+          </Button>
+        </motion.div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Hoặc đăng ký với
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Label htmlFor="username">Tên đăng nhập</Label>
+            <Input 
+              id="username" 
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required 
+            />
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Label htmlFor="full_name">Họ và tên</Label>
+            <Input 
+              id="full_name" 
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              required 
+            />
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              name="email"
+              type="email" 
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="name@example.com" 
+              required 
+            />
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Label htmlFor="phone_number">Số điện thoại</Label>
+            <Input 
+              id="phone_number" 
+              name="phone_number"
+              type="tel"
+              value={formData.phone_number}
+              onChange={handleChange}
+              required 
+            />
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <Label htmlFor="password">Mật khẩu</Label>
+            <Input 
+              id="password" 
+              name="password"
+              type="password" 
+              value={formData.password}
+              onChange={handleChange}
+              required 
+            />
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+          >
+            <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+            <Input 
+              id="confirmPassword" 
+              name="confirmPassword"
+              type="password" 
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required 
+            />
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9 }}
+          >
+            <Label htmlFor="role">Vai trò</Label>
+            <Select 
+              required
+              value={formData.role}
+              onValueChange={handleSelectChange}
             >
-              <FcGoogle size={20} />
-              Đăng ký bằng Google
-            </Button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Hoặc đăng ký với
-                </span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="username">Tên đăng nhập</Label>
-              <Input 
-                id="username" 
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Họ và tên</Label>
-              <Input 
-                id="full_name" 
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                name="email"
-                type="email" 
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="name@example.com" 
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone_number">Số điện thoại</Label>
-              <Input 
-                id="phone_number" 
-                name="phone_number"
-                type="tel"
-                value={formData.phone_number}
-                onChange={handleChange}
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
-              <Input 
-                id="password" 
-                name="password"
-                type="password" 
-                value={formData.password}
-                onChange={handleChange}
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
-              <Input 
-                id="confirmPassword" 
-                name="confirmPassword"
-                type="password" 
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Vai trò</Label>
-              <Select 
-                required
-                value={formData.role}
-                onValueChange={handleSelectChange}
-              >
-                <SelectTrigger id="role">
-                  <SelectValue placeholder="Chọn vai trò của bạn" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Sinh viên</SelectItem>
-                  <SelectItem value="lecturer">Giảng viên</SelectItem>
-                  <SelectItem value="admin">Khác</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="university_id">{getUniversityIdLabel()}</Label>
-              <Input 
-                id="university_id" 
-                name="university_id"
-                value={formData.university_id}
-                onChange={handleChange}
-                required 
-                placeholder={formData.role === "student" ? "Nhập mã sinh viên" : formData.role === "lecturer" ? "Nhập mã giảng viên" : "Nhập mã"}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="terms" 
-                name="terms"
-                checked={formData.terms}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, terms: checked as boolean }))
-                }
-                required 
-              />
-              <Label htmlFor="terms" className="text-sm font-normal">
-                Tôi đồng ý với{" "}
-                <Link href="/terms" className="text-primary hover:underline">
-                  điều khoản sử dụng
-                </Link>{" "}
-                và{" "}
-                <Link href="/privacy" className="text-primary hover:underline">
-                  chính sách bảo mật
-                </Link>
-              </Label>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Đang xử lý..." : "Đăng ký"}
-            </Button>
-            <div className="text-center text-sm">
-              Đã có tài khoản?{" "}
-              <Link href="/login" className="text-primary hover:underline">
-                Đăng nhập
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+              <SelectTrigger id="role">
+                <SelectValue placeholder="Chọn vai trò của bạn" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="student">Sinh viên</SelectItem>
+                <SelectItem value="lecturer">Giảng viên</SelectItem>
+                <SelectItem value="admin">Khác</SelectItem>
+              </SelectContent>
+            </Select>
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1 }}
+          >
+            <Label htmlFor="university_id">{getUniversityIdLabel()}</Label>
+            <Input 
+              id="university_id" 
+              name="university_id"
+              value={formData.university_id}
+              onChange={handleChange}
+              required 
+              placeholder={formData.role === "student" ? "Nhập mã sinh viên" : formData.role === "lecturer" ? "Nhập mã giảng viên" : "Nhập mã"}
+            />
+          </motion.div>
+        </div>
+
+        <motion.div 
+          className="flex items-center space-x-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.1 }}
+        >
+          <Checkbox 
+            id="terms" 
+            name="terms"
+            checked={formData.terms}
+            onCheckedChange={(checked) => 
+              setFormData(prev => ({ ...prev, terms: checked as boolean }))
+            }
+            required 
+          />
+          <Label htmlFor="terms" className="text-sm font-normal">
+            Tôi đồng ý với{" "}
+            <Link href="/terms" className="text-primary hover:underline">
+              điều khoản sử dụng
+            </Link>{" "}
+            và{" "}
+            <Link href="/privacy" className="text-primary hover:underline">
+              chính sách bảo mật
+            </Link>
+          </Label>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+        >
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Đang xử lý..." : "Đăng ký"}
+          </Button>
+        </motion.div>
+
+        <motion.div 
+          className="text-center text-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.3 }}
+        >
+          Đã có tài khoản?{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            Đăng nhập
+          </Link>
+        </motion.div>
+      </form>
+    </AuthContainer>
   )
 }
