@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   Home,
   Bell,
-  Tag
+  Tag,
+  Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
@@ -47,6 +48,13 @@ const routes = [
     href: "/admin/majors",
     color: "text-orange-700",
     bgColor: "bg-orange-700/10"
+  },
+  {
+    label: "Năm học",
+    icon: Calendar,
+    href: "/admin/years",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-600/10"
   },
   {
     label: "Diễn đàn",
@@ -83,7 +91,7 @@ const routes = [
     role: ["admin"],
     color: "text-gray-700",
     bgColor: "bg-gray-700/10"
-  },
+  }
 ]
 
 export function AdminSidebar() {
