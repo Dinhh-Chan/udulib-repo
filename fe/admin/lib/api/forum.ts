@@ -178,9 +178,10 @@ export async function getEnhancedForumPost(id: number): Promise<ForumPost> {
       return {
         ...post,
         user: {
-          ...post.user,
-          username: user.username || 'Người dùng',
-          full_name: user.full_name || post.user?.full_name || 'Người dùng'
+          user_id: post.user_id,
+          full_name: user.full_name || post.user?.full_name || 'Người dùng',
+          email: user.email || post.user?.email || '',
+          username: user.username || 'Người dùng'
         }
       };
     } catch (error) {
@@ -189,6 +190,50 @@ export async function getEnhancedForumPost(id: number): Promise<ForumPost> {
     }
   } catch (error) {
     console.error(`Error fetching enhanced forum post ${id}:`, error);
+    throw error;
+  }
+}
+
+// Hàm lấy danh sách bài viết diễn đàn kèm thông tin chi tiết của người dùng
+export async function getEnhancedForumPosts(params?: GetForumPostsParams): Promise<ForumPost[]> {
+  try {
+    console.log(`Gọi API lấy danh sách bài viết diễn đàn với thông tin người dùng`);
+    
+    // Lấy danh sách bài viết
+    const posts = await getForumPosts(params);
+    
+    // Lấy thông tin chi tiết người dùng và gán vào từng bài viết
+    const enhancedPosts = await Promise.all(
+      posts.map(async (post) => {
+        // Nếu không có thông tin user_id hoặc đã có username, trả về luôn
+        if (!post.user_id || (post.user && post.user.username)) {
+          return post;
+        }
+        
+        // Lấy thông tin chi tiết người dùng
+        try {
+          const user = await apiClient.get<any>(`/users/${post.user_id}`);
+          
+          // Cập nhật thông tin người dùng vào bài viết
+          return {
+            ...post,
+            user: {
+              user_id: post.user_id,
+              full_name: user.full_name || post.user?.full_name || 'Người dùng',
+              email: user.email || post.user?.email || '',
+              username: user.username || 'Người dùng'
+            }
+          };
+        } catch (error) {
+          console.error(`Không thể lấy thông tin người dùng cho bài viết ${post.post_id}:`, error);
+          return post;
+        }
+      })
+    );
+    
+    return enhancedPosts;
+  } catch (error) {
+    console.error(`Error fetching enhanced forum posts:`, error);
     throw error;
   }
 }

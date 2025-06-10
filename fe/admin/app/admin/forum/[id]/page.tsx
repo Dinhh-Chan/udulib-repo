@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Search, Filter, ArrowLeft } from "lucide-react"
-import { getForumById, getForumPosts, deleteForumPost, type Forum, type ForumPost } from "@/lib/api/forum"
+import { getForumById, getEnhancedForumPosts, deleteForumPost, type Forum, type ForumPost } from "@/lib/api/forum"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { AddPostDialog } from "@/components/admin/add-post-dialog"
@@ -37,7 +37,7 @@ function ForumPostsTable({ posts, isLoading, onDelete, onView }: ForumPostsTable
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">
-              Đăng bởi: {post.user?.full_name} • {new Date(post.created_at).toLocaleDateString()}
+              Đăng bởi: {post.user?.username || post.user?.full_name || `Người dùng #${post.user_id}`} • {new Date(post.created_at).toLocaleDateString()}
             </div>
           </CardHeader>
           <CardContent>
@@ -80,7 +80,7 @@ export default function ForumDetailPage() {
   const fetchPosts = async () => {
     try {
       setIsLoading(true)
-      const data = await getForumPosts({
+      const data = await getEnhancedForumPosts({
         forum_id: forumId,
         status: status === "all" ? undefined : status
       })
