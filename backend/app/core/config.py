@@ -1,10 +1,12 @@
 # app/core/config.py
 import secrets
 from typing import Any, Dict, List, Optional, Union
-
+import os
 from pydantic import AnyHttpUrl, PostgresDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class Settings(BaseSettings):
     """
@@ -108,6 +110,16 @@ class Settings(BaseSettings):
     MINIO_DOCUMENT_BUCKET: str = "documents"
     MINIO_AVATAR_BUCKET: str = "avatar"
     MINIO_MAJOR_IMAGE_BUCKET: str = "major-images"
+    
+    # Google OAuth2 Configuration
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "")
+    GOOGLE_SCOPES: List[str] = [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "openid"
+    ]
 
     model_config = {
         "case_sensitive": True,

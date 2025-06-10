@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="UDULib API",
+    description="API cho hệ thống quản lý tài liệu học tập",
+    version="1.0.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
@@ -23,13 +25,14 @@ app = FastAPI(
 
 
 # Set up CORS
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
+app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["*"],  # Cho phép tất cả các origin trong development
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 
@@ -57,7 +60,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 # Add router
-app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/")
