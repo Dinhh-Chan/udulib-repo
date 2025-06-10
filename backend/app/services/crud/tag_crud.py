@@ -36,6 +36,43 @@ class TagCRUD(CRUDBase[Tag, TagCreate, TagUpdate]):
         result = await db.execute(stmt)
         return result.scalars().all()
     
+    async def get_all_with_document_count(
+        self, db: AsyncSession, *, skip: int = 0, limit: int = 100
+    ) -> List[Tag]:
+        """
+        Lấy danh sách tất cả tags kèm theo số lượng tài liệu.
+        """
+        # Sử dụng subquery để đếm số lượng tài liệu cho mỗi tag
+        subquery = (
+            select(
+                DocumentTag.tag_id,
+                func.count(DocumentTag.document_id).label("document_count")
+            )
+            .group_by(DocumentTag.tag_id)
+            .subquery()
+        )
+        
+        # Join với bảng tag để lấy thông tin tag và số lượng tài liệu
+        stmt = (
+            select(
+                self.model,
+                func.coalesce(subquery.c.document_count, 0).label("document_count")
+            )
+            .outerjoin(subquery, self.model.tag_id == subquery.c.tag_id)
+            .offset(skip)
+            .limit(limit)
+        )
+        
+        result = await db.execute(stmt)
+        
+        # Xử lý kết quả và gán document_count vào đối tượng Tag
+        tags_with_count = []
+        for tag, count in result:
+            setattr(tag, "document_count", count)
+            tags_with_count.append(tag)
+        
+        return tags_with_count
+    
     async def create(self, db: AsyncSession, *, obj_in: TagCreate) -> Tag:
         """
         Tạo tag mới.

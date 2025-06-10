@@ -26,7 +26,9 @@ export interface ForumPost {
     user_id: number
     full_name: string
     email: string
+    username?: string
   }
+  reply_count: number
 }
 
 export interface ForumReply {
@@ -153,4 +155,40 @@ export async function updateForumReply(id: number, data: Partial<ForumReplyCreat
 
 export async function deleteForumReply(id: number): Promise<void> {
   return apiClient.delete<void>(`/forum-replies/${id}`)
+}
+
+// Hàm lấy bài viết diễn đàn kèm thông tin chi tiết của người dùng
+export async function getEnhancedForumPost(id: number): Promise<ForumPost> {
+  try {
+    console.log(`Gọi API lấy bài viết diễn đàn ${id} với thông tin người dùng`);
+    
+    // Lấy thông tin bài viết
+    const post = await getForumPostById(id);
+    
+    // Nếu không có thông tin user_id hoặc đã có username, trả về luôn
+    if (!post.user_id || (post.user && post.user.username)) {
+      return post;
+    }
+    
+    // Lấy thông tin chi tiết người dùng
+    try {
+      const user = await apiClient.get<any>(`/users/${post.user_id}`);
+      
+      // Cập nhật thông tin người dùng vào bài viết
+      return {
+        ...post,
+        user: {
+          ...post.user,
+          username: user.username || 'Người dùng',
+          full_name: user.full_name || post.user?.full_name || 'Người dùng'
+        }
+      };
+    } catch (error) {
+      console.error(`Không thể lấy thông tin người dùng cho bài viết ${id}:`, error);
+      return post;
+    }
+  } catch (error) {
+    console.error(`Error fetching enhanced forum post ${id}:`, error);
+    throw error;
+  }
 }

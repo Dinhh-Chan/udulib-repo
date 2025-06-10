@@ -1,77 +1,121 @@
 import { Year, YearCreate, YearUpdate } from "@/types/year"
-import { apiClient } from "./client"
-import { toast } from "sonner"
+import { apiClientAxios } from "./client"
+import { AxiosResponse } from "axios"
+import { showSuccessToast, showErrorToast } from "@/lib/utils"
 
-export async function getYears(): Promise<Year[]> {
+interface ApiResponse<T> {
+  data: T
+  message?: string
+  status?: number
+}
+
+// API endpoint
+const YEARS_ENDPOINT = "/academic-years"
+
+// Lấy danh sách năm học
+export const getYears = async (page: number = 1, perPage: number = 20): Promise<Year[]> => {
   try {
-    const response = await apiClient.get<Year[]>("/academic-years")
-    return response.map((year: any) => ({
-      ...year,
-      year_order: year.year_order || 1,
-      created_at: year.created_at || new Date().toISOString(),
-      updated_at: year.updated_at || null
-    }))
+    console.log(`Đang gọi API: ${YEARS_ENDPOINT} với page=${page}, per_page=${perPage}`);
+    const response = await apiClientAxios.get(YEARS_ENDPOINT, {
+      params: {
+        page,
+        per_page: perPage
+      }
+    });
+    console.log("API Response:", response);
+    return response.data || [];
   } catch (error) {
-    console.error("Error fetching years:", error)
-    toast.error("Không thể lấy danh sách năm học")
-    return []
+    console.error("Error fetching years:", error);
+    throw error;
   }
 }
 
-export async function getYear(id: number): Promise<Year | null> {
+// Lấy thông tin một năm học theo ID
+export const getYear = async (yearId: number): Promise<Year> => {
   try {
-    const response = await apiClient.get<Year>(`/academic-years/${id}`)
-    return {
-      ...response,
-      year_order: response.year_order || 1,
-      created_at: response.created_at || new Date().toISOString(),
-      updated_at: response.updated_at || null
-    }
+    const response = await apiClientAxios.get(`${YEARS_ENDPOINT}/${yearId}`);
+    return response.data;
   } catch (error) {
-    console.error("Error fetching year:", error)
-    toast.error("Không thể lấy thông tin năm học")
-    return null
+    console.error(`Error fetching year with ID ${yearId}:`, error);
+    throw error;
   }
 }
 
-export async function createYear(data: YearCreate): Promise<Year | null> {
+// Lấy năm học mới nhất
+export const getLatestYear = async (): Promise<Year> => {
   try {
-    const response = await apiClient.post<Year>("/academic-years", {
-      ...data,
-      year_order: data.year_order || 1
-    })
-    toast.success("Thêm năm học thành công")
-    return response
+    const response = await apiClientAxios.get(`${YEARS_ENDPOINT}/latest`);
+    return response.data;
   } catch (error) {
-    console.error("Error creating year:", error)
-    toast.error("Không thể thêm năm học")
-    return null
+    console.error("Error fetching latest year:", error);
+    throw error;
   }
 }
 
-export async function updateYear(id: number, data: YearUpdate): Promise<Year | null> {
+// Lấy danh sách năm học kèm số lượng môn học
+export const getYearsWithSubjectsCount = async (page: number = 1, perPage: number = 20): Promise<any[]> => {
   try {
-    const response = await apiClient.put<Year>(`/academic-years/${id}`, {
-      ...data,
-      year_order: data.year_order || 1
-    })
-    toast.success("Cập nhật năm học thành công")
-    return response
+    const response = await apiClientAxios.get(`${YEARS_ENDPOINT}/with-subjects-count`, {
+      params: {
+        page,
+        per_page: perPage
+      }
+    });
+    return response.data || [];
   } catch (error) {
-    console.error("Error updating year:", error)
-    toast.error("Không thể cập nhật năm học")
-    return null
+    console.error("Error fetching years with subjects count:", error);
+    throw error;
   }
 }
 
-export async function deleteYear(id: number): Promise<boolean> {
+// Tạo một năm học mới
+export const createYear = async (yearData: YearCreate): Promise<Year> => {
   try {
-    await apiClient.delete(`/academic-years/${id}`)
-    toast.success("Xóa năm học thành công")
-    return true
+    const response = await apiClientAxios.post(YEARS_ENDPOINT, yearData);
+    showSuccessToast("Thêm năm học thành công");
+    return response.data;
   } catch (error) {
-    console.error("Error deleting year:", error)
-    toast.error("Không thể xóa năm học")
-    return false
+    console.error("Error creating year:", error);
+    showErrorToast("Không thể thêm năm học");
+    throw error;
+  }
+}
+
+// Cập nhật thông tin năm học
+export const updateYear = async (yearId: number, yearData: YearUpdate): Promise<Year> => {
+  try {
+    const response = await apiClientAxios.put(`${YEARS_ENDPOINT}/${yearId}`, yearData);
+    showSuccessToast("Cập nhật năm học thành công");
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating year with ID ${yearId}:`, error);
+    showErrorToast("Không thể cập nhật năm học");
+    throw error;
+  }
+}
+
+// Xóa một năm học
+export const deleteYear = async (yearId: number): Promise<boolean> => {
+  try {
+    await apiClientAxios.delete(`${YEARS_ENDPOINT}/${yearId}`);
+    showSuccessToast("Xóa năm học thành công");
+    return true;
+  } catch (error) {
+    console.error(`Error deleting year with ID ${yearId}:`, error);
+    showErrorToast("Không thể xóa năm học");
+    throw error;
+  }
+}
+
+// Tạo đường dẫn cho năm học - Giả định rằng API này sẽ được thêm vào backend sau này
+export const createYearSlug = async (yearId: number): Promise<boolean> => {
+  try {
+    await apiClientAxios.post(`${YEARS_ENDPOINT}/${yearId}/slug`, {});
+    showSuccessToast("Tạo đường dẫn cho năm học thành công");
+    return true;
+  } catch (error) {
+    console.error(`Error creating slug for year with ID ${yearId}:`, error);
+    showErrorToast("Không thể tạo đường dẫn cho năm học");
+    throw error;
   }
 } 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getForumPostById, getForumReplies, updateForumPost, deleteForumPost, deleteForumReply, type ForumPost, type ForumReply } from "@/lib/api/forum"
+import { getEnhancedForumPost, getForumReplies, updateForumPost, deleteForumPost, deleteForumReply, type ForumPost, type ForumReply } from "@/lib/api/forum"
 import { toast } from "sonner"
 import { ArrowLeft, MoreHorizontal, Trash2 } from "lucide-react"
 import {
@@ -63,13 +63,11 @@ export default function PostDetailPage() {
   const [post, setPost] = useState<ForumPost | null>(null)
   const [replies, setReplies] = useState<ForumReply[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [status, setStatus] = useState("")
 
   const fetchPost = async () => {
     try {
-      const data = await getForumPostById(postId)
+      const data = await getEnhancedForumPost(postId)
       setPost(data)
-      setStatus(data.status)
     } catch (error) {
       console.error("Error fetching post:", error)
       toast.error("Không thể tải thông tin bài viết")
@@ -95,17 +93,6 @@ export default function PostDetailPage() {
       fetchReplies()
     }
   }, [postId])
-
-  const handleStatusChange = async (newStatus: string) => {
-    try {
-      await updateForumPost(postId, { status: newStatus })
-      setStatus(newStatus)
-      toast.success("Đã cập nhật trạng thái bài viết")
-    } catch (error) {
-      console.error("Error updating post status:", error)
-      toast.error("Không thể cập nhật trạng thái")
-    }
-  }
 
   const handleDeletePost = async () => {
     if (!confirm("Bạn có chắc chắn muốn xóa bài viết này?")) return
@@ -152,19 +139,10 @@ export default function PostDetailPage() {
             <div>
               <CardTitle className="text-2xl font-bold">{post.title}</CardTitle>
               <div className="text-sm text-muted-foreground mt-2">
-                Đăng bởi: {post.user?.full_name} • {new Date(post.created_at).toLocaleDateString()}
+                Đăng bởi: {post.user?.username || post.user?.full_name || `Người dùng #${post.user_id}`} • {new Date(post.created_at).toLocaleDateString()}
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Select value={status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Hoạt động</SelectItem>
-                  <SelectItem value="hidden">Ẩn</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center">
               <Button variant="destructive" onClick={handleDeletePost}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Xóa bài viết

@@ -13,7 +13,9 @@ import {
   Settings,
   ChevronLeft,
   Home,
-  Bell
+  Bell,
+  Tag,
+  Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
@@ -48,6 +50,13 @@ const routes = [
     bgColor: "bg-orange-700/10"
   },
   {
+    label: "Năm học",
+    icon: Calendar,
+    href: "/admin/years",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-600/10"
+  },
+  {
     label: "Diễn đàn",
     icon: MessageSquare,
     href: "/admin/forum",
@@ -72,6 +81,14 @@ const routes = [
     label: "Cài đặt",
     icon: Settings,
     href: "/admin/settings",
+    color: "text-gray-700",
+    bgColor: "bg-gray-700/10"
+  },
+  {
+    label: "Quản lý Tag",
+    href: "/admin/tags",
+    icon: Tag,
+    role: ["admin"],
     color: "text-gray-700",
     bgColor: "bg-gray-700/10"
   }
