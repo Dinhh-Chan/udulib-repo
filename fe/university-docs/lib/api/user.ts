@@ -50,6 +50,54 @@ export const updateUserProfile = async (userId: number, userData: {
   return response.json()
 }
 
+export const getUserAvatar = async (): Promise<string> => {
+  const token = getAuthToken()
+  
+  if (!token) {
+    throw new Error("Không tìm thấy token xác thực")
+  }
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/avatar`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy avatar")
+  }
+
+  // Trả về URL blob để hiển thị
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
+}
+
+export const uploadAvatar = async (file: File): Promise<User> => {
+  const token = getAuthToken()
+  
+  if (!token) {
+    throw new Error("Không tìm thấy token xác thực")
+  }
+
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/upload-avatar`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.detail || "Không thể upload avatar")
+  }
+
+  return response.json()
+}
+
 export const changePassword = async (passwordData: {
   current_password: string;
   new_password: string;

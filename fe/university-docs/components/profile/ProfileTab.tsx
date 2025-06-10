@@ -1,11 +1,13 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { User as UserType } from "@/types/user"
-import { updateUserProfile } from "@/lib/api/user"
+import { updateUserProfile, getUserAvatar, uploadAvatar } from "@/lib/api/user"
 import { toast } from "sonner"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Camera, Upload } from "lucide-react"
 
 interface ProfileTabProps {
   user: UserType
@@ -14,6 +16,9 @@ interface ProfileTabProps {
 
 export default function ProfileTab({ user, onUserUpdate }: ProfileTabProps) {
   const [isUpdating, setIsUpdating] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [isLoadingAvatar, setIsLoadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState(() => {
     const nameParts = user.full_name.split(" ")
     return {
@@ -24,12 +29,68 @@ export default function ProfileTab({ user, onUserUpdate }: ProfileTabProps) {
     }
   })
 
+  // Load avatar khi component mount
+  useEffect(() => {
+    const loadAvatar = async () => {
+      try {
+        setIsLoadingAvatar(true)
+        const avatar = await getUserAvatar()
+        setAvatarUrl(avatar)
+      } catch (error) {
+        // Không hiển thị lỗi nếu user chưa có avatar
+        console.log("User chưa có avatar")
+      } finally {
+        setIsLoadingAvatar(false)
+      }
+    }
+
+    loadAvatar()
+  }, [])
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
     setFormData(prev => ({
       ...prev,
       [id]: value
     }))
+  }
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Kiểm tra loại file
+    if (!file.type.startsWith('image/')) {
+      toast.error("Vui lòng chọn file ảnh")
+      return
+    }
+
+    // Kiểm tra kích thước file (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File ảnh không được vượt quá 5MB")
+      return
+    }
+
+    try {
+      setIsLoadingAvatar(true)
+      const updatedUser = await uploadAvatar(file)
+      
+      // Cập nhật avatar hiển thị
+      const newAvatarUrl = await getUserAvatar()
+      setAvatarUrl(newAvatarUrl)
+
+      onUserUpdate(updatedUser)
+      toast.success("Cập nhật avatar thành công")
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error)
+      toast.error(error.message || "Không thể upload avatar")
+    } finally {
+      setIsLoadingAvatar(false)
+    }
   }
 
   const handleUpdateProfile = async () => {
@@ -67,6 +128,52 @@ export default function ProfileTab({ user, onUserUpdate }: ProfileTabProps) {
         <CardDescription className="text-sm">Cập nhật thông tin cá nhân của bạn</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 sm:space-y-6">
+        {/* Avatar Section */}
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
+              <AvatarImage 
+                src={avatarUrl || undefined} 
+                alt={user.full_name}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-lg sm:text-xl">
+                {user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {isLoadingAvatar && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              </div>
+            )}
+            <Button
+              size="sm"
+              className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0"
+              onClick={handleAvatarClick}
+              disabled={isLoadingAvatar}
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAvatarClick}
+            disabled={isLoadingAvatar}
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            {avatarUrl ? "Thay đổi avatar" : "Tải lên avatar"}
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleAvatarUpload}
+            accept="image/*"
+            className="hidden"
+          />
+        </div>
+
         <div className="space-y-3 sm:space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">

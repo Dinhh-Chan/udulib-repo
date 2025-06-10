@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronRight, User, Settings, FileText, MessageSquare, Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { getUserProfile } from "@/lib/api/user"
+import { getUserProfile, getUserAvatar } from "@/lib/api/user"
 import { User as UserType } from "@/types/user"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
@@ -32,6 +32,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile")
   const [user, setUser] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const { user: authUser, isAuthenticated } = useAuth()
   
   // Dialog states
@@ -68,6 +69,15 @@ export default function ProfilePage() {
         if (authUser?.user_id) {
           const userData = await getUserProfile(authUser.user_id.toString())
           setUser(userData)
+          
+          // Load avatar
+          try {
+            const avatar = await getUserAvatar()
+            setAvatarUrl(avatar)
+          } catch (error) {
+            // Không hiển thị lỗi nếu user chưa có avatar
+            console.log("User chưa có avatar")
+          }
         }
       } catch (error) {
         console.error("Error fetching user profile:", error)
@@ -238,12 +248,17 @@ export default function ProfilePage() {
             <Card>
               <CardContent className="p-4 flex flex-col items-center text-center">
                 <Avatar className="h-16 w-16 sm:h-20 sm:w-20 mb-3 sm:mb-4">
-                  <AvatarImage src="/placeholder.svg?height=80&width=80" alt={user.full_name} />
-                  <AvatarFallback className="text-sm sm:text-base">{user.full_name}</AvatarFallback>
+                  <AvatarImage 
+                    src={avatarUrl || undefined} 
+                    alt={user.full_name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-sm sm:text-base">
+                    {user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <h3 className="font-medium text-base sm:text-lg truncate w-full">{user.full_name}</h3>
                 <p className="text-sm text-muted-foreground capitalize">{user.role}</p>
-                <Badge className="mt-2 text-xs">{user.status === 'active' ? 'Đã kích hoạt' : 'Chưa kích hoạt'}</Badge>
                 <div className="w-full mt-3 sm:mt-4 pt-3 sm:pt-4 border-t flex flex-col gap-2 text-xs sm:text-sm">
                   <div className="flex justify-between items-start">
                     <span className="text-muted-foreground">Email:</span>
@@ -316,7 +331,14 @@ export default function ProfilePage() {
 
           <div className="flex-1 min-w-0">
             {activeTab === "profile" && user && (
-              <ProfileTab user={user} onUserUpdate={setUser} />
+              <ProfileTab 
+                user={user} 
+                onUserUpdate={(updatedUser) => {
+                  setUser(updatedUser)
+                  // Refresh avatar when user updates
+                  getUserAvatar().then(setAvatarUrl).catch(() => console.log("No avatar"))
+                }} 
+              />
             )}
 
             {activeTab === "documents" && authUser?.user_id && (
