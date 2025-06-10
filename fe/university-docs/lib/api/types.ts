@@ -28,8 +28,11 @@ export interface Document {
     tag_id: number
     tag_name: string
   }>
+<<<<<<< HEAD
   is_liked?: boolean;
   like_count?: number;
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 }
 
 export interface Rating {

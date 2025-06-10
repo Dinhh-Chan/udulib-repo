@@ -19,7 +19,10 @@ import { getDocumentDetail, updateDocument, deleteDocument, DocumentUpdateData }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { deleteForumPost } from "@/lib/api/forum"
+<<<<<<< HEAD
 import { motion, AnimatePresence } from "framer-motion"
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
 // Import các tab components
 import ProfileTab from "@/components/profile/ProfileTab"
@@ -331,6 +334,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex-1 min-w-0">
+<<<<<<< HEAD
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -366,6 +370,34 @@ export default function ProfilePage() {
                 )}
               </motion.div>
             </AnimatePresence>
+=======
+            {activeTab === "profile" && user && (
+              <ProfileTab 
+                user={user} 
+                onUserUpdate={(updatedUser) => {
+                  setUser(updatedUser)
+                  // Refresh avatar when user updates
+                  getUserAvatar().then(setAvatarUrl).catch(() => console.log("No avatar"))
+                }} 
+              />
+            )}
+
+            {activeTab === "documents" && authUser?.user_id && (
+              <DocumentsTab userId={authUser.user_id} />
+            )}
+
+            {activeTab === "forum" && authUser?.user_id && (
+              <ForumTab userId={authUser.user_id} />
+            )}
+
+            {activeTab === "notifications" && (
+              <NotificationsTab />
+            )}
+
+            {activeTab === "settings" && (
+              <SettingsTab />
+            )}
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
           </div>
         </div>
       </div>

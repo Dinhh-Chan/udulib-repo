@@ -1,7 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserAvatar } from "@/hooks/use-user-avatar"
 import { User } from "lucide-react"
+<<<<<<< HEAD
 import { cn } from "@/lib/api/utils"
+=======
+import { cn } from "@/lib/utils"
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
 interface UserAvatarProps {
   userId?: number

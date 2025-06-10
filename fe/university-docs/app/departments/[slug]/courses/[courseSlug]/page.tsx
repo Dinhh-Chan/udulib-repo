@@ -7,8 +7,45 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ChevronRight, FileText, Download, Eye, Calendar, User } from "lucide-react"
 import React from "react"
 import Loading from "../../../../loading"
+<<<<<<< HEAD
 import { Document, Subject, Major } from "@/types"
 import { fetchSubject, fetchMajor, fetchDocuments } from "@/lib/api/api"
+=======
+
+type Document = {
+  document_id: number;
+  title: string;
+  description: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  subject_id: number;
+  user_id: number;
+  status: string;
+  view_count: number;
+  download_count: number;
+  created_at?: string;
+  updated_at?: string;
+  subject?: { major_id: number };
+  tags?: { tag_id: number; tag_name: string; created_at?: string }[];
+}
+
+type Subject = {
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  description: string;
+  major_id: number;
+  year_id: number;
+}
+
+type Major = {
+  major_id: number;
+  major_name: string;
+  major_code: string;
+  description: string;
+}
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
 export default function CoursePage({ params }: { params: Promise<{ slug: string; courseSlug: string }> }) {
   const { slug, courseSlug } = React.use(params);

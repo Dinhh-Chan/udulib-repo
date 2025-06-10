@@ -10,6 +10,10 @@ from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
 from httpx import AsyncClient
 from sqlalchemy import select
+<<<<<<< HEAD
+=======
+from urllib.parse import urlencode
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
 from app.services.crud.user_crud import user_crud
 from app.core.config import settings
@@ -219,6 +223,7 @@ async def google_callback(
         # Create access token
         access_token = create_access_token(data={"sub": user.email})
         
+<<<<<<< HEAD
         return {
             "access_token": access_token,
             "token_type": "bearer",
@@ -228,3 +233,13 @@ async def google_callback(
                 "full_name": user.full_name
             }
         }
+=======
+        # Redirect về frontend kèm token
+        params = urlencode({
+            "access_token": access_token,
+            "username": user.username,
+            "email": user.email
+        })
+        redirect_url = f"https://udulib.iuptit.com?{params}"
+        return RedirectResponse(url=redirect_url)
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed

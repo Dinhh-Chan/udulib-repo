@@ -111,6 +111,11 @@ class Settings(BaseSettings):
     MINIO_AVATAR_BUCKET: str = "avatar"
     MINIO_MAJOR_IMAGE_BUCKET: str = "major-images"
     
+<<<<<<< HEAD
+=======
+    FRONTEND_REDIRECT_URL: str = "https://udulib.iuptit.com"
+    
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
     # Google OAuth2 Configuration
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")

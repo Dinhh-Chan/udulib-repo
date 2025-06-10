@@ -7,7 +7,48 @@ import { Input } from "@/components/ui/input"
 import { BookOpen, Search } from "lucide-react"
 import { MajorImage } from "@/components/ui/major-image"
 import Loading from "../loading"
+<<<<<<< HEAD
 import { fetchMajors, fetchSubjectStatsByMajor, fetchDocumentStatsByMajor, Major, SubjectStat, DocumentStat } from "@/lib/api/document-detail"
+=======
+
+type Major = {
+  major_id: number;
+  major_name: string;
+  major_code: string;
+  description: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+type Subject = {
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  description: string;
+  major_id: number;
+  year_id: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+type Document = {
+  document_id: number;
+  title: string;
+  description: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  subject_id: number;
+  user_id: number;
+  status: string;
+  view_count: number;
+  download_count: number;
+  created_at?: string;
+  updated_at?: string;
+  subject?: { major_id: number }; 
+  tags?: { tag_id: number; tag_name: string; created_at?: string }[];
+}
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
 export default function DepartmentsPage() {
   const [majors, setMajors] = useState<Major[]>([])

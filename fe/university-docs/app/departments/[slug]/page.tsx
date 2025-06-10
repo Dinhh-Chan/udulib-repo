@@ -8,8 +8,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronRight, FileText } from "lucide-react"
 import React from "react"
 import Loading from "../../loading"
+<<<<<<< HEAD
 import { Major, Subject } from "@/types"
 import { fetchMajors, fetchSubjects, fetchDocumentCount } from "@/lib/api/api"
+=======
+
+interface Major {
+  major_id: number;
+  major_name: string;
+  slug: string;
+  description: string;
+}
+interface Subject {
+  subject_id: number;
+  subject_name: string;
+  description: string;
+}
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
 export default function DepartmentPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);

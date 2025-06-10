@@ -10,7 +10,11 @@ const getAuthHeaders = (): Record<string, string> => {
 
 // API functions cho Document
 export const fetchDocument = async (id: string): Promise<Document> => {
+<<<<<<< HEAD
   const response = await fetch(`${API_URL}/documents/public/${id}`, {
+=======
+  const response = await fetch(`${API_URL}/documents/${id}`, {
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
     headers: getAuthHeaders()
   });
   
@@ -193,6 +197,7 @@ export const fillUserInfoForComments = async (comments: Comment[]): Promise<void
       await fillUserInfoForComments(comment.replies);
     }
   }
+<<<<<<< HEAD
 };
 
 export interface DocumentStats {
@@ -315,3 +320,6 @@ export async function fetchSubjectStatsByMajor() {
   });
   return await res.json();
 } 
+=======
+}; 
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed

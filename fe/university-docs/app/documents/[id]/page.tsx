@@ -25,6 +25,11 @@ import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "
 import React from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { 
+<<<<<<< HEAD
+=======
+  getDocumentDownloadUrl, 
+  getDocumentPreviewUrl,
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
   getPublicDocumentPreviewUrl,
   getDocumentFullPreviewUrl,
   downloadPublicDocument,
@@ -42,6 +47,7 @@ import {
   formatFileSize,
   formatDate,
   buildCommentTree,
+<<<<<<< HEAD
   fillUserInfoForComments,
   toggleLikeDocument,
   fetchDocumentsBySubject,
@@ -64,6 +70,12 @@ function countAllComments(comments: Comment[]): number {
   }
   return count;
 }
+=======
+  fillUserInfoForComments
+} from "@/lib/api/document-detail"
+import { Document, Rating, Comment, PreviewSupport } from "@/lib/api/types"
+import Loading from "../../loading"
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
 export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
@@ -96,6 +108,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [previewSupport, setPreviewSupport] = useState<PreviewSupport | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+<<<<<<< HEAD
 
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
@@ -103,6 +116,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [likeStatsLoading, setLikeStatsLoading] = useState(true);
 
   const [relatedDocs, setRelatedDocs] = useState<DocType[]>([]);
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
 
   const renderPreview = () => {
     if (previewLoading) {
@@ -112,6 +127,75 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
 
     // Nếu file không hỗ trợ preview
+<<<<<<< HEAD
+    if (!previewUrl || previewError) {
+      const retryPreview = async () => {
+        try {
+          setPreviewLoading(true);
+          setPreviewError(false);
+          
+          let previewUrlToUse = "";
+          if (isAuthenticated) {
+            previewUrlToUse = getDocumentFullPreviewUrl(Number(id));
+          } else {
+            previewUrlToUse = getPublicDocumentPreviewUrl(Number(id), "medium");
+          }
+          
+          setPreviewUrl(previewUrlToUse);
+        } catch (error) {
+          console.error("Error retrying preview:", error);
+          setPreviewError(true);
+        } finally {
+          setPreviewLoading(false);
+        }
+      };
+
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <FileText className="h-16 w-16 mb-4" />
+          <p>Không thể tải preview</p>
+          <p className="text-sm">Thử tải lại preview hoặc tải xuống tài liệu</p>
+          <div className="flex gap-2 mt-4">
+            <Button 
+              onClick={retryPreview} 
+              variant="outline"
+              disabled={previewLoading}
+            >
+              {previewLoading ? "Đang tải..." : "Thử lại"}
+            </Button>
+          </div>
+=======
+    if (!previewSupport?.is_supported) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <FileText className="h-16 w-16 mb-4" />
+          <p>Không thể xem trước tài liệu này</p>
+          <p className="text-sm">Vui lòng tải xuống để xem</p>
+          {isAuthenticated ? (
+            <Button 
+              onClick={handleDownloadClick} 
+              className="mt-4"
+              disabled={downloadLoading}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {downloadLoading ? "Đang tải..." : "Tải xuống"}
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => setShowLoginPrompt(true)} 
+              className="mt-4"
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              Đăng nhập để tải xuống
+            </Button>
+          )}
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
+        </div>
+      );
+    }
+
+<<<<<<< HEAD
+=======
     if (!previewUrl || previewError) {
       const retryPreview = async () => {
         try {
@@ -152,6 +236,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       );
     }
 
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
     // Hiển thị preview với overlay nếu chưa đăng nhập
     return (
       <div className="relative h-full">
@@ -167,10 +252,17 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 Đăng nhập để xem toàn bộ nội dung và tải xuống tài liệu
               </p>
               <div className="flex gap-2">
+<<<<<<< HEAD
                 <Button onClick={() => router.push('/login')} className="flex-1">
                   Đăng nhập
                 </Button>
                 <Button variant="outline" onClick={() => router.push('/register')} className="flex-1">
+=======
+                <Button onClick={() => router.push('/auth/login')} className="flex-1">
+                  Đăng nhập
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/auth/register')} className="flex-1">
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
                   Đăng ký
                 </Button>
               </div>
@@ -251,10 +343,13 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         const data = await fetchDocument(id);
         setDocument(data);
         
+<<<<<<< HEAD
         // Nếu API trả về is_liked và like_count thì set luôn
         if (typeof data.is_liked === 'boolean') setIsLiked(data.is_liked);
         if (typeof data.like_count === 'number') setLikeCount(data.like_count);
         
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
         // Kiểm tra xem file có hỗ trợ preview không
         try {
             
@@ -322,6 +417,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       } catch (err) {}
     };
     loadComments();
+<<<<<<< HEAD
   }, [id]);
 
   useEffect(() => {
@@ -350,6 +446,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     };
 
     fetchLikeStatus();
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
   }, [id]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -547,6 +645,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
   };
 
+<<<<<<< HEAD
   const handleLike = async () => {
     if (!isAuthenticated) {
       setShowLoginPrompt(true);
@@ -567,6 +666,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
   };
 
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
   if (loading) {
     return (
       <Loading />
@@ -642,6 +743,36 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
             <div className="bg-muted rounded-lg flex items-center justify-center h-[500px] mb-4 p-0 overflow-hidden border-2 border-primary">
               {renderPreview()}
             </div>
+<<<<<<< HEAD
+=======
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm">
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  Thích
+                </Button>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>{comments.length} bình luận</span>
+                </div>
+                <Button variant="ghost" size="sm">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Chia sẻ
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm">
+                  <Bookmark className="h-4 w-4 mr-2" />
+                  Lưu
+                </Button>
+                <Button variant="ghost" size="sm">
+                  <Flag className="h-4 w-4 mr-2" />
+                  Báo cáo
+                </Button>
+              </div>
+            </div>
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
           </div>
 
           <div className="w-full md:w-80 space-y-6">
@@ -717,6 +848,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           </div>
         </div>
 
+<<<<<<< HEAD
         <div className="w-full flex flex-col md:flex-row gap-6 mt-8">
           <div className="flex-1">
             <Card className="shadow-sm mb-6">
@@ -782,6 +914,50 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
               </CardContent>
             </Card>
           </div>
+=======
+        {/* Comment Form */}
+        <Card className="shadow-sm mb-6">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Viết bình luận</h3>
+            <form onSubmit={handleSubmitComment} className="space-y-4">
+              <Textarea
+                value={commentContent}
+                onChange={e => setCommentContent(e.target.value)}
+                placeholder="Nhập bình luận của bạn..."
+                rows={4}
+                required
+                disabled={commentLoading}
+                className="resize-none"
+              />
+              <div className="flex justify-end">
+                <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
+                  {commentLoading ? "Đang gửi..." : "Đăng bình luận"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Comments Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold">Bình luận ({comments.length})</h3>
+          </div>
+
+          {comments.length > 0 ? (
+            <div className="space-y-4">
+              {comments.map((comment) => renderComment(comment))}
+            </div>
+          ) : (
+            <Card className="shadow-sm">
+              <CardContent className="p-12 text-center">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg">Chưa có bình luận nào</p>
+                <p className="text-muted-foreground text-sm">Hãy là người đầu tiên bình luận về tài liệu này!</p>
+              </CardContent>
+            </Card>
+          )}
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
         </div>
       </div>
       {/* Modal xác nhận đánh giá */}
@@ -814,10 +990,17 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
             <Button onClick={() => setShowLoginPrompt(false)} variant="outline">
               Hủy
             </Button>
+<<<<<<< HEAD
             <Button onClick={() => router.push('/login')}>
               Đăng nhập
             </Button>
             <Button onClick={() => router.push('/register')} variant="outline">
+=======
+            <Button onClick={() => router.push('/auth/login')}>
+              Đăng nhập
+            </Button>
+            <Button onClick={() => router.push('/auth/register')} variant="outline">
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
               Đăng ký
             </Button>
           </DialogFooter>

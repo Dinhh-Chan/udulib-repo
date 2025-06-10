@@ -1,5 +1,6 @@
 "use client"
 
+<<<<<<< HEAD
 import React, { useRef, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -15,6 +16,18 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
   const [isLiked, setIsLiked] = useState(initialIsLiked)
   const [likeCount, setLikeCount] = useState(initialLikeCount)
   const [isAnimating, setIsAnimating] = useState(false)
+=======
+import React, { useRef, useEffect } from 'react'
+
+interface HeartLikeProps {
+  isLiked: boolean
+  onToggle: () => void
+  disabled?: boolean
+  size?: 'sm' | 'md' | 'lg'
+}
+
+export function HeartLike({ isLiked, onToggle, disabled = false, size = 'md' }: HeartLikeProps) {
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
   const checkboxRef = useRef<HTMLInputElement>(null)
 
   // Sync checkbox với isLiked prop
@@ -24,6 +37,7 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
     }
   }, [isLiked])
 
+<<<<<<< HEAD
   const handleToggle = async () => {
     if (disabled || isAnimating) return
     
@@ -39,6 +53,8 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
     }
   }
 
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12', 
@@ -47,6 +63,7 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
 
   return (
     <div className="heart-like-wrapper">
+<<<<<<< HEAD
       <div className={`heart-container ${sizeClasses[size]} ${isAnimating ? 'animating' : ''}`} title={isLiked ? "Bỏ thích" : "Thích"}>
         <input 
           type="checkbox"
@@ -55,6 +72,16 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
           onChange={handleToggle}
           disabled={disabled || isAnimating}
           ref={checkboxRef}
+=======
+      <div className={`heart-container ${sizeClasses[size]}`} title={isLiked ? "Bỏ thích" : "Thích"}>
+        <input 
+          ref={checkboxRef}
+          type="checkbox" 
+          className="heart-checkbox" 
+          checked={isLiked}
+          onChange={onToggle}
+          disabled={disabled}
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
         />
         <div className="svg-container">
           <svg viewBox="0 0 24 24" className="svg-outline" xmlns="http://www.w3.org/2000/svg">
@@ -74,7 +101,10 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
         </div>
       </div>
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
       <style jsx>{`
         .heart-container {
           --heart-color: rgb(255, 91, 137);
@@ -87,10 +117,13 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
           transform: scale(1.1);
         }
 
+<<<<<<< HEAD
         .heart-container.animating {
           animation: heart-pop 0.3s ease-in-out;
         }
 
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
         .heart-checkbox {
           position: absolute;
           width: 100%;
@@ -177,6 +210,7 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
           }
         }
 
+<<<<<<< HEAD
         @keyframes heart-pop {
           0% {
             transform: scale(1);
@@ -189,6 +223,8 @@ export function HeartLike({ isLiked: initialIsLiked, onToggle, disabled = false,
           }
         }
 
+=======
+>>>>>>> 3c35902094cc5ae9d14dcaca99c44a5ed2a2d9ed
         /* Dark mode support */
         :global(.dark) .heart-container {
           --heart-color: rgb(255, 105, 147);
