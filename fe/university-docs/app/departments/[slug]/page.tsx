@@ -26,11 +26,11 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
     async function fetchMajor() {
       const data = await fetchMajors()
       if (!isNaN(majorIdFromUrl)) {
-        foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl)
+        foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl) || null
       } else {
-        foundMajor = data.find((m: Major) => m.slug === slug)
+        foundMajor = data.find((m: Major) => m.slug === slug) || null
       }
-      setMajor(foundMajor || null)
+      setMajor(foundMajor)
       if (foundMajor) {
         localStorage.setItem('selected_major_id', foundMajor.major_id.toString())
       }
