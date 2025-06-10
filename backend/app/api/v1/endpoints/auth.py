@@ -226,5 +226,5 @@ async def google_callback(
             "username": user.username,
             "email": user.email
         })
-        redirect_url = f"http://localhost:3001/?{params}"
+        redirect_url = f"http://localhost:3001/auth/google/callback?{params}"
         return RedirectResponse(url=redirect_url)
