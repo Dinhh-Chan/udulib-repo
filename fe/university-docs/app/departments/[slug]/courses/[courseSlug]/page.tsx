@@ -7,40 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ChevronRight, FileText, Download, Eye, Calendar, User } from "lucide-react"
 import React from "react"
 import Loading from "../../../../loading"
-
-type Document = {
-  document_id: number;
-  title: string;
-  description: string;
-  file_path: string;
-  file_size: number;
-  file_type: string;
-  subject_id: number;
-  user_id: number;
-  status: string;
-  view_count: number;
-  download_count: number;
-  created_at?: string;
-  updated_at?: string;
-  subject?: { major_id: number };
-  tags?: { tag_id: number; tag_name: string; created_at?: string }[];
-}
-
-type Subject = {
-  subject_id: number;
-  subject_name: string;
-  subject_code: string;
-  description: string;
-  major_id: number;
-  year_id: number;
-}
-
-type Major = {
-  major_id: number;
-  major_name: string;
-  major_code: string;
-  description: string;
-}
+import { Document, Subject, Major } from "@/types"
+import { fetchSubject, fetchMajor, fetchDocuments } from "@/lib/api"
 
 export default function CoursePage({ params }: { params: Promise<{ slug: string; courseSlug: string }> }) {
   const { slug, courseSlug } = React.use(params);
@@ -59,28 +27,15 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
     async function fetchData() {
       setLoading(true)
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-
-        const subjectRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/subjects/${courseSlug}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const subjectData = await subjectRes.json();
+        const [subjectData, majorData, documentsData] = await Promise.all([
+          fetchSubject(courseSlug),
+          fetchMajor(slug),
+          fetchDocuments(courseSlug)
+        ]);
+        
         setSubject(subjectData);
-
-        const majorRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/majors/${slug}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const majorData = await majorRes.json();
         setMajor(majorData);
-
-        const documentsRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/documents/public?subject_id=${courseSlug}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const documentsData = await documentsRes.json();
-        setDocuments(Array.isArray(documentsData.documents) ? documentsData.documents : []);
+        setDocuments(documentsData);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -116,7 +71,6 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
           <p className="text-muted-foreground max-w-3xl">{subject.description}</p>
         </div>
 
-        {/* Remove Tabs and show all documents directly */}
         <div className="flex flex-col gap-4 mt-6">
           {documents.map((doc) => (
             <DocumentCard key={doc.document_id} document={doc} />

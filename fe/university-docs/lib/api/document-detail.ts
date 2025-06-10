@@ -260,4 +260,12 @@ export async function fetchDocumentStatsByMajor() {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   return await res.json();
+}
+
+export async function fetchSubjectStatsByMajor() {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects/count-by-major`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return await res.json();
 } 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { BookOpen, Search } from "lucide-react"
 import { MajorImage } from "@/components/ui/major-image"
 import Loading from "../loading"
-import { fetchMajors, fetchSubjectsByMajorAndYear, fetchDocumentStatsByMajor } from "@/lib/api/document-detail"
+import { fetchMajors, fetchSubjectStatsByMajor, fetchDocumentStatsByMajor } from "@/lib/api/document-detail"
 
 type Major = {
   major_id: number;
@@ -18,68 +18,71 @@ type Major = {
   updated_at?: string;
 }
 
-type Subject = {
-  subject_id: number;
-  subject_name: string;
-  subject_code: string;
-  description: string;
+type SubjectStat = {
   major_id: number;
-  year_id: number;
-  created_at?: string;
-  updated_at?: string;
+  major_name: string;
+  major_code: string;
+  subject_count: number;
 }
 
-type DocumentMajorStat = { major_code: string; document_count: number };
+type DocumentStat = {
+  major_code: string;
+  document_count: number;
+}
+
+type Document = {
+  document_id: number;
+  title: string;
+  description: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  subject_id: number;
+  user_id: number;
+  status: string;
+  view_count: number;
+  download_count: number;
+  created_at?: string;
+  updated_at?: string;
+  subject?: { major_id: number }; 
+  tags?: { tag_id: number; tag_name: string; created_at?: string }[];
+}
 
 export default function DepartmentsPage() {
   const [majors, setMajors] = useState<Major[]>([])
-  const [subjects, setSubjects] = useState<Subject[]>([])
-  const [documents, setDocuments] = useState<DocumentMajorStat[]>([])
+  const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([])
+  const [documentStats, setDocumentStats] = useState<DocumentStat[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     async function fetchData() {
-      setLoading(true);
-      const majorsData = await fetchMajors();
-      setMajors(Array.isArray(majorsData) ? majorsData : []);
+      setLoading(true)
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const majorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      const majorsData = await majorsRes.json()
+      setMajors(Array.isArray(majorsData) ? majorsData : [])
 
-      // const allSubjects: any[] = [];
-      // for (const major of majorsData) {
-      //   for (let year = 1; year <= 4; year++) {
-      //     const yearSubjects = await fetchSubjectsByMajorAndYear(major.major_id, year);
-      //     if (Array.isArray(yearSubjects)) allSubjects.push(...yearSubjects);
-      //   }
-      // }
-      // setSubjects(allSubjects);
-
-      // Lấy tổng số tài liệu theo major
+      const subjectStatsData = await fetchSubjectStatsByMajor();
+      setSubjectStats(subjectStatsData);
       const docStats = await fetchDocumentStatsByMajor();
-      setDocuments(docStats);
-    }
-    fetchData();
-  }, []);
+      setDocumentStats(docStats);
 
-  function getCourseCount(major_id: number) {
-    return subjects.filter(sub => sub.major_id === major_id).length
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
+
+  function getCourseCount(major_code: string) {
+    const stat = subjectStats.find((s) => s.major_code === major_code);
+    return stat ? stat.subject_count : 0;
   }
+
   function getDocumentCount(major_code: string) {
-    const stat = documents.find((doc) => doc.major_code === major_code);
+    const stat = documentStats.find((doc) => doc.major_code === major_code);
     return stat ? stat.document_count : 0;
-  }
-
-  function getTagsByMajor(major_id: number) {
-    const docs = subjects.filter(sub => sub.major_id === major_id);
-    const allTags = docs.flatMap(sub => Array.isArray((sub as any).tags) ? (sub as any).tags : []);
-    const uniqueTags: { tag_id: number, tag_name: string }[] = []
-    const seen = new Set()
-    for (const tag of allTags) {
-      if (!seen.has(tag.tag_id)) {
-        uniqueTags.push(tag)
-        seen.add(tag.tag_id)
-      }
-    }
-    return uniqueTags
   }
 
   const filteredMajors = majors.filter((major) =>
@@ -123,20 +126,11 @@ export default function DepartmentsPage() {
                     <CardDescription>{major.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {getTagsByMajor(major.major_id).slice(0, 3).map(tag => (
-                        <span
-                          key={tag.tag_id}
-                          className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        >
-                          {tag.tag_name}
-                        </span>
-                      ))}
-                    </div>
+                    {/* Không còn hiển thị tags */}
                   </CardContent>
                   <CardFooter>
                     <div className="text-sm text-muted-foreground">
-                      {/* {getCourseCount(major.major_id)}*/} môn học • {getDocumentCount(major.major_code)} tài liệu 
+                      {getCourseCount(major.major_code)} môn học • {getDocumentCount(major.major_code)} tài liệu
                     </div>
                   </CardFooter>
                 </Link>
