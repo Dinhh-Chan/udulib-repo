@@ -618,7 +618,7 @@ export async function createForumPost(data: {
   if (!token) throw new Error("Unauthorized")
 
   try {
-    const response = await fetch(`${API_URL}/forum-posts`, {
+    const response = await fetch(`${API_URL}/forum-posts/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

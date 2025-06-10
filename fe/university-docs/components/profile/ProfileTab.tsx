@@ -155,16 +155,6 @@ export default function ProfileTab({ user, onUserUpdate }: ProfileTabProps) {
               <Camera className="h-4 w-4" />
             </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAvatarClick}
-            disabled={isLoadingAvatar}
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            {avatarUrl ? "Thay đổi avatar" : "Tải lên avatar"}
-          </Button>
           <input
             type="file"
             ref={fileInputRef}
