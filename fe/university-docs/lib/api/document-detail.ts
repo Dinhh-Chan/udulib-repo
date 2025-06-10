@@ -229,12 +229,34 @@ export async function fetchDocumentsBySubject(subject_id: number, per_page: numb
   return Array.isArray(data.documents) ? data.documents : [];
 }
 
-export async function fetchMajors() {
+export type Major = {
+  major_id: number;
+  major_name: string;
+  major_code: string;
+  description: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type SubjectStat = {
+  major_id: number;
+  major_name: string;
+  major_code: string;
+  subject_count: number;
+}
+
+export type DocumentStat = {
+  major_code: string;
+  document_count: number;
+}
+
+export async function fetchMajors(): Promise<Major[]> {
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors/`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  return await res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export async function fetchSubjectsByMajorAndYear(major_id: number, year_id: number) {

@@ -7,46 +7,7 @@ import { Input } from "@/components/ui/input"
 import { BookOpen, Search } from "lucide-react"
 import { MajorImage } from "@/components/ui/major-image"
 import Loading from "../loading"
-import { fetchMajors, fetchSubjectStatsByMajor, fetchDocumentStatsByMajor } from "@/lib/api/document-detail"
-
-type Major = {
-  major_id: number;
-  major_name: string;
-  major_code: string;
-  description: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-type SubjectStat = {
-  major_id: number;
-  major_name: string;
-  major_code: string;
-  subject_count: number;
-}
-
-type DocumentStat = {
-  major_code: string;
-  document_count: number;
-}
-
-type Document = {
-  document_id: number;
-  title: string;
-  description: string;
-  file_path: string;
-  file_size: number;
-  file_type: string;
-  subject_id: number;
-  user_id: number;
-  status: string;
-  view_count: number;
-  download_count: number;
-  created_at?: string;
-  updated_at?: string;
-  subject?: { major_id: number }; 
-  tags?: { tag_id: number; tag_name: string; created_at?: string }[];
-}
+import { fetchMajors, fetchSubjectStatsByMajor, fetchDocumentStatsByMajor, Major, SubjectStat, DocumentStat } from "@/lib/api/document-detail"
 
 export default function DepartmentsPage() {
   const [majors, setMajors] = useState<Major[]>([])
@@ -58,18 +19,19 @@ export default function DepartmentsPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const majorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      const majorsData = await majorsRes.json()
-      setMajors(Array.isArray(majorsData) ? majorsData : [])
-
-      const subjectStatsData = await fetchSubjectStatsByMajor();
-      setSubjectStats(subjectStatsData);
-      const docStats = await fetchDocumentStatsByMajor();
-      setDocumentStats(docStats);
-
+      try {
+        const [majorsData, subjectStatsData, docStats] = await Promise.all([
+          fetchMajors(),
+          fetchSubjectStatsByMajor(),
+          fetchDocumentStatsByMajor()
+        ]);
+        
+        setMajors(majorsData);
+        setSubjectStats(subjectStatsData);
+        setDocumentStats(docStats);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
       setLoading(false)
     }
     fetchData()

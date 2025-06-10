@@ -1,4 +1,4 @@
-import { Major, Subject, Document } from "@/types"
+import { Major, Subject, Document } from "../types"
 
 export async function fetchMajors(): Promise<Major[]> {
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
