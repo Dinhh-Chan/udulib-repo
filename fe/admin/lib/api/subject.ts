@@ -3,6 +3,7 @@ import { apiClient } from "./client"
 import { apiClientAxios } from "./client"
 import { AxiosResponse } from "axios"
 import { toast } from "sonner"
+import { getMajor } from "./major"
 
 interface GetSubjectsParams {
   search?: string
@@ -79,5 +80,70 @@ export async function getSubjectCount(): Promise<number> {
     console.error("Error fetching subject count:", error)
     toast.error("Không thể lấy số lượng môn học")
     return 0
+  }
+}
+
+// Lấy danh sách môn học theo năm học
+export const getSubjectsByYear = async (yearId: number, page: number = 1, perPage: number = 100): Promise<Subject[]> => {
+  try {
+    console.log(`Gọi API lấy môn học theo năm học ${yearId}, page=${page}, per_page=${perPage}`);
+    const response = await apiClientAxios.get(`/subjects/academic-year/${yearId}`, {
+      params: {
+        page,
+        per_page: perPage
+      }
+    });
+    console.log("Dữ liệu môn học nhận được:", response.data);
+    return response.data || [];
+  } catch (error: any) {
+    console.error(`Error fetching subjects for year ${yearId}:`, error);
+    // Ghi lại chi tiết lỗi
+    if (error.response) {
+      console.error("Response error:", error.response.status, error.response.data);
+    }
+    throw error;
+  }
+}
+
+// Lấy danh sách môn học theo năm học kèm thông tin chi tiết về ngành học
+export const getEnhancedSubjectsByYear = async (yearId: number, page: number = 1, perPage: number = 100): Promise<Subject[]> => {
+  try {
+    console.log(`Gọi API lấy môn học theo năm học ${yearId} với thông tin ngành học`);
+    
+    // Lấy danh sách môn học theo năm học
+    const subjects = await getSubjectsByYear(yearId, page, perPage);
+    
+    // Lấy thông tin chi tiết ngành học và gán vào môn học
+    const enhancedSubjects = await Promise.all(
+      subjects.map(async (subject) => {
+        try {
+          // Nếu đã có major_name thì không cần lấy thêm thông tin
+          if (subject.major_name) {
+            return subject;
+          }
+          
+          // Lấy thông tin ngành học từ major_id
+          const major = await getMajor(subject.major_id);
+          
+          // Trả về môn học với thông tin ngành học đã được bổ sung
+          return {
+            ...subject,
+            major_name: major.major_name
+          };
+        } catch (error) {
+          console.error(`Không thể lấy thông tin ngành học cho môn học ${subject.subject_id}:`, error);
+          return {
+            ...subject,
+            major_name: "Không xác định"
+          };
+        }
+      })
+    );
+    
+    console.log("Dữ liệu môn học đã bổ sung thông tin ngành học:", enhancedSubjects);
+    return enhancedSubjects;
+  } catch (error: any) {
+    console.error(`Error fetching enhanced subjects for year ${yearId}:`, error);
+    throw error;
   }
 }

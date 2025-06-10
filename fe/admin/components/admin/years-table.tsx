@@ -17,13 +17,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Pencil, Trash, MoreHorizontal, Link, ChevronLeft, ChevronRight } from "lucide-react"
+import { Pencil, Trash, MoreHorizontal, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Year } from "@/types/year"
-import { getYears, deleteYear, createYearSlug } from "@/lib/api/years"
+import { getYears, getYearsWithSubjectsCount, deleteYear } from "@/lib/api/years"
 import { EditYearDialog } from "./edit-year-dialog"
 import { formatDate } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
+import { getSubjectsByYear } from "@/lib/api/subject"
 
 interface YearsTableProps {
   searchQuery?: string
@@ -31,13 +33,13 @@ interface YearsTableProps {
 }
 
 export function YearsTable({ searchQuery = "", onSuccess }: YearsTableProps) {
-  const [years, setYears] = useState<Year[]>([])
-  const [filteredYears, setFilteredYears] = useState<Year[]>([])
+  const router = useRouter()
+  const [years, setYears] = useState<any[]>([])
+  const [filteredYears, setFilteredYears] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState<Year | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [loadingSlugYearId, setLoadingSlugYearId] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const itemsPerPage = 10
@@ -46,10 +48,27 @@ export function YearsTable({ searchQuery = "", onSuccess }: YearsTableProps) {
   const fetchYears = async () => {
     setIsLoading(true)
     try {
+      // Tạm thời sử dụng API getYears thay vì getYearsWithSubjectsCount vì API đang bị lỗi
       const data = await getYears(currentPage, itemsPerPage)
-      setYears(data)
+      console.log("Dữ liệu năm học nhận được:", data)
+      
+      // Thêm thuộc tính subjects_count giả tạm thời
+      const yearsWithSubjectsCount = data.map(year => ({
+        ...year,
+        subjects_count: 0 // Giá trị mặc định là 0, sẽ cập nhật sau khi API hoạt động đúng
+      }))
+      
+      // Sắp xếp theo ID từ thấp đến cao (1, 2, 3...)
+      const sortedYears = yearsWithSubjectsCount.sort((a, b) => a.year_id - b.year_id)
+      
+      setYears(sortedYears)
       // API hiện chưa trả về tổng số trang, tạm thời tính gần đúng
       setTotalPages(Math.ceil(data.length > 0 ? data.length / itemsPerPage : 1))
+      // Đảm bảo cập nhật filteredYears khi có dữ liệu
+      setFilteredYears(sortedYears)
+      
+      // Lấy số môn học cho từng năm học
+      fetchSubjectsCountForYears(sortedYears);
     } catch (error) {
       console.error("Error fetching years:", error)
       toast({
@@ -59,6 +78,28 @@ export function YearsTable({ searchQuery = "", onSuccess }: YearsTableProps) {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Hàm lấy số môn học cho từng năm học
+  const fetchSubjectsCountForYears = async (years: any[]) => {
+    for (const year of years) {
+      try {
+        const subjects = await getSubjectsByYear(year.year_id);
+        // Cập nhật state years và filteredYears với số lượng môn học mới
+        setYears(prevYears => 
+          prevYears.map(y => 
+            y.year_id === year.year_id ? { ...y, subjects_count: subjects.length } : y
+          )
+        );
+        setFilteredYears(prevYears => 
+          prevYears.map(y => 
+            y.year_id === year.year_id ? { ...y, subjects_count: subjects.length } : y
+          )
+        );
+      } catch (error) {
+        console.error(`Không thể lấy số môn học cho năm học ${year.year_id}:`, error);
+      }
     }
   }
 
@@ -87,17 +128,8 @@ export function YearsTable({ searchQuery = "", onSuccess }: YearsTableProps) {
     setIsDeleteDialogOpen(true)
   }
 
-  const handleCreateSlug = async (year: Year) => {
-    setLoadingSlugYearId(year.year_id)
-    try {
-      await createYearSlug(year.year_id)
-      await fetchYears()
-      if (onSuccess) onSuccess()
-    } catch (error) {
-      console.error(`Error creating slug for year with ID ${year.year_id}:`, error)
-    } finally {
-      setLoadingSlugYearId(null)
-    }
+  const handleViewDetails = (year: Year) => {
+    router.push(`/admin/years/${year.year_id}`)
   }
 
   const handleDeleteConfirm = async () => {
@@ -158,9 +190,8 @@ export function YearsTable({ searchQuery = "", onSuccess }: YearsTableProps) {
           <TableRow>
             <TableHead>ID</TableHead>
             <TableHead>Tên năm học</TableHead>
-            <TableHead>Thứ tự</TableHead>
             <TableHead>Ngày tạo</TableHead>
-            <TableHead>Ngày cập nhật</TableHead>
+            <TableHead>Số môn học</TableHead>
             <TableHead className="text-right">Thao tác</TableHead>
           </TableRow>
         </TableHeader>
@@ -169,9 +200,8 @@ export function YearsTable({ searchQuery = "", onSuccess }: YearsTableProps) {
             <TableRow key={year.year_id}>
               <TableCell>{year.year_id}</TableCell>
               <TableCell>{year.year_name}</TableCell>
-              <TableCell>{year.year_order}</TableCell>
               <TableCell>{formatDate(year.created_at)}</TableCell>
-              <TableCell>{year.updated_at ? formatDate(year.updated_at) : "N/A"}</TableCell>
+              <TableCell>{year.subjects_count || 0}</TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -182,13 +212,13 @@ export function YearsTable({ searchQuery = "", onSuccess }: YearsTableProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Tác vụ</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleViewDetails(year)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Xem chi tiết
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleEditClick(year)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Chỉnh sửa
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleCreateSlug(year)} disabled={loadingSlugYearId === year.year_id}>
-                      <Link className="mr-2 h-4 w-4" />
-                      {loadingSlugYearId === year.year_id ? "Đang xử lý..." : "Tạo đường dẫn"}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDeleteClick(year)}>
                       <Trash className="mr-2 h-4 w-4" />
