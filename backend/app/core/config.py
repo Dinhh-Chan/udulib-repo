@@ -111,8 +111,6 @@ class Settings(BaseSettings):
     MINIO_AVATAR_BUCKET: str = "avatar"
     MINIO_MAJOR_IMAGE_BUCKET: str = "major-images"
     
-<<<<<<< HEAD
-=======
     FRONTEND_REDIRECT_URL: str = "https://udulib.iuptit.com"
     
     # Google OAuth2 Configuration

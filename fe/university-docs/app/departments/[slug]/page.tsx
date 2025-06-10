@@ -102,7 +102,6 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
             <TabsContent key={year} value={year.toString()} className="mt-6">
               {loading ? (
                 <Loading />
-                <Loading />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {subjects.map(subject => (
