@@ -342,9 +342,33 @@ export const downloadPublicDocument = async (documentId: number) => {
       throw new Error("Không thể tải xuống tài liệu")
     }
 
-    // Trả về URL để download
+    // Lấy filename từ content-disposition header
+    const contentDisposition = response.headers.get('content-disposition')
+    let filename = 'document'
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+      if (filenameMatch) {
+        filename = filenameMatch[1]
+      }
+    }
+
+    // Lấy blob từ response
     const blob = await response.blob()
+    
+    // Tạo URL từ blob
     const url = window.URL.createObjectURL(blob)
+    
+    // Tạo link download
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    
+    // Cleanup
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
     return url
   } catch (error) {
     console.error("Error downloading document:", error)
