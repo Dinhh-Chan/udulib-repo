@@ -385,7 +385,7 @@ async def get_document_preview(
     await document.record_view(db, document_id=id, user_id=current_user.user_id)
     
     # Trả về preview
-    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, size)
+    return await document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, size)
 
 @router.get("/{id}/thumbnail")
 async def get_document_thumbnail(
@@ -415,7 +415,7 @@ async def get_document_thumbnail(
             detail="Định dạng file không được hỗ trợ preview"
         )
     
-    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "small")
+    return await document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "small")
 
 @router.get("/{id}/full-preview")
 async def get_document_full_preview(
@@ -449,7 +449,7 @@ async def get_document_full_preview(
     await document.record_view(db, document_id=id, user_id=current_user.user_id)
     
     # Trả về full preview
-    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "full")
+    return await document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "full")
 
 @router.get("/{id}/is-supported")
 async def check_document_preview_support(
@@ -511,7 +511,7 @@ async def get_public_document_preview(
         )
     
     # Trả về preview
-    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, size)
+    return await document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, size)
 
 @router.get("/public/{id}/thumbnail")
 async def get_public_document_thumbnail(
@@ -540,7 +540,7 @@ async def get_public_document_thumbnail(
             detail="Định dạng file không được hỗ trợ preview"
         )
     
-    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "small")
+    return await document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "small")
 
 @router.get("/public/{id}/full-preview")
 async def get_public_document_full_preview(
@@ -570,7 +570,7 @@ async def get_public_document_full_preview(
         )
     
     # Trả về full preview
-    return document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "full")
+    return await document_preview_service.get_document_preview_stream(doc.file_path, actual_filename, "full")
 
 @router.get("/public/{id}/download")
 async def download_public_document(
@@ -596,9 +596,22 @@ async def download_public_document(
             detail="Không thể tải file từ MinIO"
         )
     
-    # Trả về file stream (không cần record download cho public)
+    # Tạo async generator để stream file theo chunks
+    async def stream_file():
+        try:
+            # Đọc file theo chunks 8KB
+            chunk_size = 8 * 1024
+            while True:
+                chunk = download_data["stream"].read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            download_data["stream"].close()
+    
+    # Trả về file stream với async generator
     return StreamingResponse(
-        download_data["stream"],
+        stream_file(),
         media_type=download_data["media_type"],
         headers=download_data["headers"]
     )

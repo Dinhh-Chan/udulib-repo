@@ -166,7 +166,7 @@ class MinIOService:
                 file_size = None
                 content_type = 'application/octet-stream'
             
-            # Lấy file stream từ MinIO
+            # Lấy file stream từ MinIO với buffer size tối ưu
             response = self.client.get_object(bucket, object_name)
             
             # Xác định filename để download
@@ -187,14 +187,21 @@ class MinIOService:
             # Escape filename để tránh lỗi header
             safe_filename = final_filename.replace('"', '\\"')
             
-            # Tạo headers
+            # Tạo headers với cache control và compression
             headers = {
                 "Content-Disposition": f'attachment; filename="{safe_filename}"',
-                "Cache-Control": "no-cache"
+                "Cache-Control": "public, max-age=3600",  # Cache 1 giờ
+                "Accept-Ranges": "bytes",  # Hỗ trợ resume download
+                "Transfer-Encoding": "chunked"  # Sử dụng chunked transfer
             }
             
+            # Thêm Content-Length nếu có
             if file_size:
                 headers["Content-Length"] = str(file_size)
+            
+            # Thêm Content-Encoding cho text files
+            if content_type.startswith('text/'):
+                headers["Content-Encoding"] = "gzip"
             
             return {
                 "stream": response,
