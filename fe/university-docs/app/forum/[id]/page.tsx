@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ChevronRight, Search, MessageSquare, Eye, ThumbsUp, Clock, User } from "lucide-react"
+import { ChevronRight, Search, MessageSquare, Eye, ThumbsUp, Clock, User, Heart } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/ui/user-avatar"
 import { useAuth } from "@/contexts/auth-context"
 import { getForum, getForumPosts } from "@/lib/api/forum"
 import { NewPostModal } from "@/components/forum/new-post-modal"
@@ -101,15 +102,12 @@ export default function ForumDetailPage({ params }: { params: Promise<{ id: stri
                       </CardTitle>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage 
-                          src={"/placeholder.svg"} 
-                          alt={post.author?.username || "Người dùng"} 
-                        />
-                        <AvatarFallback>
-                          {post.author?.username?.substring(0, 2) || "ND"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        userId={post.author?.user_id}
+                        username={post.author?.username}
+                        fullName={post.author?.full_name}
+                        size="md"
+                      />
                     </div>
                   </div>
                 </CardHeader>
@@ -125,6 +123,16 @@ export default function ForumDetailPage({ params }: { params: Promise<{ id: stri
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
                       <span>{new Date(post.created_at).toLocaleDateString("vi-VN")}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      <span>{post.views || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Heart className="h-4 w-4" />
+                      <span>{post.like_count || 0}</span>
                     </div>
                   </div>
                 </CardContent>

@@ -320,23 +320,6 @@ export const getDocumentPreviewUrl = async (documentId: number) => {
   }
 }
 
-// Kiểm tra tài liệu có hỗ trợ preview không
-export const checkDocumentPreviewSupport = async (documentId: number) => {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/documents/public/${documentId}/is-supported`
-    )
-
-    if (!response.ok) {
-      return { is_supported: false, file_category: 'unsupported' }
-    }
-
-    return response.json()
-  } catch (error) {
-    console.error("Error checking document preview support:", error)
-    return { is_supported: false, file_category: 'unsupported' }
-  }
-}
 
 // Lấy preview cho tài liệu công khai (không cần đăng nhập)
 export const getPublicDocumentPreviewUrl = (documentId: number, size: string = "medium") => {

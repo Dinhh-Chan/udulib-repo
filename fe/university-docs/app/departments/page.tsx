@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { BookOpen, Search } from "lucide-react"
+import { MajorImage } from "@/components/ui/major-image"
 import Loading from "../loading"
 
 type Major = {
@@ -143,9 +144,11 @@ export default function DepartmentsPage() {
             filteredMajors.map((major) => (
               <Card key={major.major_id} className="overflow-hidden">
                 <Link href={`/departments/${major.major_id}`}>
-                  <div className="h-40 bg-muted flex items-center justify-center">
-                    <BookOpen className="h-16 w-16 text-muted-foreground/50" />
-                  </div>
+                  <MajorImage 
+                    majorId={major.major_id}
+                    majorName={major.major_name}
+                    className="h-40"
+                  />
                   <CardHeader>
                     <CardTitle>{major.major_name}</CardTitle>
                     <CardDescription>{major.description}</CardDescription>

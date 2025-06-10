@@ -21,6 +21,9 @@ export interface ForumPost {
   courseSlug?: string
   forum_name?: string
   reply_count?: number
+  views: number
+  like_count: number
+  is_liked: boolean
   author: {
     user_id: number
     username: string
