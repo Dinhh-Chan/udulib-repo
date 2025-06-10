@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { FcGoogle } from "react-icons/fc"
 import { AuthContainer } from "@/components/ui/auth-container"
 import { motion } from "framer-motion"
+import { handleGoogleLogin } from "@/lib/api/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -96,9 +97,7 @@ export default function LoginPage() {
             type="button" 
             variant="outline" 
             className="w-full flex items-center justify-center gap-2"
-            onClick={() => {
-              toast.info("Tính năng đang được phát triển")
-            }}
+            onClick={handleGoogleLogin}
           >
             <FcGoogle size={20} />
             Đăng nhập bằng Google
