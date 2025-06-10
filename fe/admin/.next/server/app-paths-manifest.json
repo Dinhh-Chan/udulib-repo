@@ -1,7 +1,8 @@
 {
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
+  "/admin/years/[id]/page": "app/admin/years/[id]/page.js",
+  "/admin/documents/page": "app/admin/documents/page.js",
+  "/admin/forum/page": "app/admin/forum/page.js",
+  "/admin/forum/post/[id]/page": "app/admin/forum/post/[id]/page.js",
   "/admin/courses/page": "app/admin/courses/page.js",
-  "/admin/years/page": "app/admin/years/page.js",
-  "/admin/settings/page": "app/admin/settings/page.js",
-  "/admin/years/[id]/page": "app/admin/years/[id]/page.js"
+  "/admin/forum/[id]/page": "app/admin/forum/[id]/page.js"
 }
