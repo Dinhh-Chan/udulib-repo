@@ -52,6 +52,7 @@ export default function DepartmentsPage() {
   );
 
   if (loading) return <Loading />
+  if (loading) return <Loading />
 
   return (
     <div className="container py-8 px-4 md:px-6">
@@ -78,6 +79,11 @@ export default function DepartmentsPage() {
             filteredMajors.map((major) => (
               <Card key={major.major_id} className="overflow-hidden">
                 <Link href={`/departments/${major.major_id}`}>
+                  <MajorImage 
+                    majorId={major.major_id}
+                    majorName={major.major_name}
+                    className="h-40"
+                  />
                   <MajorImage 
                     majorId={major.major_id}
                     majorName={major.major_name}

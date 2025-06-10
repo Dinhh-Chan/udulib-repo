@@ -3,18 +3,23 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronRight, User, Settings, FileText, MessageSquare, Bell } from "lucide-react"
+import { ChevronRight, User, Settings, FileText, MessageSquare, Bell } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { getUserProfile, getUserAvatar } from "@/lib/api/user"
 import { getUserProfile, getUserAvatar } from "@/lib/api/user"
 import { User as UserType } from "@/types/user"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
 import Loading from "@/app/loading"
+import { getDocumentDetail, updateDocument, deleteDocument, DocumentUpdateData } from "@/lib/api/documents"
 import { getDocumentDetail, updateDocument, deleteDocument, DocumentUpdateData } from "@/lib/api/documents"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -34,7 +39,11 @@ export default function ProfilePage() {
   const [user, setUser] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const { user: authUser, isAuthenticated } = useAuth()
+  
+  // Dialog states
+  const [selectedDocument, setSelectedDocument] = useState<any>(null)
   
   // Dialog states
   const [selectedDocument, setSelectedDocument] = useState<any>(null)
@@ -79,6 +88,15 @@ export default function ProfilePage() {
             // Không hiển thị lỗi nếu user chưa có avatar
             console.log("User chưa có avatar")
           }
+          
+          // Load avatar
+          try {
+            const avatar = await getUserAvatar()
+            setAvatarUrl(avatar)
+          } catch (error) {
+            // Không hiển thị lỗi nếu user chưa có avatar
+            console.log("User chưa có avatar")
+          }
         }
       } catch (error) {
         console.error("Error fetching user profile:", error)
@@ -92,7 +110,21 @@ export default function ProfilePage() {
   }, [authUser, isAuthenticated])
 
   // Event listeners for child components
+  // Event listeners for child components
   useEffect(() => {
+    const handleEditDocument = async (event: any) => {
+      const { documentId } = event.detail
+      try {
+        setIsLoadingDocument(true)
+        const doc = await getDocumentDetail(documentId)
+        setSelectedDocument(doc)
+        setIsEditDialogOpen(true)
+        setEditForm({
+          title: doc.title,
+          description: doc.description,
+          status: doc.status,
+          tags: doc.tags.map((tag: any) => tag.tag_name)
+        })
     const handleEditDocument = async (event: any) => {
       const { documentId } = event.detail
       try {
@@ -109,11 +141,36 @@ export default function ProfilePage() {
       } catch (error) {
         console.error("Error fetching document:", error)
         toast.error("Không thể tải thông tin tài liệu")
+        console.error("Error fetching document:", error)
+        toast.error("Không thể tải thông tin tài liệu")
       } finally {
+        setIsLoadingDocument(false)
         setIsLoadingDocument(false)
       }
     }
 
+    const handleDeleteDocument = (event: any) => {
+      const { documentId } = event.detail
+      setDocumentToDelete(documentId)
+      setIsDeleteDialogOpen(true)
+    }
+
+    const handleDeleteForumPost = (event: any) => {
+      const { postId } = event.detail
+      setForumPostToDelete(postId)
+      setIsDeleteForumPostDialogOpen(true)
+    }
+
+    window.addEventListener('editDocument', handleEditDocument)
+    window.addEventListener('deleteDocument', handleDeleteDocument)
+    window.addEventListener('deleteForumPost', handleDeleteForumPost)
+
+    return () => {
+      window.removeEventListener('editDocument', handleEditDocument)
+      window.removeEventListener('deleteDocument', handleDeleteDocument)
+      window.removeEventListener('deleteForumPost', handleDeleteForumPost)
+    }
+  }, [])
     const handleDeleteDocument = (event: any) => {
       const { documentId } = event.detail
       setDocumentToDelete(documentId)
@@ -155,6 +212,8 @@ export default function ProfilePage() {
       setIsEditDialogOpen(false)
       // Trigger refresh in child component
       window.dispatchEvent(new CustomEvent('refreshDocuments'))
+      // Trigger refresh in child component
+      window.dispatchEvent(new CustomEvent('refreshDocuments'))
     } catch (error) {
       console.error("Error updating document:", error)
       toast.error("Không thể cập nhật tài liệu")
@@ -164,6 +223,7 @@ export default function ProfilePage() {
   }
 
   const handleDeleteDocumentConfirm = async () => {
+  const handleDeleteDocumentConfirm = async () => {
     if (!documentToDelete) return
 
     try {
@@ -171,6 +231,8 @@ export default function ProfilePage() {
       await deleteDocument(documentToDelete)
       toast.success("Xóa tài liệu thành công")
       setIsDeleteDialogOpen(false)
+      // Trigger refresh in child component
+      window.dispatchEvent(new CustomEvent('refreshDocuments'))
       // Trigger refresh in child component
       window.dispatchEvent(new CustomEvent('refreshDocuments'))
     } catch (error) {
@@ -183,12 +245,15 @@ export default function ProfilePage() {
   }
 
   const handleDeleteForumPostConfirm = async () => {
+  const handleDeleteForumPostConfirm = async () => {
     if (!forumPostToDelete) return
 
     try {
       await deleteForumPost(forumPostToDelete)
       toast.success("Xóa bài viết thành công")
       setIsDeleteForumPostDialogOpen(false)
+      // Trigger refresh in child component
+      window.dispatchEvent(new CustomEvent('refreshForumPosts'))
       // Trigger refresh in child component
       window.dispatchEvent(new CustomEvent('refreshForumPosts'))
     } catch (error) {
@@ -221,6 +286,7 @@ export default function ProfilePage() {
   if (!user && !isLoading && isAuthenticated) {
     return (
       <Loading />
+      <Loading />
     )
   }
 
@@ -249,6 +315,14 @@ export default function ProfilePage() {
             <Card>
               <CardContent className="p-4 flex flex-col items-center text-center">
                 <Avatar className="h-16 w-16 sm:h-20 sm:w-20 mb-3 sm:mb-4">
+                  <AvatarImage 
+                    src={avatarUrl || undefined} 
+                    alt={user.full_name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-sm sm:text-base">
+                    {user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
                   <AvatarImage 
                     src={avatarUrl || undefined} 
                     alt={user.full_name}
@@ -384,13 +458,17 @@ export default function ProfilePage() {
               <div className="space-y-2">
                 <label htmlFor="title" className="text-sm font-medium">Tiêu đề</label>
                 <input
+                <label htmlFor="title" className="text-sm font-medium">Tiêu đề</label>
+                <input
                   id="title"
                   value={editForm.title}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                   className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="space-y-2">
+                <label htmlFor="description" className="text-sm font-medium">Mô tả</label>
                 <label htmlFor="description" className="text-sm font-medium">Mô tả</label>
                 <Textarea
                   id="description"
@@ -401,6 +479,7 @@ export default function ProfilePage() {
               </div>
               {authUser?.role === "admin" && (
                 <div className="space-y-2">
+                  <label htmlFor="status" className="text-sm font-medium">Trạng thái</label>
                   <label htmlFor="status" className="text-sm font-medium">Trạng thái</label>
                   <Select
                     value={editForm.status}
@@ -443,6 +522,7 @@ export default function ProfilePage() {
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
             <AlertDialogCancel className="w-full sm:w-auto order-2 sm:order-1">Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteDocumentConfirm} disabled={isLoadingDocument} className="w-full sm:w-auto order-1 sm:order-2">
+            <AlertDialogAction onClick={handleDeleteDocumentConfirm} disabled={isLoadingDocument} className="w-full sm:w-auto order-1 sm:order-2">
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -460,6 +540,7 @@ export default function ProfilePage() {
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
             <AlertDialogCancel className="w-full sm:w-auto order-2 sm:order-1">Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteForumPostConfirm} className="w-full sm:w-auto order-1 sm:order-2">
+            <AlertDialogAction onClick={handleDeleteForumPostConfirm} className="w-full sm:w-auto order-1 sm:order-2">
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -468,4 +549,5 @@ export default function ProfilePage() {
     </div>
   )
 }
+
 

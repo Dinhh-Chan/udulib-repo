@@ -163,6 +163,7 @@ export default function DocumentsPage() {
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {documents.map((doc) => (
                     <Link 
                       key={doc.document_id} 
@@ -223,8 +224,13 @@ export default function DocumentsPage() {
                           {/* Tags - giới hạn trong 1 dòng */}
                           <div className="flex flex-wrap gap-1 mb-2 min-h-[20px]">
                             {doc.tags?.slice(0, 2).map((tag) => (
+                          
+                          {/* Tags - giới hạn trong 1 dòng */}
+                          <div className="flex flex-wrap gap-1 mb-2 min-h-[20px]">
+                            {doc.tags?.slice(0, 2).map((tag) => (
                               <span
                                 key={tag.tag_id}
+                                className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-full font-medium"
                                 className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-full font-medium"
                               >
                                 {tag.tag_name}
@@ -233,20 +239,32 @@ export default function DocumentsPage() {
                             {doc.tags && doc.tags.length > 2 && (
                               <span className="text-xs text-muted-foreground self-center">+{doc.tags.length - 2}</span>
                             )}
+                            {doc.tags && doc.tags.length > 2 && (
+                              <span className="text-xs text-muted-foreground self-center">+{doc.tags.length - 2}</span>
+                            )}
                           </div>
+                          
+                          {/* Stats footer - luôn ở dưới cùng */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-auto">
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           
                           {/* Stats footer - luôn ở dưới cùng */}
                           <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-auto">
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <ThumbsUp className="h-3 w-3" />
+                                <ThumbsUp className="h-3 w-3" />
                                 <span>{doc.view_count}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Download className="h-3 w-3" />
+                                <Download className="h-3 w-3" />
                                 <span>{doc.download_count}</span>
                               </div>
                             </div>
+                            
+                            <div className="text-xs text-muted-foreground/70 truncate max-w-[60px]">
+                              {doc.user.full_name}
                             
                             <div className="text-xs text-muted-foreground/70 truncate max-w-[60px]">
                               {doc.user.full_name}
@@ -257,9 +275,19 @@ export default function DocumentsPage() {
                               <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                               </svg>
+                            
+                            {/* Simple arrow */}
+                            <div className="opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+                              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
                             </div>
                           </div>
                         </div>
+                        
+
+                      </Card>
+                    </Link>
                         
 
                       </Card>

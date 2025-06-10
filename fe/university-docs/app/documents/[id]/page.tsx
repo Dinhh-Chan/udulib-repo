@@ -1,6 +1,7 @@
 "use client"
 
 import { toast } from "sonner"
+import { toast } from "sonner"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,6 +17,7 @@ import {
   Bookmark,
   Flag,
   Eye,
+  Lock,
   Lock,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -87,6 +89,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [replyContent, setReplyContent] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
 
+
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -148,6 +151,18 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
               {previewLoading ? "Đang tải..." : "Thử lại"}
             </Button>
           </div>
+          <FileText className="h-16 w-16 mb-4" />
+          <p>Không thể tải preview</p>
+          <p className="text-sm">Thử tải lại preview hoặc tải xuống tài liệu</p>
+          <div className="flex gap-2 mt-4">
+            <Button 
+              onClick={retryPreview} 
+              variant="outline"
+              disabled={previewLoading}
+            >
+              {previewLoading ? "Đang tải..." : "Thử lại"}
+            </Button>
+          </div>
         </div>
       );
     }
@@ -189,7 +204,24 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           src={previewUrl}
           alt="Document preview"
           className="w-full h-auto rounded-lg"
+          className="w-full h-auto rounded-lg"
           onError={(e) => {
+            console.error("Failed to load image preview:", {
+              url: previewUrl,
+              error: e,
+              target: e.target,
+              isAuthenticated,
+              documentId: id
+            });
+            setPreviewError(true);
+            setPreviewUrl("");
+          }}
+          onLoad={() => {
+            console.log("Image preview loaded successfully:", previewUrl);
+            setPreviewError(false);
+          }}
+        />
+      </div>
             console.error("Failed to load image preview:", {
               url: previewUrl,
               error: e,
@@ -213,8 +245,13 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     // Kiểm tra authentication status
     setIsAuthenticated(isUserAuthenticated());
     
+    // Kiểm tra authentication status
+    setIsAuthenticated(isUserAuthenticated());
+    
     if (typeof window !== "undefined") {
       try {
+        const user = getCurrentUser();
+        if (user) {
         const user = getCurrentUser();
         if (user) {
           setUserId(user.user_id);
@@ -236,12 +273,22 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       } catch (error) {
         console.error("Error checking/increasing view count:", error);
       }
+      try {
+        const history = await checkUserViewHistory(id, userId);
+        if (!Array.isArray(history) || history.length === 0) {
+          await increaseViewCount(id);
+        }
+        hasIncreasedView.current = true;
+      } catch (error) {
+        console.error("Error checking/increasing view count:", error);
+      }
     };
 
     checkAndIncreaseView();
   }, [id, userId]);
 
   useEffect(() => {
+    const loadDocument = async () => {
     const loadDocument = async () => {
       try {
         setLoading(true)
@@ -285,12 +332,16 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
 
     const loadRatings = async () => {
+    const loadRatings = async () => {
       try {
         setRatingLoading(true)
         setRatingError(null)
         const data = await fetchRatings(id);
         setRatings(data);
+        const data = await fetchRatings(id);
+        setRatings(data);
         if (userId) {
+          const found = data.find((r: Rating) => r.user_id === userId)
           const found = data.find((r: Rating) => r.user_id === userId)
           if (found) {
             setUserRating(found.score)
@@ -311,12 +362,19 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     loadRatings();
   }, [id, isAuthenticated, userId])
 
+    loadDocument();
+    loadRatings();
+  }, [id, isAuthenticated, userId])
+
   useEffect(() => {
     if (!id) return;
     const loadComments = async () => {
+    const loadComments = async () => {
       try {
         let data = await fetchComments(id);
+        let data = await fetchComments(id);
         const tree = buildCommentTree(data);
+        await fillUserInfoForComments(tree);
         await fillUserInfoForComments(tree);
         setComments(tree);
       } catch (err) {}
@@ -358,6 +416,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     setCommentLoading(true);
     try {
       let newComment = await createComment(id, commentContent);
+      let newComment = await createComment(id, commentContent);
       setComments((prev) => [newComment, ...prev]);
       setCommentContent("");
     } catch (err) {
@@ -380,6 +439,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     setRatingError(null)
     try {
       const newRating = await createRating(id, pendingScore);
+      const newRating = await createRating(id, pendingScore);
       setRatings((prev) => [...prev, newRating])
       setUserRating(pendingScore)
       setUserRatingId(newRating.rating_id)
@@ -397,6 +457,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     setReplyLoading(true);
     try {
       const newReply = await createComment(id, replyContent, parentId);
+      const newReply = await createComment(id, replyContent, parentId);
       setComments((prev) =>
         prev.map((c) =>
           c.comment_id === parentId
@@ -411,6 +472,109 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   };
 
   const renderComment = (comment: Comment) => (
+    <Card key={comment.comment_id} className="shadow-sm">
+      <CardContent className="p-6">
+        <div className="flex gap-4">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+            {comment.user?.full_name?.substring(0, 2) || "ND"}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <p className="font-semibold">{comment.user?.full_name || comment.user?.username || "Ẩn danh"}</p>
+              <p className="text-sm text-muted-foreground">
+                {formatDate(comment.created_at)}
+              </p>
+            </div>
+            
+            <div className="prose max-w-none mb-3 dark:prose-invert">
+              <p className="whitespace-pre-wrap text-foreground leading-relaxed text-sm">
+                {comment.content}
+              </p>
+            </div>
+            
+            {/* Comment Actions */}
+            <div className="flex items-center gap-4 text-sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReplyingToId(comment.comment_id)}
+                className="text-muted-foreground hover:text-primary p-0 h-auto"
+              >
+                <MessageSquare className="h-4 w-4 mr-1" />
+                Phản hồi
+              </Button>
+            </div>
+
+            {/* Reply Form */}
+            {replyingToId === comment.comment_id && (
+              <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                <form onSubmit={(e) => handleSubmitReply(e, comment.comment_id)} className="space-y-3">
+                  <Textarea
+                    placeholder={`Phản hồi ${comment.user?.full_name || "bình luận này"}...`}
+                    rows={3}
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    required
+                    disabled={replyLoading}
+                    className="resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      type="submit" 
+                      size="sm" 
+                      disabled={replyLoading || !replyContent.trim()}
+                    >
+                      {replyLoading ? "Đang gửi..." : "Gửi phản hồi"}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setReplyingToId(null)}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Nested Replies */}
+            {comment.replies && comment.replies.length > 0 && (
+              <div className="mt-4 ml-6 border-l-2 border-border pl-4">
+                <div className="space-y-3">
+                  {comment.replies.map((reply) => (
+                    <div 
+                      key={reply.comment_id} 
+                      className="flex gap-3 p-3 rounded-lg bg-muted/20"
+                    >
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-semibold text-xs">
+                        {reply.user?.full_name?.substring(0, 2) || "ND"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-sm truncate">{reply.user?.full_name || reply.user?.username || "Ẩn danh"}</p>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <p className="text-xs text-muted-foreground flex-shrink-0">
+                            {formatDate(reply.created_at)}
+                          </p>
+                        </div>
+                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                          {reply.content}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+
     <Card key={comment.comment_id} className="shadow-sm">
       <CardContent className="p-6">
         <div className="flex gap-4">
@@ -570,6 +734,7 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   if (loading) {
     return (
       <Loading />
+      <Loading />
     )
   }
 
@@ -663,6 +828,24 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 {userRating && <div className="text-xs text-green-600 mt-1">Bạn đã đánh giá {userRating} sao</div>}
                 {ratingError && <div className="text-xs text-red-500 mt-1">{ratingError}</div>}
                 <br />
+                {isAuthenticated ? (
+                  <Button
+                    className="w-full"
+                    onClick={handleDownloadClick}
+                    disabled={downloadLoading}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {downloadLoading ? "Đang tải..." : "Tải xuống"}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={() => setShowLoginPrompt(true)}
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Đăng nhập để tải xuống
+                  </Button>
+                )}
                 {isAuthenticated ? (
                   <Button
                     className="w-full"
@@ -800,10 +983,20 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
 
       {/* Modal yêu cầu đăng nhập */}
       <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+
+      {/* Modal yêu cầu đăng nhập */}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Yêu cầu đăng nhập</DialogTitle>
+            <DialogTitle>Yêu cầu đăng nhập</DialogTitle>
           </DialogHeader>
+          <div className="text-center py-4">
+            <Lock className="h-12 w-12 mx-auto mb-4 text-primary" />
+            <p className="mb-4">
+              Bạn cần đăng nhập để tải xuống tài liệu và xem đầy đủ nội dung.
+            </p>
+          </div>
           <div className="text-center py-4">
             <Lock className="h-12 w-12 mx-auto mb-4 text-primary" />
             <p className="mb-4">

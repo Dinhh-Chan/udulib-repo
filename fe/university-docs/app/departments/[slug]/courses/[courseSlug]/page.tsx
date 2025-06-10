@@ -46,6 +46,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string;
 
   if (!mounted) return null;
   if (loading) return <Loading />
+  if (loading) return <Loading />
   if (!subject || !major) return <div>Không tìm thấy thông tin môn học</div>
 
   return (
