@@ -782,4 +782,27 @@ async def get_document_stats(
     stats = await document.get_document_stats(db, document_id=id, user_id=current_user.user_id)
     return stats
 
+@router.get("/{id}/like-status")
+async def get_document_like_status(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Kiểm tra trạng thái like của người dùng đối với một tài liệu.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    is_liked = await document.check_user_liked(db, document_id=id, user_id=current_user.user_id)
+    return {
+        "document_id": id,
+        "is_liked": is_liked
+    }
+
 
