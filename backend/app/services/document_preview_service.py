@@ -3,11 +3,14 @@ import logging
 import tempfile
 import os
 import subprocess
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Generator
 from PIL import Image, ImageDraw, ImageFont
 import fitz  # PyMuPDF
 from fastapi import HTTPException, status
 from fastapi.responses import StreamingResponse
+from functools import lru_cache
+import gzip
+import asyncio
 
 from app.services.minio_service import minio_service
 from app.core.config import settings
@@ -46,34 +49,20 @@ class DocumentPreviewService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
     
+    # Cache cho file type category
+    @lru_cache(maxsize=512)
     def get_file_type_category(self, filename: str) -> str:
-        """Phân loại file theo category"""
-        if not filename:
-            self.logger.error("Filename is empty or None")
-            return 'unsupported'
-        
-        try:
-            ext = minio_service.get_file_extension(filename)
-            
-            # Nếu không có extension thì return unsupported
-            if not ext:
-                self.logger.info(f"File '{filename}' has no extension, treating as unsupported")
-                return 'unsupported'
-                
-            self.logger.debug(f"File extension for '{filename}': '{ext}'")
-        except Exception as e:
-            self.logger.error(f"Error getting file extension for '{filename}': {e}")
-            return 'unsupported'
-        if ext.lower() in self.SUPPORTED_IMAGE_TYPES:
+        """Cache file type category để tăng hiệu năng"""
+        ext = minio_service.get_file_extension(filename).lower()
+        if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
             return 'image'
-        elif ext.lower() in self.SUPPORTED_PDF_TYPES:
+        elif ext == '.pdf':
             return 'pdf'
-        elif ext.lower() in self.SUPPORTED_OFFICE_TYPES:
+        elif ext in ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']:
             return 'office'
-        elif ext.lower() in self.SUPPORTED_TEXT_TYPES:
+        elif ext in ['.txt', '.md', '.csv', '.json']:
             return 'text'
-        else:
-            return 'unsupported'
+        return 'unsupported'
     
     def is_supported_file(self, filename: str) -> bool:
         """Kiểm tra file có được hỗ trợ preview không"""
@@ -467,7 +456,39 @@ class DocumentPreviewService:
         
         return combined_image
     
-    def get_document_preview_stream(self, file_path: str, filename: str, size_type: str = "medium") -> StreamingResponse:
+    async def _stream_file_chunks(self, file_path: str, chunk_size: int = 8192) -> Generator[bytes, None, None]:
+        """Stream file theo chunks từ MinIO"""
+        try:
+            file_stream = minio_service.get_file_stream(file_path)
+            if not file_stream:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File không tồn tại")
+            
+            while True:
+                chunk = file_stream.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+            file_stream.close()
+        except Exception as e:
+            logging.error(f"Error streaming file: {e}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi khi đọc file")
+
+    def _compress_text(self, text: str) -> bytes:
+        """Nén text bằng gzip"""
+        return gzip.compress(text.encode('utf-8'))
+
+    async def _get_cached_preview(self, file_path: str, size_type: str) -> Optional[StreamingResponse]:
+        """Lấy preview từ cache nếu có"""
+        cache_key = f"{file_path}_{size_type}"
+        # TODO: Implement cache logic (Redis/Memcached)
+        return None
+
+    async def _cache_preview(self, file_path: str, size_type: str, preview_data: bytes):
+        """Cache preview để dùng lại"""
+        cache_key = f"{file_path}_{size_type}"
+        # TODO: Implement cache logic (Redis/Memcached)
+
+    async def get_document_preview_stream(self, file_path: str, filename: str, size_type: str = "medium") -> StreamingResponse:
         """
         Lấy preview stream cho bất kỳ loại tài liệu nào được hỗ trợ
         
@@ -477,6 +498,12 @@ class DocumentPreviewService:
             size_type: Loại kích thước (small, medium, large, original, full)
         """
         try:
+            # Kiểm tra cache trước
+            cached_preview = await self._get_cached_preview(file_path, size_type)
+            if cached_preview:
+                return cached_preview
+
+            # Xác định loại file (đã được cache)
             file_category = self.get_file_type_category(filename)
             
             if file_category == 'unsupported':
@@ -487,32 +514,23 @@ class DocumentPreviewService:
             
             # Xác định kích thước target và số trang
             is_full_preview = size_type == "full"
-            
-            if size_type == "small":
-                target_size = self.THUMBNAIL_SIZE
-                max_pages = 1
-            elif size_type == "large":
-                target_size = self.LARGE_SIZE  
-                max_pages = 5
-            elif size_type == "original":
-                target_size = None
-                max_pages = 10
-            elif size_type == "full":
-                target_size = self.LARGE_SIZE
-                max_pages = 50  # Nhiều trang cho full preview
-            else:  # medium
-                target_size = self.MAX_PREVIEW_SIZE
-                max_pages = 3
+            target_size, max_pages = self._get_preview_size_config(size_type)
             
             # Xử lý theo loại file
             if file_category == 'image':
-                return self._handle_image_preview(file_path, target_size)
+                preview_response = self._handle_image_preview(file_path, target_size)
             elif file_category == 'pdf':
-                return self._handle_pdf_preview(file_path, target_size, max_pages, is_full_preview)
+                preview_response = self._handle_pdf_preview(file_path, target_size, max_pages, is_full_preview)
             elif file_category == 'office':
-                return self._handle_office_preview(file_path, target_size, max_pages, is_full_preview)
+                preview_response = self._handle_office_preview(file_path, target_size, max_pages, is_full_preview)
             elif file_category == 'text':
-                return self._handle_text_preview(file_path, target_size, is_full_preview)
+                preview_response = await self._handle_text_preview(file_path, target_size, is_full_preview)
+            
+            # Cache preview nếu cần
+            if preview_response and not is_full_preview:
+                asyncio.create_task(self._cache_preview(file_path, size_type, preview_response.body))
+            
+            return preview_response
                 
         except HTTPException:
             raise
@@ -521,6 +539,67 @@ class DocumentPreviewService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Không thể tạo preview tài liệu"
+            )
+
+    def _get_preview_size_config(self, size_type: str) -> Tuple[Optional[Tuple[int, int]], int]:
+        """Lấy cấu hình kích thước và số trang cho preview"""
+        if size_type == "small":
+            return self.THUMBNAIL_SIZE, 1
+        elif size_type == "large":
+            return self.LARGE_SIZE, 5
+        elif size_type == "original":
+            return None, 10
+        elif size_type == "full":
+            return self.LARGE_SIZE, 50
+        else:  # medium
+            return self.MAX_PREVIEW_SIZE, 3
+
+    async def _handle_text_preview(self, file_path: str, target_size: Optional[Tuple[int, int]], is_full_preview: bool) -> StreamingResponse:
+        """Xử lý preview cho text files với compression"""
+        try:
+            # Đọc text theo chunks
+            text_chunks = []
+            async for chunk in self._stream_file_chunks(file_path):
+                text_chunks.append(chunk.decode('utf-8'))
+            
+            text_content = ''.join(text_chunks)
+            
+            # Tạo image từ text
+            preview_size = target_size or self.MAX_PREVIEW_SIZE
+            text_image = self._create_text_preview_image(text_content, preview_size, is_full_preview)
+            
+            # Nén output
+            output = io.BytesIO()
+            text_image.save(output, format='JPEG', quality=85, optimize=True)
+            output.seek(0)
+            
+            # Nén text nếu là full preview
+            if is_full_preview:
+                compressed_data = self._compress_text(text_content)
+                return StreamingResponse(
+                    io.BytesIO(compressed_data),
+                    media_type="text/plain",
+                    headers={
+                        "Content-Encoding": "gzip",
+                        "Cache-Control": "public, max-age=3600",
+                        "Content-Disposition": "inline"
+                    }
+                )
+            
+            return StreamingResponse(
+                io.BytesIO(output.getvalue()),
+                media_type="image/jpeg",
+                headers={
+                    "Cache-Control": "public, max-age=3600",
+                    "Content-Disposition": "inline"
+                }
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error processing text file: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Không thể tạo preview từ file text"
             )
     
     def _handle_image_preview(self, file_path: str, target_size: Optional[Tuple[int, int]]) -> StreamingResponse:
@@ -731,50 +810,6 @@ class DocumentPreviewService:
                 os.unlink(temp_office_path)
             except:
                 pass
-    
-    def _handle_text_preview(self, file_path: str, target_size: Optional[Tuple[int, int]], is_full_preview: bool = False) -> StreamingResponse:
-        """Xử lý preview cho text files"""
-        file_stream = minio_service.get_file_stream(file_path)
-        if not file_stream:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File không tồn tại")
-        
-        # Đọc nội dung text
-        text_data = file_stream.read()
-        file_stream.close()
-        
-        try:
-            # Decode text (thử các encoding phổ biến)
-            text_content = None
-            for encoding in ['utf-8', 'utf-16', 'latin1', 'cp1252']:
-                try:
-                    text_content = text_data.decode(encoding)
-                    break
-                except:
-                    continue
-            
-            if text_content is None:
-                text_content = "Không thể đọc nội dung file text"
-            
-            # Tạo image từ text
-            preview_size = target_size or self.MAX_PREVIEW_SIZE
-            text_image = self._create_text_preview_image(text_content, preview_size, is_full_preview)
-            
-            output = io.BytesIO()
-            text_image.save(output, format='JPEG', quality=85, optimize=True)
-            output.seek(0)
-            
-            return StreamingResponse(
-                io.BytesIO(output.getvalue()),
-                media_type="image/jpeg",
-                headers={"Cache-Control": "public, max-age=3600", "Content-Disposition": "inline"}
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Error processing text file: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Không thể tạo preview từ file text"
-            )
     
     # Backwards compatibility methods
     def get_image_preview_stream(self, file_path: str, max_size: Optional[Tuple[int, int]] = None) -> StreamingResponse:
