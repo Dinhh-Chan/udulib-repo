@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
 from app.services.crud.forum_post_crud import ForumPostCRUD
-from app.schemas.forum import ForumPost, ForumPostCreate, ForumPostUpdate
+from app.schemas.forum import ForumPost, ForumPostCreate, ForumPostUpdate, ForumPostStats
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from pydantic import BaseModel
@@ -84,10 +84,11 @@ async def read_forum_post(
     *,
     db: AsyncSession = Depends(get_db),
     post_id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lấy thông tin chi tiết của một forum post.
+    Tự động tăng view count.
     """
     crud = ForumPostCRUD(db)
     post = await crud.get_by_id(id=post_id)
@@ -96,6 +97,15 @@ async def read_forum_post(
             status_code=404,
             detail="Forum post not found"
         )
+    
+    # Tăng view count
+    await crud.increment_views(post_id)
+    
+    # Thêm thông tin is_liked
+    if current_user:
+        is_liked = await crud.check_user_liked(post_id, current_user.user_id)
+        post["is_liked"] = is_liked
+    
     return post
 
 @router.post("/", response_model=ForumPost)
@@ -109,7 +119,7 @@ async def create_forum_post(
     Tạo forum post mới.
     """
     crud = ForumPostCRUD(db)
-    post = await crud.create(obj_in=post_in, user_id=1)
+    post = await crud.create(obj_in=post_in, user_id=current_user.user_id)
     return post
 
 @router.put("/{post_id}", response_model=ForumPost)
@@ -161,6 +171,122 @@ async def update_forum_post(
             status_code=403,
             detail=str(e)
         )
+
+@router.post("/{post_id}/like")
+async def like_forum_post(
+    *,
+    db: AsyncSession = Depends(get_db),
+    post_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Like một forum post.
+    """
+    crud = ForumPostCRUD(db)
+    
+    # Kiểm tra post có tồn tại không
+    post = await crud.get_by_id(id=post_id)
+    if not post:
+        raise HTTPException(
+            status_code=404,
+            detail="Forum post not found"
+        )
+    
+    result = await crud.like_post(post_id, current_user.user_id)
+    if not result["success"]:
+        raise HTTPException(
+            status_code=400,
+            detail=result["message"]
+        )
+    
+    return result
+
+@router.delete("/{post_id}/like")
+async def unlike_forum_post(
+    *,
+    db: AsyncSession = Depends(get_db),
+    post_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Unlike một forum post.
+    """
+    crud = ForumPostCRUD(db)
+    
+    # Kiểm tra post có tồn tại không
+    post = await crud.get_by_id(id=post_id)
+    if not post:
+        raise HTTPException(
+            status_code=404,
+            detail="Forum post not found"
+        )
+    
+    result = await crud.unlike_post(post_id, current_user.user_id)
+    if not result["success"]:
+        raise HTTPException(
+            status_code=400,
+            detail=result["message"]
+        )
+    
+    return result
+
+@router.get("/{post_id}/stats", response_model=ForumPostStats)
+async def get_forum_post_stats(
+    *,
+    db: AsyncSession = Depends(get_db),
+    post_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Lấy thống kê của forum post (views, likes, replies, is_liked).
+    """
+    crud = ForumPostCRUD(db)
+    
+    # Kiểm tra post có tồn tại không
+    post = await crud.get_by_id(id=post_id)
+    if not post:
+        raise HTTPException(
+            status_code=404,
+            detail="Forum post not found"
+        )
+    
+    stats = await crud.get_post_stats(post_id, current_user.user_id if current_user else None)
+    if not stats:
+        raise HTTPException(
+            status_code=500,
+            detail="Error getting post stats"
+        )
+    
+    return stats
+
+@router.post("/{post_id}/view")
+async def track_forum_post_view(
+    *,
+    db: AsyncSession = Depends(get_db),
+    post_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually track view cho forum post (nếu không muốn auto-track trong GET).
+    """
+    crud = ForumPostCRUD(db)
+    
+    # Kiểm tra post có tồn tại không
+    post = await crud.get_by_id(id=post_id)
+    if not post:
+        raise HTTPException(
+            status_code=404,
+            detail="Forum post not found"
+        )
+    
+    success = await crud.increment_views(post_id)
+    if not success:
+        raise HTTPException(
+            status_code=500,
+            detail="Error tracking view"
+        )
+    
+    return {"message": "View tracked successfully"}
 
 @router.delete("/{post_id}")
 async def delete_forum_post(

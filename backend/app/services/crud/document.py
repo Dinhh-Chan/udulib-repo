@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from app.models.document import Document
 from app.models.document_tag import DocumentTag
 from app.models.document_history import DocumentHistory
+from app.models.document_like import DocumentLike
 from app.models.subject import Subject
 from app.models.tag import Tag
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentFilterRequest
@@ -327,5 +328,118 @@ class CRUDDocument(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
     async def count_document(self, db: AsyncSession):
         documents= await db.execute(select(func.count()).select_from(self.model))
         return documents.scalar_one()
+
+    async def like_document(self, db: AsyncSession, *, document_id: int, user_id: int) -> Dict[str, Any]:
+        """
+        Like một document
+        """
+        try:
+            # Kiểm tra xem user đã like chưa
+            existing_like = await db.scalar(
+                select(DocumentLike).where(
+                    DocumentLike.document_id == document_id,
+                    DocumentLike.user_id == user_id
+                )
+            )
+            
+            if existing_like:
+                return {"message": "Đã like tài liệu này rồi", "liked": True}
+            
+            # Tạo like mới
+            new_like = DocumentLike(
+                document_id=document_id,
+                user_id=user_id
+            )
+            db.add(new_like)
+            
+            # Cập nhật like_count
+            stmt = select(Document).where(Document.document_id == document_id)
+            document = await db.scalar(stmt)
+            if document:
+                document.like_count += 1
+                db.add(document)
+            
+            await db.commit()
+            
+            return {"message": "Đã like tài liệu thành công", "liked": True}
+            
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Lỗi khi like tài liệu: {str(e)}")
+
+    async def unlike_document(self, db: AsyncSession, *, document_id: int, user_id: int) -> Dict[str, Any]:
+        """
+        Unlike một document
+        """
+        try:
+            # Tìm và xóa like
+            existing_like = await db.scalar(
+                select(DocumentLike).where(
+                    DocumentLike.document_id == document_id,
+                    DocumentLike.user_id == user_id
+                )
+            )
+            
+            if not existing_like:
+                return {"message": "Chưa like tài liệu này", "liked": False}
+            
+            await db.delete(existing_like)
+            
+            # Cập nhật like_count
+            stmt = select(Document).where(Document.document_id == document_id)
+            document = await db.scalar(stmt)
+            if document and document.like_count > 0:
+                document.like_count -= 1
+                db.add(document)
+            
+            await db.commit()
+            
+            return {"message": "Đã bỏ like tài liệu", "liked": False}
+            
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Lỗi khi bỏ like tài liệu: {str(e)}")
+
+    async def check_user_liked(self, db: AsyncSession, *, document_id: int, user_id: int) -> bool:
+        """
+        Kiểm tra user đã like document chưa
+        """
+        result = await db.scalar(
+            select(DocumentLike).where(
+                DocumentLike.document_id == document_id,
+                DocumentLike.user_id == user_id
+            )
+        )
+        return result is not None
+
+    async def get_document_stats(self, db: AsyncSession, *, document_id: int, user_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Lấy thống kê của document
+        """
+        # Lấy thông tin cơ bản của document
+        stmt = select(Document).where(Document.document_id == document_id)
+        document = await db.scalar(stmt)
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Tài liệu không tồn tại")
+        
+        # Đếm comments
+        from app.models.comment import Comment
+        comment_count = await db.scalar(
+            select(func.count(Comment.comment_id)).where(Comment.document_id == document_id)
+        )
+        
+        # Kiểm tra user đã like chưa
+        is_liked = False
+        if user_id:
+            is_liked = await self.check_user_liked(db, document_id=document_id, user_id=user_id)
+        
+        return {
+            "view_count": document.view_count,
+            "download_count": document.download_count,
+            "like_count": document.like_count,
+            "comment_count": comment_count or 0,
+            "is_liked": is_liked
+        }
 
 document = CRUDDocument(Document) 

@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { FilterSidebar } from "./components/FilterSidebar"
+import { DocumentThumbnail } from "@/components/ui/document-thumbnail"
 
 interface Document {
   document_id: number
@@ -120,50 +121,6 @@ export default function DocumentsPage() {
     return `${size.toFixed(1)} ${sizes[i]}`
   }
 
-  const handleView = async (documentId: number) => {
-    try {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        console.warn("Vui lòng đăng nhập")
-        return
-      }
-
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/view`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      // Cập nhật lại danh sách tài liệu sau khi ghi nhận lượt xem
-      fetchDocuments()
-    } catch (err) {
-      console.error("Error recording view:", err)
-    }
-  }
-
-  const handleDownload = async (documentId: number) => {
-    try {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        console.warn("Vui lòng đăng nhập")
-        return
-      }
-
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/download`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      // Cập nhật lại danh sách tài liệu sau khi ghi nhận lượt tải
-      fetchDocuments()
-    } catch (err) {
-      console.error("Error recording download:", err)
-    }
-  }
-
   return (
     <div className="container py-8 px-4 md:px-6">
       <div className="flex flex-col gap-8">
@@ -193,8 +150,41 @@ export default function DocumentsPage() {
           
           <div className="flex-1">
             {loading ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <Card key={i} className="animate-pulse border-0 shadow-lg h-80">
+                    {/* Thumbnail skeleton */}
+                    <div className="h-40 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 relative">
+                      {/* Badge skeletons */}
+                      <div className="absolute top-3 left-3">
+                        <div className="h-5 bg-white/50 rounded-full w-24"></div>
+                      </div>
+                      <div className="absolute top-3 right-3 space-y-1">
+                        <div className="h-5 bg-blue-500/50 rounded-full w-12"></div>
+                        <div className="h-5 bg-green-500/50 rounded-full w-16"></div>
+                      </div>
+                    </div>
+                    
+                    {/* Content skeleton */}
+                    <div className="p-4 h-40 space-y-2">
+                      <div className="h-5 bg-muted rounded w-full"></div>
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="flex gap-1 mb-2">
+                        <div className="h-5 bg-purple-200/50 rounded-full w-16"></div>
+                        <div className="h-5 bg-purple-200/50 rounded-full w-12"></div>
+                      </div>
+                      
+                      {/* Footer skeleton */}
+                      <div className="flex justify-between items-center pt-2 border-t border-muted/50 mt-auto">
+                        <div className="flex gap-3">
+                          <div className="h-3 bg-muted rounded w-8"></div>
+                          <div className="h-3 bg-muted rounded w-8"></div>
+                        </div>
+                        <div className="h-3 bg-muted rounded w-16"></div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             ) : error ? (
               <div className="text-center py-8 text-red-500">
@@ -206,73 +196,108 @@ export default function DocumentsPage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {documents.map((doc) => (
-                    <Card key={doc.document_id}>
-                      <CardContent className="p-4">
-                        <div className="flex flex-col gap-4">
-                          <div>
-                            <h3 className="font-medium line-clamp-2">
-                              <Link 
-                                href={`/documents/${doc.document_id}`}
-                                className="hover:underline"
-                                onClick={() => {
-                                  const token = localStorage.getItem("access_token")
-                                  if (token) {
-                                    handleView(doc.document_id)
-                                  }
-                                }}
-                              >
-                                {doc.title}
-                              </Link>
-                            </h3>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    <Link 
+                      key={doc.document_id} 
+                      href={`/documents/${doc.document_id}`}
+                    >
+                      <Card className="group relative overflow-hidden border-0 bg-white dark:bg-gray-900 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer h-80">
+                        {/* Thumbnail Section - Thu nhỏ lại */}
+                        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+                          <DocumentThumbnail
+                            documentId={doc.document_id}
+                            title={doc.title}
+                            fileType={doc.file_type}
+                            size="large"
+                            className="w-full h-full !w-full !h-full"
+                          />
+                          
+                          {/* Gradient overlay on hover */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          
+                          {/* Badges ở góc trên */}
+                          <div className="absolute top-3 right-3 flex flex-col gap-1">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/90 text-white backdrop-blur-sm">
+                              {doc.file_type?.split('/')[1]?.toUpperCase() || doc.file_type?.toUpperCase() || 'UNKNOWN'}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/90 text-white backdrop-blur-sm">
+                              {formatFileSize(doc.file_size)}
+                            </span>
+                          </div>
+                          
+                          {/* Subject badge ở góc trái */}
+                          <div className="absolute top-3 left-3">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-800 dark:bg-gray-900/90 dark:text-white backdrop-blur-sm">
+                              {doc.subject.subject_name}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Content Section - Mở rộng thêm */}
+                        <div className="p-4 h-40 flex flex-col">
+                          {/* Title */}
+                          <h3 className="font-bold text-base leading-tight line-clamp-2 group-hover:text-primary transition-colors duration-200 mb-2">
+                            {doc.title}
+                          </h3>
+                          
+                          {/* Description - có thể hiển thị nhiều hơn */}
+                          <div className="flex-1 mb-2">
+                            <p className="text-sm text-muted-foreground line-clamp-3 overflow-hidden" 
+                               style={{
+                                 display: '-webkit-box',
+                                 WebkitLineClamp: 3,
+                                 WebkitBoxOrient: 'vertical',
+                                 textOverflow: 'ellipsis'
+                               }}>
                               {doc.description}
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {doc.tags?.map((tag) => (
+                          
+                          {/* Tags - giới hạn trong 1 dòng */}
+                          <div className="flex flex-wrap gap-1 mb-2 min-h-[20px]">
+                            {doc.tags?.slice(0, 2).map((tag) => (
                               <span
                                 key={tag.tag_id}
-                                className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded"
+                                className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-full font-medium"
                               >
                                 {tag.tag_name}
                               </span>
                             ))}
+                            {doc.tags && doc.tags.length > 2 && (
+                              <span className="text-xs text-muted-foreground self-center">+{doc.tags.length - 2}</span>
+                            )}
                           </div>
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <div className="flex items-center gap-4">
+                          
+                          {/* Stats footer - luôn ở dưới cùng */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-auto">
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
-                                <FileText className="h-4 w-4" />
-                                <span>{doc.file_type?.split('/')[1]?.toUpperCase() || doc.file_type?.toUpperCase() || 'UNKNOWN'}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Download className="h-4 w-4" />
-                                <span>{formatFileSize(doc.file_size)}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-1">
-                                <ThumbsUp className="h-4 w-4" />
+                                <ThumbsUp className="h-3 w-3" />
                                 <span>{doc.view_count}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Download className="h-4 w-4" />
+                                <Download className="h-3 w-3" />
                                 <span>{doc.download_count}</span>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <span>Đăng bởi: {doc.user.full_name}</span>
+                            
+                            <div className="text-xs text-muted-foreground/70 truncate max-w-[60px]">
+                              {doc.user.full_name}
                             </div>
-                            <div className="flex items-center gap-1">
-                              <span>Môn: {doc.subject.subject_code}</span>
+                            
+                            {/* Simple arrow */}
+                            <div className="opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+                              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
                             </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        
+
+                      </Card>
+                    </Link>
                   ))}
                 </div>
                 

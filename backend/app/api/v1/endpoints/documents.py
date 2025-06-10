@@ -19,7 +19,8 @@ from app.schemas.document import (
     DocumentCreate,
     DocumentUpdate,
     DocumentListResponse,
-    DocumentFilterRequest
+    DocumentFilterRequest,
+    DocumentStats
 )
 
 router = APIRouter()
@@ -107,13 +108,14 @@ async def get_documents_by_academic_year(
     # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
-    Lấy danh sách tài liệu theo năm học.
+    Lấy danh sách tài liệu public theo năm học.
     """
     skip = (page - 1) * per_page
     filter_request = DocumentFilterRequest(
         academic_year_id=academic_year_id,
         skip=skip,
-        limit=per_page
+        limit=per_page,
+        status="approved",  # Chỉ lấy tài liệu đã được duyệt
     )
     return await document.get_filtered_documents(db, filter_request=filter_request)
 
@@ -133,6 +135,10 @@ async def get_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tài liệu không tồn tại"
         )
+    
+    # Kiểm tra user đã like chưa
+    doc.is_liked = await document.check_user_liked(db, document_id=id, user_id=current_user.user_id)
+    
     return doc
 
 @router.post("/", response_model=Document, status_code=status.HTTP_201_CREATED)
@@ -225,6 +231,32 @@ async def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tài liệu không tồn tại"
         )
+        
+@router.get("/public/{id}", response_model=Document)
+async def get_public_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int
+) -> Any:
+    """
+    Lấy thông tin chi tiết của một tài liệu công khai theo ID.
+    API này không yêu cầu đăng nhập.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Kiểm tra xem tài liệu có phải là công khai không
+    if doc.status != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài liệu này không phải là tài liệu công khai"
+        )
+    
+    return doc
     
     # Kiểm tra quyền
     if doc.user_id != current_user.user_id and current_user.role != "admin":
@@ -696,3 +728,58 @@ async def get_public_documents_by_multiple_tags(
         order_desc=sort_desc
     )
     return await document.get_filtered_documents(db, filter_request=filter_request)
+
+@router.post("/{id}/like")
+async def like_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Like một tài liệu.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    result = await document.like_document(db, document_id=id, user_id=current_user.user_id)
+    return result
+
+@router.delete("/{id}/like")
+async def unlike_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Bỏ like một tài liệu.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    result = await document.unlike_document(db, document_id=id, user_id=current_user.user_id)
+    return result
+
+@router.get("/{id}/stats", response_model=DocumentStats)
+async def get_document_stats(
+    *,
+    db: Session = Depends(get_db),
+    id: int,
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy thống kê của tài liệu (views, downloads, likes, comments).
+    """
+    stats = await document.get_document_stats(db, document_id=id, user_id=current_user.user_id)
+    return stats
+
+

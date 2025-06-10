@@ -115,7 +115,7 @@ export async function deleteForum(id: number): Promise<void> {
 
 // Forum Posts
 export async function getForumPosts(params?: GetForumPostsParams): Promise<ForumPost[]> {
-  return apiClient.get<ForumPost[]>("/forum-posts", { params })
+  return apiClient.get<ForumPost[]>("/forum-posts/", { params })
 }
 
 export async function getForumPostById(id: number): Promise<ForumPost> {

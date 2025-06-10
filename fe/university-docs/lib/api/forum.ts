@@ -38,6 +38,27 @@ export async function getUser(id: number): Promise<{
 }
 
 // Subject APIs
+export async function getSubjects(): Promise<Array<{ subject_id: number; subject_name: string; subject_code: string }>> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/subjects/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể lấy danh sách môn học")
+    }
+    return response.json()
+  } catch (error) {
+    console.error("Error fetching subjects:", error)
+    throw error
+  }
+}
+
 export async function getSubject(id: number): Promise<{ subject_id: number; subject_name: string }> {
   const token = getAuthToken()
   if (!token) throw new Error("Unauthorized")
@@ -60,12 +81,26 @@ export async function getSubject(id: number): Promise<{ subject_id: number; subj
 }
 
 // Forum APIs
-export async function getForums(): Promise<Forum[]> {
+export async function getForums(params?: {
+  search?: string
+  subject_id?: number
+  page?: number
+  per_page?: number
+}): Promise<Forum[]> {
   const token = getAuthToken()
   if (!token) throw new Error("Unauthorized")
 
   try {
-    const response = await fetch(`${API_URL}/forums`, {
+    // Xây dựng URL với query parameters
+    const searchParams = new URLSearchParams()
+    if (params?.search) searchParams.append('search', params.search)
+    if (params?.subject_id) searchParams.append('subject_id', params.subject_id.toString())
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.per_page) searchParams.append('per_page', params.per_page.toString())
+
+    const url = `${API_URL}/forums${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+    
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -78,18 +113,26 @@ export async function getForums(): Promise<Forum[]> {
     
     // Lấy thông tin môn học cho mỗi forum
     const forumsWithSubjects = await Promise.all(
-      forums.map(async (forum: Forum) => {
+      forums.map(async (forum: any) => {
         try {
           const subject = await getSubject(forum.subject_id)
           return {
-            ...forum,
-            subject_name: subject.subject_name
+            forum_id: forum.forum_id,
+            subject_id: forum.subject_id,
+            subject_name: subject.subject_name,
+            post_count: forum.post_count || 0,
+            description: forum.description,
+            created_at: forum.created_at
           }
         } catch (error) {
           console.error(`Error fetching subject for forum ${forum.forum_id}:`, error)
           return {
-            ...forum,
-            subject_name: "Không xác định"
+            forum_id: forum.forum_id,
+            subject_id: forum.subject_id,
+            subject_name: "Không xác định",
+            post_count: forum.post_count || 0,
+            description: forum.description,
+            created_at: forum.created_at
           }
         }
       })
@@ -144,7 +187,7 @@ export async function getForumPosts(forumId: number): Promise<ForumPost[]> {
   if (!token) throw new Error("Unauthorized")
 
   try {
-    const response = await fetch(`${API_URL}/forum-posts?forum_id=${forumId}`, {
+    const response = await fetch(`${API_URL}/forum-posts/?forum_id=${forumId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -162,6 +205,9 @@ export async function getForumPosts(forumId: number): Promise<ForumPost[]> {
           const author = await getUser(post.user_id)
           return {
             ...post,
+            views: post.views || 0,
+            like_count: post.like_count || 0,
+            is_liked: post.is_liked || false,
             author: {
               user_id: author.user_id,
               username: author.username,
@@ -180,6 +226,9 @@ export async function getForumPosts(forumId: number): Promise<ForumPost[]> {
           console.error(`Error fetching author for post ${post.post_id}:`, error)
           return {
             ...post,
+            views: post.views || 0,
+            like_count: post.like_count || 0,
+            is_liked: post.is_liked || false,
             author: {
               user_id: post.user_id,
               username: "Người dùng",
@@ -226,6 +275,9 @@ export async function getForumPost(id: number): Promise<ForumPost> {
       const author = await getUser(post.user_id)
       return {
         ...post,
+        views: post.views || 0,
+        like_count: post.like_count || 0,
+        is_liked: post.is_liked || false,
         author: {
           user_id: author.user_id,
           username: author.username,
@@ -244,6 +296,9 @@ export async function getForumPost(id: number): Promise<ForumPost> {
       console.error(`Error fetching author for post ${post.post_id}:`, error)
       return {
         ...post,
+        views: post.views || 0,
+        like_count: post.like_count || 0,
+        is_liked: post.is_liked || false,
         author: {
           user_id: post.user_id,
           username: "Người dùng",
@@ -272,7 +327,7 @@ export async function getForumReplies(postId: number, page: number = 1, perPage:
 
   try {
     // API trả về tất cả replies, không phân trang ở backend
-    const response = await fetch(`${API_URL}/forum-replies?post_id=${postId}`, {
+    const response = await fetch(`${API_URL}/forum-replies/?post_id=${postId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -492,6 +547,9 @@ export async function getUserForumPosts(userId: number, page: number = 1, per_pa
           
           return {
             ...post,
+            views: post.views || 0,
+            like_count: post.like_count || 0,
+            is_liked: post.is_liked || false,
             forum_name: forum.subject_name,
             author: {
               user_id: author.user_id,
@@ -511,6 +569,9 @@ export async function getUserForumPosts(userId: number, page: number = 1, per_pa
           console.error(`Error fetching details for post ${post.post_id}:`, error)
           return {
             ...post,
+            views: post.views || 0,
+            like_count: post.like_count || 0,
+            is_liked: post.is_liked || false,
             forum_name: "Không xác định",
             author: {
               user_id: post.user_id,
@@ -557,7 +618,7 @@ export async function createForumPost(data: {
   if (!token) throw new Error("Unauthorized")
 
   try {
-    const response = await fetch(`${API_URL}/forum-posts`, {
+    const response = await fetch(`${API_URL}/forum-posts/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -577,6 +638,9 @@ export async function createForumPost(data: {
       const author = await getUser(post.user_id)
       return {
         ...post,
+        views: post.views || 0,
+        like_count: post.like_count || 0,
+        is_liked: post.is_liked || false,
         author: {
           user_id: author.user_id,
           username: author.username,
@@ -595,6 +659,9 @@ export async function createForumPost(data: {
       console.error(`Error fetching author for new post ${post.post_id}:`, error)
       return {
         ...post,
+        views: post.views || 0,
+        like_count: post.like_count || 0,
+        is_liked: post.is_liked || false,
         author: {
           user_id: post.user_id,
           username: "Người dùng",
@@ -634,6 +701,113 @@ export async function deleteForumPost(postId: number): Promise<void> {
     }
   } catch (error) {
     console.error("Error deleting forum post:", error)
+    throw error
+  }
+}
+
+// Like bài viết forum
+export async function likeForumPost(postId: number): Promise<{ is_liked: boolean; like_count: number }> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-posts/${postId}/like`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể thích bài viết")
+    }
+    return response.json()
+  } catch (error) {
+    console.error("Error liking forum post:", error)
+    throw error
+  }
+}
+
+// Unlike bài viết forum
+export async function unlikeForumPost(postId: number): Promise<{ is_liked: boolean; like_count: number }> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-posts/${postId}/like`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể bỏ thích bài viết")
+    }
+    return response.json()
+  } catch (error) {
+    console.error("Error unliking forum post:", error)
+    throw error
+  }
+}
+
+// Toggle Like/Unlike bài viết forum dựa trên trạng thái hiện tại
+export async function toggleLikeForumPost(postId: number, currentLikedStatus: boolean): Promise<{ is_liked: boolean; like_count: number }> {
+  if (currentLikedStatus) {
+    // Nếu đã thích, thì unlike
+    return await unlikeForumPost(postId)
+  } else {
+    // Nếu chưa thích, thì like
+    return await likeForumPost(postId)
+  }
+}
+
+// Tăng view count cho bài viết
+export async function incrementPostView(postId: number): Promise<void> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-posts/${postId}/view`, {
+      method: "POST", 
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      // Không throw error cho view count để không ảnh hưởng UX
+      console.error("Error incrementing view count")
+    }
+  } catch (error) {
+    console.error("Error incrementing view count:", error)
+    // Không throw error
+  }
+}
+
+// Lấy thống kê bài viết
+export async function getForumPostStats(postId: number): Promise<{
+  views: number
+  like_count: number
+  reply_count: number
+  is_liked: boolean
+}> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Unauthorized")
+
+  try {
+    const response = await fetch(`${API_URL}/forum-posts/${postId}/stats`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || "Không thể lấy thống kê bài viết")
+    }
+    return response.json()
+  } catch (error) {
+    console.error("Error fetching forum post stats:", error)
     throw error
   }
 } 

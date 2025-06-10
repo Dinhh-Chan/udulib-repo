@@ -1,6 +1,7 @@
 from typing import Optional
 from datetime import datetime, timedelta
 import secrets
+import string
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -60,6 +61,12 @@ def mark_token_as_used(token: str):
         password_reset_tokens[token]["used"] = True
 
 
+def generate_random_password(length: int = 12) -> str:
+    """Tạo mật khẩu ngẫu nhiên với độ dài cho trước"""
+    characters = string.ascii_letters + string.digits + "!@#$%^&*"
+    return ''.join(secrets.choice(characters) for _ in range(length))
+
+
 @router.post("/request-reset", response_model=PasswordResetResponse)
 async def request_password_reset(
     *,
@@ -68,7 +75,7 @@ async def request_password_reset(
     background_tasks: BackgroundTasks
 ):
     """
-    Yêu cầu đổi mật khẩu - gửi email xác nhận
+    Yêu cầu đổi mật khẩu - gửi email xác nhận với mật khẩu mới
     """
     # Kiểm tra user có tồn tại không
     result = await db.execute(select(User).where(User.email == user_data.email))
@@ -77,22 +84,28 @@ async def request_password_reset(
     if not user:
         # Không tiết lộ rằng email không tồn tại vì lý do bảo mật
         return PasswordResetResponse(
-            message="Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đổi mật khẩu."
+            message="Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mật khẩu mới qua email."
         )
     
-    # Tạo token đổi mật khẩu
-    reset_token = create_password_reset_token(user_data.email)
+    # Tạo mật khẩu ngẫu nhiên mới
+    new_password = generate_random_password()
+    hashed_password = pwd_context.hash(new_password)
     
-    # Gửi email trong background
+    # Cập nhật mật khẩu mới cho user
+    user.password_hash = hashed_password
+    user.updated_at = datetime.utcnow()
+    await db.commit()
+    
+    # Gửi email trong background với mật khẩu mới
     background_tasks.add_task(
         email_service.send_password_reset_email,
         to_email=user.email,
-        reset_token=reset_token,
+        new_password=new_password,
         user_name=user.full_name or user.username
     )
     
     return PasswordResetResponse(
-        message="Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đổi mật khẩu."
+        message="Nếu email tồn tại trong hệ thống, bạn sẽ nhận được mật khẩu mới qua email."
     )
 
 
