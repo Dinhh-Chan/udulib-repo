@@ -137,7 +137,6 @@ async def upload_major_image(
 async def get_major_image(
     major_id: int = Query(..., description="ID của ngành học"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
 ):
     """Lấy ảnh ngành học trực tiếp"""
     crud = MajorCRUD(db)
