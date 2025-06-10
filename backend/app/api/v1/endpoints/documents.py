@@ -108,13 +108,14 @@ async def get_documents_by_academic_year(
     # current_user: User = Depends(get_current_user)
 ) -> Any:
     """
-    Lấy danh sách tài liệu theo năm học.
+    Lấy danh sách tài liệu public theo năm học.
     """
     skip = (page - 1) * per_page
     filter_request = DocumentFilterRequest(
         academic_year_id=academic_year_id,
         skip=skip,
-        limit=per_page
+        limit=per_page,
+        status="approved",  # Chỉ lấy tài liệu đã được duyệt
     )
     return await document.get_filtered_documents(db, filter_request=filter_request)
 
