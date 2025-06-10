@@ -44,14 +44,14 @@ export default function DepartmentsPage() {
       const majorsData = await fetchMajors();
       setMajors(Array.isArray(majorsData) ? majorsData : []);
 
-      const allSubjects: any[] = [];
-      for (const major of majorsData) {
-        for (let year = 1; year <= 4; year++) {
-          const yearSubjects = await fetchSubjectsByMajorAndYear(major.major_id, year);
-          if (Array.isArray(yearSubjects)) allSubjects.push(...yearSubjects);
-        }
-      }
-      setSubjects(allSubjects);
+      // const allSubjects: any[] = [];
+      // for (const major of majorsData) {
+      //   for (let year = 1; year <= 4; year++) {
+      //     const yearSubjects = await fetchSubjectsByMajorAndYear(major.major_id, year);
+      //     if (Array.isArray(yearSubjects)) allSubjects.push(...yearSubjects);
+      //   }
+      // }
+      // setSubjects(allSubjects);
 
       // Lấy tổng số tài liệu theo major
       const docStats = await fetchDocumentStatsByMajor();
