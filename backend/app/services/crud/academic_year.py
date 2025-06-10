@@ -255,7 +255,7 @@ class AcademicYearCRUD(CRUDBase[AcademicYear, AcademicYearCreate, AcademicYearUp
 
     async def get_latest_year(self) -> Optional[Dict[str, Any]]:
         try:
-            query = select(self.model).order_by(self.model.year_order.desc())
+            query = select(self.model).order_by(self.model.year_order.desc()).limit(1)
             result = await self.db.execute(query)
             year = result.scalar_one_or_none()
 
