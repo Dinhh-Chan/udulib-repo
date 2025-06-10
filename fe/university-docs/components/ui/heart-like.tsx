@@ -29,9 +29,8 @@ export function HeartLike({ isLiked, onToggle, disabled = false, size = 'md' }: 
     <div className="heart-like-wrapper">
       <div className={`heart-container ${sizeClasses[size]}`} title={isLiked ? "Bỏ thích" : "Thích"}>
         <input 
-          ref={checkboxRef}
-          type="checkbox" 
-          className="heart-checkbox" 
+          type="checkbox"
+          className="heart-checkbox"
           checked={isLiked}
           onChange={onToggle}
           disabled={disabled}

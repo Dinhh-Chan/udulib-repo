@@ -124,7 +124,7 @@ async def get_document(
     *,
     db: Session = Depends(get_db),
     id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy thông tin chi tiết của một tài liệu.

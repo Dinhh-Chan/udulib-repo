@@ -8,18 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronRight, FileText } from "lucide-react"
 import React from "react"
 import Loading from "../../loading"
-
-interface Major {
-  major_id: number;
-  major_name: string;
-  slug: string;
-  description: string;
-}
-interface Subject {
-  subject_id: number;
-  subject_name: string;
-  description: string;
-}
+import { Major, Subject } from "@/types"
+import { fetchMajors, fetchSubjects, fetchDocumentCount } from "@/lib/api"
 
 export default function DepartmentPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);
@@ -34,17 +24,13 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
     let foundMajor: Major | null = null
 
     async function fetchMajor() {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      const data = await res.json()
+      const data = await fetchMajors()
       if (!isNaN(majorIdFromUrl)) {
-        foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl)
+        foundMajor = data.find((m: Major) => m.major_id === majorIdFromUrl) || null
       } else {
-        foundMajor = data.find((m: Major) => m.slug === slug)
+        foundMajor = data.find((m: Major) => m.slug === slug) || null
       }
-      setMajor(foundMajor || null)
+      setMajor(foundMajor)
       if (foundMajor) {
         localStorage.setItem('selected_major_id', foundMajor.major_id.toString())
       }
@@ -66,29 +52,25 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
   useEffect(() => {
     if (!selectedYear || !major) return
     setLoading(true)
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects?major_id=${major.major_id}&year_id=${selectedYear}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(res => res.json())
-      .then(data => {
-        setSubjects(Array.isArray(data) ? data : [])
-        setLoading(false)
-        if (Array.isArray(data)) {
-          data.forEach((subject: Subject) => {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public?subject_id=${subject.subject_id}`, {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            })
-              .then(res => res.json())
-              .then(docData => {
-                setDocumentCounts(prev => ({
-                  ...prev,
-                  [subject.subject_id]: Array.isArray(docData.documents) ? docData.documents.length : 0
-                }))
-              })
+    
+    async function loadSubjectsAndDocuments() {
+      if (!major) return
+      const subjectsData = await fetchSubjects(major.major_id, selectedYear)
+      setSubjects(Array.isArray(subjectsData) ? subjectsData : [])
+      
+      if (Array.isArray(subjectsData)) {
+        const counts: { [subject_id: number]: number } = {}
+        await Promise.all(
+          subjectsData.map(async (subject: Subject) => {
+            counts[subject.subject_id] = await fetchDocumentCount(subject.subject_id)
           })
-        }
-      })
+        )
+        setDocumentCounts(counts)
+      }
+      setLoading(false)
+    }
+
+    loadSubjectsAndDocuments()
   }, [selectedYear, major])
 
   if (!major) return <Loading />
