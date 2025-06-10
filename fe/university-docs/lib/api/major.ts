@@ -93,4 +93,37 @@ export async function deleteMajor(id: number): Promise<void> {
     }
     throw new Error("Failed to delete major")
   }
+}
+
+export async function getMajorImage(majorId: number): Promise<string> {
+  const token = getAuthToken()
+  const response = await fetch(`${API_URL}/majors/image?major_id=${majorId}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error("Failed to fetch major image")
+  }
+  
+  // Tạo blob URL để hiển thị ảnh
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
+}
+
+export async function getMajorImageUrl(majorId: number): Promise<string> {
+  const token = getAuthToken()
+  const response = await fetch(`${API_URL}/majors/image-url?major_id=${majorId}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  })
+  
+  if (!response.ok) {
+    throw new Error("Failed to fetch major image URL")
+  }
+  
+  const data = await response.json()
+  return data.image_url
 } 

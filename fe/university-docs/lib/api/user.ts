@@ -50,26 +50,58 @@ export const updateUserProfile = async (userId: number, userData: {
   return response.json()
 }
 
-export const getUserAvatar = async (): Promise<string> => {
+export const getUserAvatar = async (): Promise<string | null> => {
   const token = getAuthToken()
   
   if (!token) {
-    throw new Error("Không tìm thấy token xác thực")
+    return null
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/avatar`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/avatar`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      }
+    })
+
+    if (!response.ok) {
+      return null
     }
-  })
 
-  if (!response.ok) {
-    throw new Error("Không thể lấy avatar")
+    // Trả về URL blob để hiển thị
+    const blob = await response.blob()
+    return URL.createObjectURL(blob)
+  } catch (error) {
+    console.error("Error getting user avatar:", error)
+    return null
+  }
+}
+
+export const getUserAvatarById = async (userId: number): Promise<string | null> => {
+  const token = getAuthToken()
+  
+  if (!token) {
+    return null
   }
 
-  // Trả về URL blob để hiển thị
-  const blob = await response.blob()
-  return URL.createObjectURL(blob)
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/avatar`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      }
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    // Trả về URL blob để hiển thị
+    const blob = await response.blob()
+    return URL.createObjectURL(blob)
+  } catch (error) {
+    console.error(`Error getting avatar for user ${userId}:`, error)
+    return null
+  }
 }
 
 export const uploadAvatar = async (file: File): Promise<User> => {

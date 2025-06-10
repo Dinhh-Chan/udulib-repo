@@ -27,7 +27,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { 
   getDocumentDownloadUrl, 
   getDocumentPreviewUrl,
-  checkDocumentPreviewSupport,
   getPublicDocumentPreviewUrl,
   getDocumentFullPreviewUrl,
   downloadPublicDocument,
@@ -259,11 +258,6 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         
         // Kiểm tra xem file có hỗ trợ preview không
         try {
-          const supportInfo = await checkDocumentPreviewSupport(Number(id));
-          setPreviewSupport(supportInfo);
-          
-          if (supportInfo.is_supported) {
-            setPreviewLoading(true);
             
             // Lấy URL preview phù hợp
             let previewUrlToUse = "";
@@ -278,10 +272,9 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
             
             setPreviewUrl(previewUrlToUse);
             setPreviewLoading(false);
-          }
+          
         } catch (error) {
           console.error("Error checking preview support:", error);
-          setPreviewSupport({ is_supported: false, file_category: 'unsupported' });
         }
         
       } catch (err) {

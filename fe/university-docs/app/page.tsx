@@ -10,6 +10,7 @@ import { getPublicDocuments, Document } from "@/lib/api/documents"
 import { getMajors } from "@/lib/api/major"
 import { Major } from "@/types/major"
 import { DocumentThumbnail } from "@/components/ui/document-thumbnail"
+import { MajorImage } from "@/components/ui/major-image"
 
 export default function Home() {
   const { isAuthenticated } = useAuth()
@@ -298,9 +299,11 @@ export default function Home() {
             {popularDepartments.map((dept) => (
               <Card key={dept.major_id} className="overflow-hidden">
                 <Link href={`/departments/${dept.major_id}`}>
-                  <div className="h-40 bg-muted flex items-center justify-center">
-                    <BookOpen className="h-16 w-16 text-muted-foreground/50" />
-                  </div>
+                  <MajorImage 
+                    majorId={dept.major_id}
+                    majorName={dept.major_name}
+                    className="h-40"
+                  />
                   <CardHeader>
                     <CardTitle>{dept.major_name}</CardTitle>
                     <CardDescription>{dept.description}</CardDescription>

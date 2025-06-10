@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { FileText, File, Image as ImageIcon, FileCode } from "lucide-react"
-import { getPublicDocumentThumbnail, checkDocumentPreviewSupport } from "@/lib/api/documents"
+import { getPublicDocumentThumbnail,  } from "@/lib/api/documents"
 
 interface DocumentThumbnailProps {
   documentId: number
@@ -20,24 +20,8 @@ export function DocumentThumbnail({
   className = "",
   size = "medium"
 }: DocumentThumbnailProps) {
-  const [isSupported, setIsSupported] = useState<boolean | null>(null)
-  const [fileCategory, setFileCategory] = useState<string>("")
   const [imageError, setImageError] = useState(false)
 
-  useEffect(() => {
-    const checkSupport = async () => {
-      try {
-        const result = await checkDocumentPreviewSupport(documentId)
-        setIsSupported(result.is_supported)
-        setFileCategory(result.file_category)
-      } catch (error) {
-        console.error("Error checking preview support:", error)
-        setIsSupported(false)
-      }
-    }
-
-    checkSupport()
-  }, [documentId])
 
   const getSizeClasses = () => {
     switch (size) {
@@ -58,35 +42,10 @@ export function DocumentThumbnail({
         ? "w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24" 
         : "w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14"
     }`
-    
-    if (fileCategory === "image") {
-      return <ImageIcon className={`${iconClass} text-blue-500`} />
-    } else if (fileCategory === "pdf") {
-      return <FileText className={`${iconClass} text-red-500`} />
-    } else if (fileCategory === "office") {
-      return <FileCode className={`${iconClass} text-green-500`} />
-    } else if (fileCategory === "text") {
-      return <FileText className={`${iconClass} text-gray-500`} />
-    } else {
-      return <File className={`${iconClass} text-gray-400`} />
-    }
+    return <ImageIcon className={`${iconClass} text-blue-500`} />
   }
 
-  if (isSupported === null) {
-    // Loading state
-    const isFullSize = className.includes('!w-full !h-full')
-    const loadingClasses = isFullSize 
-      ? `w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 animate-pulse ${className.replace('!w-full !h-full', '')}`
-      : `${getSizeClasses()} bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 animate-pulse rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${className}`
-    
-    return (
-      <div className={loadingClasses}>
-        <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-xl"></div>
-      </div>
-    )
-  }
-
-  if (!isSupported || imageError) {
+  if (imageError) {
     // Fallback to file type icon
     const isFullSize = className.includes('!w-full !h-full')
     const fallbackClasses = isFullSize 
