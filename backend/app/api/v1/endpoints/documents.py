@@ -596,9 +596,22 @@ async def download_public_document(
             detail="Không thể tải file từ MinIO"
         )
     
-    # Trả về file stream (không cần record download cho public)
+    # Tạo async generator để stream file theo chunks
+    async def stream_file():
+        try:
+            # Đọc file theo chunks 8KB
+            chunk_size = 8 * 1024
+            while True:
+                chunk = download_data["stream"].read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            download_data["stream"].close()
+    
+    # Trả về file stream với async generator
     return StreamingResponse(
-        download_data["stream"],
+        stream_file(),
         media_type=download_data["media_type"],
         headers=download_data["headers"]
     )

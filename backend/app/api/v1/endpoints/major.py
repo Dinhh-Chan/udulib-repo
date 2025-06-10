@@ -194,7 +194,7 @@ async def get_major_by_code(
 async def get_major(
     major_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # current_user: User = Depends(get_current_user)
 ):
     crud = MajorCRUD(db)
     major = await crud.get_by_id(major_id)
