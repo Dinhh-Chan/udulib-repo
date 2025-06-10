@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
@@ -10,51 +10,60 @@ export default function GoogleCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login } = useAuth()
+  const [isProcessing, setIsProcessing] = useState(true)
 
   useEffect(() => {
     const handleGoogleCallback = async () => {
       try {
+        const user_id = searchParams.get("user_id")
         const access_token = searchParams.get("access_token")
         const username = searchParams.get("username")
         const email = searchParams.get("email")
-        
+        const role = searchParams.get("role")
+        const full_name = searchParams.get("full_name")
+        const university_id = searchParams.get("university_id")
+        const status = searchParams.get("status")
+        const created_at = searchParams.get("created_at")
+  
+
         if (!access_token || !username || !email) {
           toast.error("Thiếu thông tin đăng nhập")
-          router.push("/login")
+          router.replace("/login")
           return
         }
 
         // Tạo đối tượng user từ thông tin nhận được
         const user: User = {
-          user_id: 0, // Sẽ được cập nhật sau khi lấy thông tin chi tiết từ API
-          username,
-          email,
-          full_name: username,
-          role: undefined as any, // Cho phép bỏ trống
-          status: undefined as any, // Cho phép bỏ trống
-          university_id: "",
+          user_id: user_id ? parseInt(user_id) : 0, 
+          username: username || "",
+          email: email || "",
+          full_name: full_name || "",
+          role: role as any, 
+          status: status as any, 
+          university_id: university_id || "",
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          last_login: new Date().toISOString()
         }
 
         // Lưu thông tin đăng nhập
         login(user, access_token)
-        
-        // Xóa các tham số trên URL
-        window.history.replaceState({}, document.title, window.location.pathname)
-        
         toast.success("Đăng nhập thành công")
-        router.push("/")
       } catch (error) {
         console.error("Google callback error:", error)
         toast.error("Đăng nhập thất bại, vui lòng thử lại")
-        router.push("/login")
+        router.replace("/login")
+      } finally {
+        setIsProcessing(false)
       }
     }
 
-    handleGoogleCallback()
-  }, [searchParams, router, login])
+    if (isProcessing) {
+      handleGoogleCallback()
+    }
+  }, [searchParams, router, login, isProcessing])
+
+  if (!isProcessing) {
+    return null
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen">

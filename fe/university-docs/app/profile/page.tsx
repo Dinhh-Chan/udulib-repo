@@ -259,7 +259,7 @@ export default function ProfilePage() {
                   </AvatarFallback>
                 </Avatar>
                 <h3 className="font-medium text-base sm:text-lg truncate w-full">{user.full_name}</h3>
-                <p className="text-sm text-muted-foreground capitalize">{user.role}</p>
+                <p className="text-sm text-muted-foreground capitalize">{user.role === "admin" ? "Quản trị viên" : user.role === "student" ? "Sinh viên" : "Giảng viên"}</p>
                 <div className="w-full mt-3 sm:mt-4 pt-3 sm:pt-4 border-t flex flex-col gap-2 text-xs sm:text-sm">
                   <div className="flex justify-between items-start">
                     <span className="text-muted-foreground">Email:</span>
