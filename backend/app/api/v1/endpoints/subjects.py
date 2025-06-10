@@ -2,6 +2,7 @@ from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any 
+from pydantic import BaseModel
 from app.models.base import get_db
 from app.services.crud.subject_crud import SubjectCRUD
 from app.schemas.subject import Subject, SubjectCreate, SubjectUpdate
@@ -9,6 +10,39 @@ from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User
 
 router = APIRouter()
+
+class SubjectCountByMajor(BaseModel):
+    major_id: int
+    major_name: str
+    major_code: str
+    subject_count: int
+
+@router.get("/count-by-major", response_model=List[SubjectCountByMajor])
+async def count_subjects_by_major(
+    *,
+    db: AsyncSession = Depends(get_db),
+    # current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy tổng số môn học theo từng ngành học.
+    Trả về danh sách các ngành học kèm số lượng môn học.
+    """
+    crud = SubjectCRUD(db)
+    result = await crud.count_subjects_by_major()
+    return result
+
+@router.get("/count-subject")
+async def count_subjects(
+    *,
+    db: AsyncSession = Depends(get_db),
+    # current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Đếm tổng số môn học.
+    """
+    subject_crud = SubjectCRUD(db)
+    count = await subject_crud.count_subject()
+    return {"count": count}
 
 @router.get("/", response_model=List[Subject])
 async def read_subjects(
@@ -43,19 +77,6 @@ async def read_subjects_with_details(
     skip = (page - 1) * per_page
     subjects = await crud.get_all_with_details(skip=skip, limit=per_page, major_id=major_id, year_id=year_id)
     return subjects
-
-@router.get("/count-subject")
-async def count_subjects(
-    *,
-    db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
-) -> Any:
-    """
-    Đếm tổng số môn học.
-    """
-    subject_crud = SubjectCRUD(db)
-    count = await subject_crud.count_subject()
-    return {"count": count}
 
 @router.get("/academic-year/{academic_year_id}", response_model=List[Subject])
 async def read_subjects_by_academic_year(
@@ -183,38 +204,3 @@ async def delete_subject(
         )
     await crud.delete(id=subject_id)
     return {"status": "success", "message": "Môn học đã được xóa thành công"}
-
-@router.get("/academic-year/{academic_year_id}", response_model=List[Subject])
-async def read_subjects_by_academic_year(
-    *,
-    db: AsyncSession = Depends(get_db),
-    academic_year_id: int,
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    # current_user: User = Depends(get_current_user)
-):
-    """
-    Lấy danh sách môn học theo năm học.
-    """
-    crud = SubjectCRUD(db)
-    skip = (page - 1) * per_page
-    subjects = await crud.get_all(
-        skip=skip,
-        limit=per_page,
-        year_id=academic_year_id
-    )
-    return subjects 
-
-@router.get("/count-by-major", response_model=List[Dict[str, Any]])
-async def count_subjects_by_major(
-    *,
-    db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user)
-) -> Any:
-    """
-    Lấy tổng số môn học theo từng ngành học.
-    Trả về danh sách các ngành học kèm số lượng môn học.
-    """
-    crud = SubjectCRUD(db)
-    result = await crud.count_subjects_by_major()
-    return result 
