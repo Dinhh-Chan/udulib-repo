@@ -27,17 +27,22 @@ export default function GoogleCallbackPage() {
         // Tạo đối tượng user từ thông tin nhận được
         const user: User = {
           user_id: 0, // Sẽ được cập nhật sau khi lấy thông tin chi tiết từ API
-          email,
           username,
+          email,
           full_name: username,
-          role: "student",
-          status: "active",
+          role: undefined as any, // Cho phép bỏ trống
+          status: undefined as any, // Cho phép bỏ trống
+          university_id: "",
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          last_login: new Date().toISOString()
         }
 
         // Lưu thông tin đăng nhập
         login(user, access_token)
+        
+        // Xóa các tham số trên URL
+        window.history.replaceState({}, document.title, window.location.pathname)
         
         toast.success("Đăng nhập thành công")
         router.push("/")
