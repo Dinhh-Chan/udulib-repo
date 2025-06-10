@@ -31,6 +31,38 @@ async def get_academic_years(
     years = await crud.get_all(skip=skip, limit=per_page)
     return years
 
+@router.get("/latest", response_model=AcademicYear)
+async def get_latest_academic_year(
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Lấy năm học mới nhất (có year_order cao nhất).
+    Endpoint này là công khai và không yêu cầu xác thực.
+    """
+    crud = AcademicYearCRUD(db)
+    latest_year = await crud.get_latest_year()
+    if not latest_year:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy năm học nào"
+        )
+    return latest_year
+
+@router.get("/with-subjects-count", response_model=List[dict])
+async def get_years_with_subjects_count(
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy danh sách năm học kèm số lượng môn học liên quan.
+    Chỉ admin mới có thể truy cập endpoint này.
+    """
+    crud = AcademicYearCRUD(db)
+    skip = (page - 1) * per_page
+    return await crud.get_with_subjects_count(skip=skip, limit=per_page)
+
 @router.get("/{year_id}", response_model=AcademicYear)
 async def get_academic_year(
     year_id: int,
@@ -139,34 +171,3 @@ async def delete_academic_year(
         )
     return {"status": "success", "message": "Năm học đã được xóa thành công"}
 
-@router.get("/latest", response_model=AcademicYear)
-async def get_latest_academic_year(
-    db: AsyncSession = Depends(get_db)
-) -> Any:
-    """
-    Lấy năm học mới nhất (có year_order cao nhất).
-    Endpoint này là công khai và không yêu cầu xác thực.
-    """
-    crud = AcademicYearCRUD(db)
-    latest_year = await crud.get_latest_year()
-    if not latest_year:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy năm học nào"
-        )
-    return latest_year
-
-@router.get("/with-subjects-count", response_model=List[dict])
-async def get_years_with_subjects_count(
-    db: AsyncSession = Depends(get_db),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    # current_user: User = Depends(get_current_user)
-) -> Any:
-    """
-    Lấy danh sách năm học kèm số lượng môn học liên quan.
-    Chỉ admin mới có thể truy cập endpoint này.
-    """
-    crud = AcademicYearCRUD(db)
-    skip = (page - 1) * per_page
-    return await crud.get_with_subjects_count(skip=skip, limit=per_page)

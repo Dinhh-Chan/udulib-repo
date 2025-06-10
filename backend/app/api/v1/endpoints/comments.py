@@ -44,7 +44,7 @@ async def create_comment(
     *,
     db: AsyncSession = Depends(get_db),
     comment_in: CommentCreate,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Tạo bình luận mới.

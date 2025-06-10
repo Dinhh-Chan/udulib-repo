@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { BookOpen, Search } from "lucide-react"
 import { MajorImage } from "@/components/ui/major-image"
 import Loading from "../loading"
+import { fetchMajors, fetchSubjectsByMajorAndYear, fetchDocumentStatsByMajor } from "@/lib/api/document-detail"
 
 type Major = {
   major_id: number;
@@ -28,80 +29,48 @@ type Subject = {
   updated_at?: string;
 }
 
-type Document = {
-  document_id: number;
-  title: string;
-  description: string;
-  file_path: string;
-  file_size: number;
-  file_type: string;
-  subject_id: number;
-  user_id: number;
-  status: string;
-  view_count: number;
-  download_count: number;
-  created_at?: string;
-  updated_at?: string;
-  subject?: { major_id: number }; 
-  tags?: { tag_id: number; tag_name: string; created_at?: string }[];
-}
+type DocumentMajorStat = { major_code: string; document_count: number };
 
 export default function DepartmentsPage() {
   const [majors, setMajors] = useState<Major[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
-  const [documents, setDocuments] = useState<Document[]>([])
+  const [documents, setDocuments] = useState<DocumentMajorStat[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     async function fetchData() {
-      setLoading(true)
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const majorsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      const majorsData = await majorsRes.json()
-      setMajors(Array.isArray(majorsData) ? majorsData : [])
+      setLoading(true);
+      const majorsData = await fetchMajors();
+      setMajors(Array.isArray(majorsData) ? majorsData : []);
 
-      const subjectsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      const subjectsData = await subjectsRes.json()
-      setSubjects(Array.isArray(subjectsData) ? subjectsData : [])
+      const allSubjects: any[] = [];
+      for (const major of majorsData) {
+        for (let year = 1; year <= 4; year++) {
+          const yearSubjects = await fetchSubjectsByMajorAndYear(major.major_id, year);
+          if (Array.isArray(yearSubjects)) allSubjects.push(...yearSubjects);
+        }
+      }
+      setSubjects(allSubjects);
 
-      const documentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      const documentsData = await documentsRes.json()
-      setDocuments(Array.isArray(documentsData.documents) ? documentsData.documents : [])
-
-      setLoading(false)
+      // Lấy tổng số tài liệu theo major
+      const docStats = await fetchDocumentStatsByMajor();
+      setDocuments(docStats);
     }
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   function getCourseCount(major_id: number) {
     return subjects.filter(sub => sub.major_id === major_id).length
   }
-  function getDocumentCount(major_id: number) {
-    return documents.filter(doc => {
-      if (doc.subject && doc.subject.major_id) {
-        return doc.subject.major_id === major_id
-      }
-      const subject = subjects.find(sub => sub.subject_id === doc.subject_id)
-      return subject?.major_id === major_id
-    }).length
+  function getDocumentCount(major_code: string) {
+    const stat = documents.find((doc) => doc.major_code === major_code);
+    return stat ? stat.document_count : 0;
   }
 
   function getTagsByMajor(major_id: number) {
-    const docs = documents.filter(doc => {
-      if (doc.subject && doc.subject.major_id) {
-        return doc.subject.major_id === major_id
-      }
-      const subject = subjects.find(sub => sub.subject_id === doc.subject_id)
-      return subject?.major_id === major_id
-    })
-    const allTags = docs.flatMap(doc => doc.tags || [])
+    const docs = subjects.filter(sub => sub.major_id === major_id);
+    const allTags = docs.flatMap(sub => Array.isArray((sub as any).tags) ? (sub as any).tags : []);
     const uniqueTags: { tag_id: number, tag_name: string }[] = []
     const seen = new Set()
     for (const tag of allTags) {
@@ -167,7 +136,7 @@ export default function DepartmentsPage() {
                   </CardContent>
                   <CardFooter>
                     <div className="text-sm text-muted-foreground">
-                      {getCourseCount(major.major_id)} môn học • {getDocumentCount(major.major_id)} tài liệu
+                      {/* {getCourseCount(major.major_id)}*/} môn học • {getDocumentCount(major.major_code)} tài liệu 
                     </div>
                   </CardFooter>
                 </Link>

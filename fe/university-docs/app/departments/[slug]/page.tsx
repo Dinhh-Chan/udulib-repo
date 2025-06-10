@@ -35,7 +35,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ slug: str
 
     async function fetchMajor() {
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors/`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       const data = await res.json()

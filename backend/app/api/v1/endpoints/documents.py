@@ -123,7 +123,7 @@ async def get_document(
     *,
     db: Session = Depends(get_db),
     id: int,
-    # current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Lấy thông tin chi tiết của một tài liệu.
@@ -230,6 +230,32 @@ async def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tài liệu không tồn tại"
         )
+        
+@router.get("/public/{id}", response_model=Document)
+async def get_public_document(
+    *,
+    db: Session = Depends(get_db),
+    id: int
+) -> Any:
+    """
+    Lấy thông tin chi tiết của một tài liệu công khai theo ID.
+    API này không yêu cầu đăng nhập.
+    """
+    doc = await document.get(db, id=id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tài liệu không tồn tại"
+        )
+    
+    # Kiểm tra xem tài liệu có phải là công khai không
+    if doc.status != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài liệu này không phải là tài liệu công khai"
+        )
+    
+    return doc
     
     # Kiểm tra quyền
     if doc.user_id != current_user.user_id and current_user.role != "admin":
@@ -754,3 +780,5 @@ async def get_document_stats(
     """
     stats = await document.get_document_stats(db, document_id=id, user_id=current_user.user_id)
     return stats
+
+

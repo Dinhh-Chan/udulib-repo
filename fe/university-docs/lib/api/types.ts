@@ -28,6 +28,8 @@ export interface Document {
     tag_id: number
     tag_name: string
   }>
+  is_liked?: boolean;
+  like_count?: number;
 }
 
 export interface Rating {

@@ -193,4 +193,71 @@ export const fillUserInfoForComments = async (comments: Comment[]): Promise<void
       await fillUserInfoForComments(comment.replies);
     }
   }
-}; 
+};
+
+export async function likeDocument(documentId: number): Promise<{ is_liked: boolean; like_count: number }> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/like`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new Error("Không thể like tài liệu");
+  return await response.json();
+}
+
+export async function unlikeDocument(documentId: number): Promise<{ is_liked: boolean; like_count: number }> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/like`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new Error("Không thể bỏ like tài liệu");
+  return await response.json();
+}
+
+export async function toggleLikeDocument(documentId: number, currentLikedStatus: boolean): Promise<{ is_liked: boolean; like_count: number }> {
+  if (currentLikedStatus) {
+    return await unlikeDocument(documentId);
+  } else {
+    return await likeDocument(documentId);
+  }
+}
+
+export async function fetchDocumentsBySubject(subject_id: number, per_page: number = 10) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public?subject_id=${subject_id}&per_page=${per_page}`);
+  const data = await res.json();
+  return Array.isArray(data.documents) ? data.documents : [];
+}
+
+export async function fetchMajors() {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/majors/`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return await res.json();
+}
+
+export async function fetchSubjectsByMajorAndYear(major_id: number, year_id: number) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subjects/?major_id=${major_id}&year_id=${year_id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return await res.json();
+}
+
+export async function fetchDocumentCountBySubject(subject_id: number) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/public?subject_id=${subject_id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return Array.isArray(data.documents) ? data.documents.length : 0;
+}
+
+export async function fetchDocumentStatsByMajor() {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/statistics/documents/by-major`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return await res.json();
+} 

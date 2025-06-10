@@ -44,10 +44,27 @@ import {
   formatFileSize,
   formatDate,
   buildCommentTree,
-  fillUserInfoForComments
+  fillUserInfoForComments,
+  toggleLikeDocument,
+  fetchDocumentsBySubject
 } from "@/lib/api/document-detail"
 import { Document, Rating, Comment, PreviewSupport } from "@/lib/api/types"
 import Loading from "../../loading"
+import { HeartLike } from "@/components/ui/heart-like"
+import RadioRating from '../../../components/ui/RadioRating'
+import { useMemo } from "react"
+import { Document as DocType } from "@/lib/api/types"
+
+function countAllComments(comments: Comment[]): number {
+  let count = 0;
+  for (const comment of comments) {
+    count += 1;
+    if (comment.replies && comment.replies.length > 0) {
+      count += countAllComments(comment.replies);
+    }
+  }
+  return count;
+}
 
 export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
@@ -80,6 +97,11 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [previewSupport, setPreviewSupport] = useState<PreviewSupport | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+
+  const [relatedDocs, setRelatedDocs] = useState<DocType[]>([]);
 
   const renderPreview = () => {
     if (previewLoading) {
@@ -256,6 +278,10 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
         const data = await fetchDocument(id);
         setDocument(data);
         
+        // Nếu API trả về is_liked và like_count thì set luôn
+        if (typeof data.is_liked === 'boolean') setIsLiked(data.is_liked);
+        if (typeof data.like_count === 'number') setLikeCount(data.like_count);
+        
         // Kiểm tra xem file có hỗ trợ preview không
         try {
             
@@ -324,6 +350,14 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     };
     loadComments();
   }, [id]);
+
+  useEffect(() => {
+    if (!document?.subject?.subject_id) return;
+    fetchDocumentsBySubject(document.subject.subject_id, 10)
+      .then(docs => {
+        setRelatedDocs(docs.filter((doc: DocType) => doc.document_id !== document.document_id));
+      });
+  }, [document?.subject?.subject_id, document?.document_id]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -520,6 +554,20 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
     }
   };
 
+  const handleLike = async () => {
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    try {
+      const result = await toggleLikeDocument(Number(id), isLiked);
+      setIsLiked(result.is_liked);
+      setLikeCount(result.like_count);
+    } catch (error) {
+      toast.error("Có lỗi khi like tài liệu");
+    }
+  };
+
   if (loading) {
     return (
       <Loading />
@@ -547,7 +595,13 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
             <ChevronRight className="h-4 w-4" />
             <span>{document.title}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">{document.title}</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-3xl font-bold tracking-tight">{document.title}</h1>
+            <div className="flex items-center gap-2">
+              <HeartLike isLiked={!!isLiked} onToggle={handleLike} disabled={downloadLoading} size="md" />
+              <span className="text-sm text-muted-foreground">{likeCount} lượt thích</span>
+            </div>
+          </div>
           <p className="text-muted-foreground max-w-3xl">{document.description}</p>
           <div className="flex flex-wrap gap-4 mt-2">
             <div className="flex items-center gap-1 text-sm">
@@ -573,35 +627,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1">
-            <div className="bg-muted rounded-lg flex items-center justify-center h-[500px] mb-4 p-0 overflow-hidden">
+            <div className="bg-muted rounded-lg flex items-center justify-center h-[500px] mb-4 p-0 overflow-hidden border-2 border-primary">
               {renderPreview()}
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm">
-                  <ThumbsUp className="h-4 w-4 mr-2" />
-                  Thích
-                </Button>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MessageSquare className="h-4 w-4" />
-                  <span>{comments.length} bình luận</span>
-                </div>
-                <Button variant="ghost" size="sm">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Chia sẻ
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm">
-                  <Bookmark className="h-4 w-4 mr-2" />
-                  Lưu
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <Flag className="h-4 w-4 mr-2" />
-                  Báo cáo
-                </Button>
-              </div>
             </div>
           </div>
 
@@ -611,29 +638,12 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                 <h3 className="font-medium mb-4">Tải xuống tài liệu</h3>
                 <div className="flex items-center gap-2 mt-4">
                   <div className="text-sm font-medium">{ratings.length} đánh giá:</div>
-                  <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        className={`text-yellow-400 focus:outline-none ${userRating && userRating >= star ? "" : "opacity-40"}`}
-                        onClick={() => handleStarClick(star)}
-                        disabled={!!userRating || ratingLoading}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="w-5 h-5"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    ))}
-                  </div>
+                  <RadioRating
+                    value={userRating || 0}
+                    onChange={handleStarClick}
+                    disabled={!!userRating || ratingLoading}
+                    loading={ratingLoading}
+                  />
                   <div className="text-sm text-muted-foreground">
                     ({ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length).toFixed(1) : "0.0"}/5)
                   </div>
@@ -683,48 +693,71 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           </div>
         </div>
 
-        {/* Comment Form */}
-        <Card className="shadow-sm mb-6">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Viết bình luận</h3>
-            <form onSubmit={handleSubmitComment} className="space-y-4">
-              <Textarea
-                value={commentContent}
-                onChange={e => setCommentContent(e.target.value)}
-                placeholder="Nhập bình luận của bạn..."
-                rows={4}
-                required
-                disabled={commentLoading}
-                className="resize-none"
-              />
-              <div className="flex justify-end">
-                <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
-                  {commentLoading ? "Đang gửi..." : "Đăng bình luận"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Comments Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold">Bình luận ({comments.length})</h3>
-          </div>
-
-          {comments.length > 0 ? (
-            <div className="space-y-4">
-              {comments.map((comment) => renderComment(comment))}
-            </div>
-          ) : (
-            <Card className="shadow-sm">
-              <CardContent className="p-12 text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg">Chưa có bình luận nào</p>
-                <p className="text-muted-foreground text-sm">Hãy là người đầu tiên bình luận về tài liệu này!</p>
+        <div className="w-full flex flex-col md:flex-row gap-6 mt-8">
+          <div className="flex-1">
+            <Card className="shadow-sm mb-6">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Viết bình luận</h3>
+                <form onSubmit={handleSubmitComment} className="space-y-4">
+                  <Textarea
+                    value={commentContent}
+                    onChange={e => setCommentContent(e.target.value)}
+                    placeholder="Nhập bình luận của bạn..."
+                    rows={4}
+                    required
+                    disabled={commentLoading}
+                    className="resize-none"
+                  />
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={commentLoading || !commentContent.trim()}>
+                      {commentLoading ? "Đang gửi..." : "Đăng bình luận"}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
-          )}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">Bình luận ({countAllComments(comments)})</h3>
+              </div>
+              {comments.length > 0 ? (
+                <div className="space-y-4">
+                  {comments.map((comment) => renderComment(comment))}
+                </div>
+              ) : (
+                <Card className="shadow-sm">
+                  <CardContent className="p-12 text-center">
+                    <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg">Chưa có bình luận nào</p>
+                    <p className="text-muted-foreground text-sm">Hãy là người đầu tiên bình luận về tài liệu này!</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+          <div className="w-full md:w-80">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-medium mb-4">Tài liệu liên quan</h3>
+                {relatedDocs.length === 0 ? (
+                  <div className="text-muted-foreground text-sm">Không có tài liệu liên quan.</div>
+                ) : (
+                  <ul className="space-y-3">
+                    {relatedDocs.map((doc: Document) => (
+                      <li key={doc.document_id}>
+                        <Link href={`/documents/${doc.document_id}`} className="font-medium hover:underline">
+                          {doc.title}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">
+                          {doc.file_type?.toUpperCase()} • {formatFileSize(doc.file_size)} • {formatDate(doc.created_at)}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
       {/* Modal xác nhận đánh giá */}
