@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input"
 import { Menu, Search, LogIn, BookOpen, ChevronDown, LogOut, User, Upload, HelpCircle, MessageCircle, Mail, MessageSquare } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/api/utils"
 import { usePathname } from "next/navigation"
 import ThemeToggle from "@/components/theme-toggle"
 import NotificationDropdown from "@/components/notification-dropdown"

@@ -195,28 +195,52 @@ export const fillUserInfoForComments = async (comments: Comment[]): Promise<void
   }
 };
 
-export async function likeDocument(documentId: number): Promise<{ is_liked: boolean; like_count: number }> {
+export interface DocumentStats {
+  is_liked: boolean;
+  like_count: number;
+  view_count: number;
+  download_count: number;
+}
+
+export async function getDocumentStats(documentId: number): Promise<DocumentStats> {
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/stats`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new Error("Không thể lấy thống kê tài liệu");
+  return await response.json();
+}
+
+export async function likeDocument(documentId: number): Promise<DocumentStats> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  if (!token) throw new Error("Bạn cần đăng nhập để thực hiện chức năng này");
+  
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/like`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) throw new Error("Không thể like tài liệu");
   return await response.json();
 }
 
-export async function unlikeDocument(documentId: number): Promise<{ is_liked: boolean; like_count: number }> {
+export async function unlikeDocument(documentId: number): Promise<DocumentStats> {
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  if (!token) throw new Error("Bạn cần đăng nhập để thực hiện chức năng này");
+  
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/documents/${documentId}/like`, {
     method: "DELETE",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) throw new Error("Không thể bỏ like tài liệu");
   return await response.json();
 }
 
-export async function toggleLikeDocument(documentId: number, currentLikedStatus: boolean): Promise<{ is_liked: boolean; like_count: number }> {
-  if (currentLikedStatus) {
+export async function toggleLikeDocument(documentId: number): Promise<DocumentStats> {
+  // Lấy trạng thái like hiện tại từ API stats
+  const currentStats = await getDocumentStats(documentId);
+  
+  // Dựa vào trạng thái is_liked để quyết định gọi API nào
+  if (currentStats.is_liked) {
     return await unlikeDocument(documentId);
   } else {
     return await likeDocument(documentId);

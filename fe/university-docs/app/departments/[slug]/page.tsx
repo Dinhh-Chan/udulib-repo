@@ -9,7 +9,7 @@ import { ChevronRight, FileText } from "lucide-react"
 import React from "react"
 import Loading from "../../loading"
 import { Major, Subject } from "@/types"
-import { fetchMajors, fetchSubjects, fetchDocumentCount } from "@/lib/api"
+import { fetchMajors, fetchSubjects, fetchDocumentCount } from "@/lib/api/api"
 
 export default function DepartmentPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params);

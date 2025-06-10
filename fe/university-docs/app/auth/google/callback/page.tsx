@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
+import type { User } from "@/types/user"
 
 export default function GoogleCallbackPage() {
   const router = useRouter()
@@ -13,23 +14,30 @@ export default function GoogleCallbackPage() {
   useEffect(() => {
     const handleGoogleCallback = async () => {
       try {
-        const code = searchParams.get("code")
+        const access_token = searchParams.get("access_token")
+        const username = searchParams.get("username")
+        const email = searchParams.get("email")
         
-        if (!code) {
-          toast.error("Không tìm thấy mã xác thực từ Google")
+        if (!access_token || !username || !email) {
+          toast.error("Thiếu thông tin đăng nhập")
           router.push("/login")
           return
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google/callback?code=${code}`)
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Đăng nhập thất bại")
+        // Tạo đối tượng user từ thông tin nhận được
+        const user: User = {
+          user_id: 0, // Sẽ được cập nhật sau khi lấy thông tin chi tiết từ API
+          email,
+          username,
+          full_name: username,
+          role: "student",
+          status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
 
         // Lưu thông tin đăng nhập
-        login(data.user, data.access_token)
+        login(user, access_token)
         
         toast.success("Đăng nhập thành công")
         router.push("/")

@@ -8,7 +8,7 @@ import { ChevronRight, FileText, Download, Eye, Calendar, User } from "lucide-re
 import React from "react"
 import Loading from "../../../../loading"
 import { Document, Subject, Major } from "@/types"
-import { fetchSubject, fetchMajor, fetchDocuments } from "@/lib/api"
+import { fetchSubject, fetchMajor, fetchDocuments } from "@/lib/api/api"
 
 export default function CoursePage({ params }: { params: Promise<{ slug: string; courseSlug: string }> }) {
   const { slug, courseSlug } = React.use(params);

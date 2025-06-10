@@ -12,7 +12,7 @@ import {
 import { useRouter } from "next/navigation"
 import { Notification, getUnreadNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/api/notification"
 import { useAuth } from "@/contexts/auth-context"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/api/utils"
 
 export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([])

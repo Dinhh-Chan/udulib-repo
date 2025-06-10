@@ -44,7 +44,8 @@ import {
   buildCommentTree,
   fillUserInfoForComments,
   toggleLikeDocument,
-  fetchDocumentsBySubject
+  fetchDocumentsBySubject,
+  getDocumentStats
 } from "@/lib/api/document-detail"
 import { Document, Rating, Comment, PreviewSupport } from "@/lib/api/types"
 import Loading from "../../loading"
@@ -98,6 +99,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
 
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [likeStatsLoading, setLikeStatsLoading] = useState(true);
 
   const [relatedDocs, setRelatedDocs] = useState<DocType[]>([]);
 
@@ -329,6 +332,26 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       });
   }, [document?.subject?.subject_id, document?.document_id]);
 
+  // Thêm useEffect để lấy trạng thái like khi component mount
+  useEffect(() => {
+    const fetchLikeStatus = async () => {
+      if (!id) return;
+      
+      try {
+        setLikeStatsLoading(true);
+        const stats = await getDocumentStats(Number(id));
+        setIsLiked(stats.is_liked);
+        setLikeCount(stats.like_count);
+      } catch (error) {
+        console.error("Error fetching like status:", error);
+      } finally {
+        setLikeStatsLoading(false);
+      }
+    };
+
+    fetchLikeStatus();
+  }, [id]);
+
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentContent.trim() || !userId) return;
@@ -529,12 +552,18 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
       setShowLoginPrompt(true);
       return;
     }
+
+    if (likeLoading) return;
+    
     try {
-      const result = await toggleLikeDocument(Number(id), isLiked);
+      setLikeLoading(true);
+      const result = await toggleLikeDocument(Number(id));
       setIsLiked(result.is_liked);
       setLikeCount(result.like_count);
     } catch (error) {
       toast.error("Có lỗi khi like tài liệu");
+    } finally {
+      setLikeLoading(false);
     }
   };
 
@@ -568,8 +597,19 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-3xl font-bold tracking-tight">{document.title}</h1>
             <div className="flex items-center gap-2">
-              <HeartLike isLiked={!!isLiked} onToggle={handleLike} disabled={downloadLoading} size="md" />
-              <span className="text-sm text-muted-foreground">{likeCount} lượt thích</span>
+              {likeStatsLoading ? (
+                <div className="w-12 h-12 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <HeartLike 
+                  isLiked={isLiked} 
+                  onToggle={handleLike} 
+                  disabled={downloadLoading || likeLoading} 
+                  size="md"
+                  likeCount={likeCount}
+                />
+              )}
             </div>
           </div>
           <p className="text-muted-foreground max-w-3xl">{document.description}</p>
@@ -591,6 +631,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
               <span className="text-muted-foreground">•</span>
               <Download className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">{document.download_count} lượt tải</span>
+              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground">{likeCount || 0} lượt thích</span>
             </div>
           </div>
         </div>
@@ -657,6 +699,18 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
                     <div className="text-sm font-medium">Mã môn học</div>
                     <div className="text-sm text-muted-foreground">{document.subject.subject_code}</div>
                   </div>
+                  {document.tags && document.tags.length > 0 && (
+                    <div>
+                      <div className="text-sm font-medium">Tags</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {document.tags.map((tag) => (
+                          <Badge key={tag.tag_id} variant="secondary" className="text-xs">
+                            {tag.tag_name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

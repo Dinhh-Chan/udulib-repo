@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { uploadDocument } from "@/lib/api/documents"
 import { getSubjects } from "@/lib/api/subject"
 import { Subject } from "@/types/subject"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/api/utils"
 import {
   Dialog,
   DialogContent,
