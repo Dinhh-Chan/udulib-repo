@@ -13,10 +13,10 @@ import {
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
-import { apiClient } from "@/lib/api/client"
 import { useState } from "react"
 import { ViewDocumentDialog } from "@/components/admin/view-document-dialog"
 import { EditDocumentDialog } from "@/components/admin/edit-document-dialog"
+import { Document, deleteDocument } from "@/lib/api/documents"
 
 export interface Subject {
   subject_id: number
@@ -41,26 +41,6 @@ export interface User {
   last_login: string
 }
 
-export type Document = {
-  document_id: number
-  title: string
-  description: string
-  file_path: string
-  file_size: number
-  file_type: string
-  subject_id: number
-  user_id: number
-  status: string
-  view_count: number
-  download_count: number
-  created_at: string
-  updated_at: string
-  subject: Subject
-  user: User
-  tags: any[]
-  average_rating: number
-}
-
 export const columns: ColumnDef<Document>[] = [
   {
     accessorKey: "title",
@@ -79,7 +59,7 @@ export const columns: ColumnDef<Document>[] = [
     header: "Người đăng",
     cell: ({ row }) => {
       const user = row.original.user
-      return user ? user.full_name : "N/A"
+      return user ? user.username : "N/A"
     },
   },
   {
@@ -119,10 +99,12 @@ export const columns: ColumnDef<Document>[] = [
       const handleDelete = async () => {
         if (confirm("Bạn có chắc chắn muốn xóa tài liệu này?")) {
           try {
-            await apiClient.delete(`/documents/${document.document_id}`)
-            toast.success("Xóa tài liệu thành công")
-            // Reload trang để cập nhật dữ liệu
-            window.location.reload()
+            const success = await deleteDocument(document.document_id)
+            if (success) {
+              toast.success("Xóa tài liệu thành công")
+              // Reload trang để cập nhật dữ liệu
+              window.location.reload()
+            }
           } catch (error) {
             console.error("Lỗi khi xóa tài liệu:", error)
             toast.error("Không thể xóa tài liệu")

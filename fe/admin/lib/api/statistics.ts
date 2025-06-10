@@ -1,4 +1,5 @@
-import { apiClient } from "./client"
+import { apiClientAxios as apiClient } from "./client"
+import { AxiosResponse } from "axios"
 
 export interface OverviewStatistics {
   total_documents: number
@@ -52,34 +53,42 @@ export interface ActivityByTime {
   ratings: number
 }
 
-export async function getOverviewStatistics() {
-  return await apiClient.get<OverviewStatistics>("/statistics/overview")
+export async function getOverviewStatistics(): Promise<OverviewStatistics> {
+  const response: AxiosResponse<OverviewStatistics> = await apiClient.get("/statistics/overview")
+  return response.data
 }
 
-export async function getDocumentsByStatus() {
-  return await apiClient.get<DocumentStatusStats[]>("/statistics/documents/by-status")
+export async function getDocumentsByStatus(): Promise<DocumentStatusStats[]> {
+  const response: AxiosResponse<DocumentStatusStats[]> = await apiClient.get("/statistics/documents/by-status")
+  return response.data
 }
 
-export async function getDocumentsBySubject(limit = 10) {
-  return await apiClient.get<DocumentBySubjectStats[]>(`/statistics/documents/by-subject?limit=${limit}`)
+export async function getDocumentsBySubject(limit = 10): Promise<DocumentBySubjectStats[]> {
+  const response: AxiosResponse<DocumentBySubjectStats[]> = await apiClient.get(`/statistics/documents/by-subject?limit=${limit}`)
+  return response.data
 }
 
-export async function getDocumentsByMajor() {
-  return await apiClient.get<DocumentByMajorStats[]>("/statistics/documents/by-major")
+export async function getDocumentsByMajor(): Promise<DocumentByMajorStats[]> {
+  const response: AxiosResponse<DocumentByMajorStats[]> = await apiClient.get("/statistics/documents/by-major")
+  return response.data
 }
 
-export async function getDocumentsByFileType() {
-  return await apiClient.get<FileTypeStats[]>("/statistics/documents/by-file-type")
+export async function getDocumentsByFileType(): Promise<FileTypeStats[]> {
+  const response: AxiosResponse<FileTypeStats[]> = await apiClient.get("/statistics/documents/by-file-type")
+  return response.data
 }
 
-export async function getMostViewedDocuments(limit = 10) {
-  return await apiClient.get<MostViewedDocument[]>(`/statistics/documents/most-viewed?limit=${limit}`)
+export async function getMostViewedDocuments(limit = 10): Promise<MostViewedDocument[]> {
+  const response: AxiosResponse<MostViewedDocument[]> = await apiClient.get(`/statistics/documents/most-viewed?limit=${limit}`)
+  return response.data
 }
 
-export async function getMostDownloadedDocuments(limit = 10) {
-  return await apiClient.get<MostDownloadedDocument[]>(`/statistics/documents/most-downloaded?limit=${limit}`)
+export async function getMostDownloadedDocuments(limit = 10): Promise<MostDownloadedDocument[]> {
+  const response: AxiosResponse<MostDownloadedDocument[]> = await apiClient.get(`/statistics/documents/most-downloaded?limit=${limit}`)
+  return response.data
 }
 
-export async function getActivityByTime(days = 30) {
-  return await apiClient.get<ActivityByTime[]>(`/statistics/activity/by-time?days=${days}`)
+export async function getActivityByTime(days = 30): Promise<ActivityByTime[]> {
+  const response: AxiosResponse<ActivityByTime[]> = await apiClient.get(`/statistics/activity/by-time?days=${days}`)
+  return response.data
 } 

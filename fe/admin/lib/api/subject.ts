@@ -1,6 +1,5 @@
 import { Subject, SubjectCreate, SubjectUpdate } from "@/types/subject"
-import { apiClient } from "./client"
-import { apiClientAxios } from "./client"
+import { apiClientAxios as apiClient } from "./client"
 import { AxiosResponse } from "axios"
 import { toast } from "sonner"
 import { getMajor } from "./major"
@@ -16,7 +15,7 @@ interface GetSubjectsParams {
 export async function getSubjects(params: GetSubjectsParams = {}): Promise<Subject[]> {
   try {
     console.log("Gọi API lấy danh sách môn học")
-    const response: AxiosResponse<Subject[]> = await apiClientAxios.get("/subjects", { params })
+    const response: AxiosResponse<Subject[]> = await apiClient.get("/subjects/", { params })
     console.log("Kết quả API subjects:", response.data)
     return response.data
   } catch (error) {
@@ -28,7 +27,8 @@ export async function getSubjects(params: GetSubjectsParams = {}): Promise<Subje
 
 export async function getSubject(id: number): Promise<Subject | null> {
   try {
-    return await apiClient.get<Subject>(`/subjects/${id}`)
+    const response: AxiosResponse<Subject> = await apiClient.get(`/subjects/${id}/`)
+    return response.data
   } catch (error) {
     console.error("Error fetching subject:", error)
     toast.error("Không thể lấy thông tin môn học")
@@ -38,9 +38,9 @@ export async function getSubject(id: number): Promise<Subject | null> {
 
 export async function createSubject(data: SubjectCreate): Promise<Subject | null> {
   try {
-    const response = await apiClient.post<Subject>("/subjects", data)
+    const response: AxiosResponse<Subject> = await apiClient.post("/subjects/", data)
     toast.success("Thêm môn học thành công")
-    return response
+    return response.data
   } catch (error) {
     console.error("Error creating subject:", error)
     toast.error("Không thể thêm môn học")
@@ -50,9 +50,9 @@ export async function createSubject(data: SubjectCreate): Promise<Subject | null
 
 export async function updateSubject(id: number, data: SubjectUpdate): Promise<Subject | null> {
   try {
-    const response = await apiClient.put<Subject>(`/subjects/${id}`, data)
+    const response: AxiosResponse<Subject> = await apiClient.put(`/subjects/${id}/`, data)
     toast.success("Cập nhật môn học thành công")
-    return response
+    return response.data
   } catch (error) {
     console.error("Error updating subject:", error)
     toast.error("Không thể cập nhật môn học")
@@ -62,7 +62,7 @@ export async function updateSubject(id: number, data: SubjectUpdate): Promise<Su
 
 export async function deleteSubject(id: number): Promise<boolean> {
   try {
-    await apiClient.delete(`/subjects/${id}`)
+    await apiClient.delete(`/subjects/${id}/`)
     toast.success("Xóa môn học thành công")
     return true
   } catch (error) {
@@ -74,8 +74,8 @@ export async function deleteSubject(id: number): Promise<boolean> {
 
 export async function getSubjectCount(): Promise<number> {
   try {
-    const response = await apiClient.get<{ count: number }>("/subjects/count-subject")
-    return response.count
+    const response: AxiosResponse<{ count: number }> = await apiClient.get("/subjects/count-subject/")
+    return response.data.count
   } catch (error) {
     console.error("Error fetching subject count:", error)
     toast.error("Không thể lấy số lượng môn học")
@@ -87,7 +87,7 @@ export async function getSubjectCount(): Promise<number> {
 export const getSubjectsByYear = async (yearId: number, page: number = 1, perPage: number = 100): Promise<Subject[]> => {
   try {
     console.log(`Gọi API lấy môn học theo năm học ${yearId}, page=${page}, per_page=${perPage}`);
-    const response = await apiClientAxios.get(`/subjects/academic-year/${yearId}`, {
+    const response: AxiosResponse<Subject[]> = await apiClient.get(`/subjects/academic-year/${yearId}/`, {
       params: {
         page,
         per_page: perPage
@@ -97,7 +97,6 @@ export const getSubjectsByYear = async (yearId: number, page: number = 1, perPag
     return response.data || [];
   } catch (error: any) {
     console.error(`Error fetching subjects for year ${yearId}:`, error);
-    // Ghi lại chi tiết lỗi
     if (error.response) {
       console.error("Response error:", error.response.status, error.response.data);
     }

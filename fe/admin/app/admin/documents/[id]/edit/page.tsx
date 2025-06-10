@@ -12,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { apiClient } from "@/lib/api/client"
-import { Document } from "@/app/admin/documents/columns"
+import { Document, getDocument, updateDocument } from "@/lib/api/documents"
 import { ArrowLeft, Save } from "lucide-react"
 import { toast } from "sonner"
 import { 
@@ -24,6 +23,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card"
+import { apiClient } from "@/lib/api/client"
 
 interface Subject {
   subject_id: number
@@ -45,12 +45,14 @@ export default function DocumentEditPage({ params }: { params: { id: string } })
     const fetchDocument = async () => {
       try {
         setIsLoading(true)
-        const doc = await apiClient.get<Document>(`/documents/${params.id}`)
-        setDocument(doc)
-        setTitle(doc.title)
-        setDescription(doc.description || "")
-        setSubjectId(doc.subject_id)
-        setStatus(doc.status)
+        const doc = await getDocument(parseInt(params.id))
+        if (doc) {
+          setDocument(doc)
+          setTitle(doc.title)
+          setDescription(doc.description || "")
+          setSubjectId(doc.subject_id)
+          setStatus(doc.status)
+        }
       } catch (error) {
         console.error("Error fetching document:", error)
         toast.error("Không thể tải thông tin tài liệu")
@@ -61,7 +63,7 @@ export default function DocumentEditPage({ params }: { params: { id: string } })
 
     const fetchSubjects = async () => {
       try {
-        const response = await apiClient.get<{ subjects: Subject[] }>("/subjects")
+        const response = await apiClient.get<{ subjects: Subject[] }>("/subjects/")
         setSubjects(response.subjects || [])
       } catch (error) {
         console.error("Error fetching subjects:", error)
@@ -79,14 +81,16 @@ export default function DocumentEditPage({ params }: { params: { id: string } })
     
     try {
       setIsSaving(true)
-      await apiClient.put(`/documents/${document.document_id}`, {
+      const updatedDoc = await updateDocument(document.document_id, {
         title,
         description,
         subject_id: subjectId,
         status
       })
-      toast.success("Cập nhật tài liệu thành công")
-      router.push(`/admin/documents/${document.document_id}`)
+      if (updatedDoc) {
+        toast.success("Cập nhật tài liệu thành công")
+        router.push(`/admin/documents/${document.document_id}`)
+      }
     } catch (error) {
       console.error("Error updating document:", error)
       toast.error("Không thể cập nhật tài liệu")

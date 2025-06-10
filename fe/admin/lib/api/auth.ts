@@ -31,5 +31,5 @@ export async function logout(): Promise<void> {
 
 export const getAuthToken = () => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("access_token");
-}; 
+  return localStorage.getItem("access_token") || localStorage.getItem("token");
+};

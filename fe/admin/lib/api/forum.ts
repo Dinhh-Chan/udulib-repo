@@ -1,4 +1,5 @@
-import { apiClient, apiClientAxios } from "./client"
+import { apiClientAxios as apiClient } from "./client"
+import { AxiosResponse } from "axios"
 
 export interface Forum {
   forum_id: number
@@ -87,77 +88,87 @@ export interface GetForumRepliesParams {
   status?: string
 }
 
-// Forums
+// Forums - Using consistent apiClient (axios)
 export async function getForums(params?: GetForumsParams): Promise<Forum[]> {
-  return apiClient.get<Forum[]>("/forums", { params })
+  const response: AxiosResponse<Forum[]> = await apiClient.get("/forums/", { params })
+  return response.data
 }
 
 export async function getForumById(id: number): Promise<Forum> {
-  return apiClient.get<Forum>(`/forums/${id}`)
+  const response: AxiosResponse<Forum> = await apiClient.get(`/forums/${id}`)
+  return response.data
 }
 
 export async function getForumBySubjectId(subjectId: number): Promise<Forum> {
-  return apiClient.get<Forum>(`/forums/subject/${subjectId}`)
+  const response: AxiosResponse<Forum> = await apiClient.get(`/forums/subject/${subjectId}`)
+  return response.data
 }
 
 export async function createForum(data: ForumCreate): Promise<Forum> {
-  return apiClient.post<Forum>("/forums", data)
+  const response: AxiosResponse<Forum> = await apiClient.post("/forums/", data)
+  return response.data
 }
 
 export async function updateForum(id: number, data: ForumUpdate): Promise<Forum> {
-  const response = await apiClientAxios.put<Forum>(`/forums/${id}`, data)
+  const response: AxiosResponse<Forum> = await apiClient.put(`/forums/${id}`, data)
   return response.data
 }
 
 export async function deleteForum(id: number): Promise<void> {
-  return apiClient.delete<void>(`/forums/${id}`)
+  await apiClient.delete(`/forums/${id}`)
 }
 
-// Forum Posts
+// Forum Posts - Using consistent apiClient (axios)
 export async function getForumPosts(params?: GetForumPostsParams): Promise<ForumPost[]> {
-  return apiClient.get<ForumPost[]>("/forum-posts/", { params })
+  const response: AxiosResponse<ForumPost[]> = await apiClient.get("/forum-posts", { params })
+  return response.data
 }
 
 export async function getForumPostById(id: number): Promise<ForumPost> {
-  return apiClient.get<ForumPost>(`/forum-posts/${id}`)
+  const response: AxiosResponse<ForumPost> = await apiClient.get(`/forum-posts/${id}`)
+  return response.data
 }
 
 export async function createForumPost(data: ForumPostCreate): Promise<ForumPost> {
-  return apiClient.post<ForumPost>("/forum-posts", data)
+  const response: AxiosResponse<ForumPost> = await apiClient.post("/forum-posts", data)
+  return response.data
 }
 
 export async function updateForumPost(id: number, data: Partial<ForumPostCreate> & { status?: string }): Promise<ForumPost> {
-  const response = await apiClientAxios.put<ForumPost>(`/forum-posts/${id}`, data)
+  const response: AxiosResponse<ForumPost> = await apiClient.put(`/forum-posts/${id}`, data)
   return response.data
 }
 
 export async function deleteForumPost(id: number): Promise<void> {
-  return apiClient.delete<void>(`/forum-posts/${id}`)
+  await apiClient.delete(`/forum-posts/${id}`)
 }
 
-// Forum Replies
+// Forum Replies - Using consistent apiClient (axios)
 export async function getForumReplies(params?: GetForumRepliesParams): Promise<ForumReply[]> {
-  return apiClient.get<ForumReply[]>("/forum-replies", { params })
+  const response: AxiosResponse<ForumReply[]> = await apiClient.get("/forum-replies", { params })
+  return response.data
 }
 
 export async function getForumReplyById(id: number): Promise<ForumReply> {
-  return apiClient.get<ForumReply>(`/forum-replies/${id}`)
+  const response: AxiosResponse<ForumReply> = await apiClient.get(`/forum-replies/${id}`)
+  return response.data
 }
 
 export async function createForumReply(data: ForumReplyCreate): Promise<ForumReply> {
-  return apiClient.post<ForumReply>("/forum-replies", data)
+  const response: AxiosResponse<ForumReply> = await apiClient.post("/forum-replies", data)
+  return response.data
 }
 
 export async function updateForumReply(id: number, data: Partial<ForumReplyCreate> & { status?: string }): Promise<ForumReply> {
-  const response = await apiClientAxios.put<ForumReply>(`/forum-replies/${id}`, data)
+  const response: AxiosResponse<ForumReply> = await apiClient.put(`/forum-replies/${id}`, data)
   return response.data
 }
 
 export async function deleteForumReply(id: number): Promise<void> {
-  return apiClient.delete<void>(`/forum-replies/${id}`)
+  await apiClient.delete(`/forum-replies/${id}`)
 }
 
-// Hàm lấy bài viết diễn đàn kèm thông tin chi tiết của người dùng
+// Enhanced functions - Using consistent apiClient (axios)
 export async function getEnhancedForumPost(id: number): Promise<ForumPost> {
   try {
     console.log(`Gọi API lấy bài viết diễn đàn ${id} với thông tin người dùng`);
@@ -172,7 +183,8 @@ export async function getEnhancedForumPost(id: number): Promise<ForumPost> {
     
     // Lấy thông tin chi tiết người dùng
     try {
-      const user = await apiClient.get<any>(`/users/${post.user_id}`);
+      const userResponse: AxiosResponse<any> = await apiClient.get(`/users/${post.user_id}`);
+      const user = userResponse.data;
       
       // Cập nhật thông tin người dùng vào bài viết
       return {
@@ -194,7 +206,6 @@ export async function getEnhancedForumPost(id: number): Promise<ForumPost> {
   }
 }
 
-// Hàm lấy danh sách bài viết diễn đàn kèm thông tin chi tiết của người dùng
 export async function getEnhancedForumPosts(params?: GetForumPostsParams): Promise<ForumPost[]> {
   try {
     console.log(`Gọi API lấy danh sách bài viết diễn đàn với thông tin người dùng`);
@@ -212,7 +223,8 @@ export async function getEnhancedForumPosts(params?: GetForumPostsParams): Promi
         
         // Lấy thông tin chi tiết người dùng
         try {
-          const user = await apiClient.get<any>(`/users/${post.user_id}`);
+          const userResponse: AxiosResponse<any> = await apiClient.get(`/users/${post.user_id}`);
+          const user = userResponse.data;
           
           // Cập nhật thông tin người dùng vào bài viết
           return {

@@ -116,7 +116,7 @@ export function AddDocumentDialog({ children, open, onOpenChange, onSuccess }: A
       }
 
       // Tạo tài liệu mới
-      const response = await apiClient.post("/documents", formData, {
+      const response = await apiClient.post("/documents/", formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

@@ -1,7 +1,8 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios"
 import { showErrorToast } from "@/lib/utils"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
+// Đảm bảo sử dụng HTTPS
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace('http://', 'https://') || "https://localhost:8000/api/v1"
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, any>
@@ -161,10 +162,14 @@ class ApiClient {
 export const apiClient = new ApiClient(API_URL)
 
 export const apiClientAxios = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace('http://', 'https://') || "https://localhost:8000/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
+  maxRedirects: 5,
+  validateStatus: function (status) {
+    return status >= 200 && status < 400;
+  }
 })
 
 // Thêm interceptor để xử lý token

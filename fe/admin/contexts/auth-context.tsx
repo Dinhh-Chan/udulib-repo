@@ -1,5 +1,4 @@
 "use client"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { apiClient } from "@/lib/api/client"
@@ -44,7 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem("token")
+        // Check for token with consistent key
+        const token = localStorage.getItem("access_token") || localStorage.getItem("token")
         if (!token) {
           setUser(null)
           setIsAuthenticated(false)
@@ -59,6 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAdmin(response.role === "admin")
       } catch (error) {
         console.error("Auth check failed:", error)
+        // Clear both possible token keys
+        localStorage.removeItem("access_token")
         localStorage.removeItem("token")
         localStorage.removeItem("user")
         setUser(null)
@@ -83,8 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response: LoginResponse = await res.json();
 
       const { access_token, user } = response
-      localStorage.setItem("token", access_token)
+      
+      // Store token with consistent key - use access_token as primary
+      localStorage.setItem("access_token", access_token)
+      localStorage.setItem("token", access_token) // Keep both for backward compatibility
       localStorage.setItem("user", JSON.stringify(user))
+      
       setUser(user)
       setIsAuthenticated(true)
       setIsAdmin(user.role === "admin")
@@ -102,6 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
+    // Clear both possible token keys
+    localStorage.removeItem("access_token")
     localStorage.removeItem("token")
     localStorage.removeItem("user")
     setUser(null)

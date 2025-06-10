@@ -1,13 +1,13 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PlusCircle, Search } from "lucide-react"
 import { DataTable } from "@/components/ui/data-table"
 import { columns } from "./columns"
-import { useDocuments } from "@/hooks/use-documents"
+import { getDocuments } from "@/lib/api/documents"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AddDocumentDialog } from "@/components/admin/add-document-dialog"
@@ -16,7 +16,28 @@ function DocumentsContent() {
   const searchParams = useSearchParams()
   const page = Number(searchParams?.get("page")) || 1
   const search = searchParams?.get("search") || ""
-  const { data, isLoading, error } = useDocuments({ page, search })
+  const [data, setData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        setIsLoading(true)
+        const response = await getDocuments({ page, search })
+        if (response) {
+          setData(response)
+        }
+      } catch (err) {
+        setError(err as Error)
+        toast.error("Không thể tải danh sách tài liệu")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchDocuments()
+  }, [page, search])
 
   if (error) {
     toast.error("Không thể tải danh sách tài liệu")

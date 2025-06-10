@@ -17,21 +17,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { apiClient } from "@/lib/api/client"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Search, MoreHorizontal } from "lucide-react"
 import { useDebounce } from "@/hooks/use-debounce"
 import { EditMajorDialog } from "./edit-major-dialog"
 import { Major } from "@/types/major"
-import { deleteMajor } from "@/lib/api/major"
+import { deleteMajor, getMajors } from "@/lib/api/major"
 import { showSuccessToast, showErrorToast } from "@/lib/utils"
-
-interface MajorsResponse {
-  items: Major[]
-  total: number
-  total_pages: number
-  current_page: number
-}
 
 interface MajorsTableProps {
   page?: number
@@ -53,8 +45,8 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
     const fetchMajors = async () => {
       try {
         setIsLoading(true)
-        const response = await apiClient.get<Major[]>(`/majors?page=${page}&search=${debouncedSearch}`)
-        setMajors(response)
+        const response = await getMajors(page, debouncedSearch)
+        setMajors(response || [])
       } catch (error: any) {
         // Xử lý lỗi từ API
         if (error.type === 'silent' && error.message) {
@@ -67,6 +59,7 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
         } else {
           showErrorToast("Không thể tải danh sách ngành học");
         }
+        setMajors([])
       } finally {
         setIsLoading(false)
       }
@@ -117,10 +110,6 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
     setReloadKey(key => key + 1)
   }
 
-  if (isLoading) {
-    return <div>Loading...</div>
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between mb-4 px-6 py-4">
@@ -148,7 +137,13 @@ export function MajorsTable({ page = 1, search = "" }: MajorsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {majors.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center">
+                  Đang tải...
+                </TableCell>
+              </TableRow>
+            ) : majors.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center">
                   Không có dữ liệu

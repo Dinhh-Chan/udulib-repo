@@ -1,5 +1,6 @@
 import { toast } from "sonner"
-import { apiClient } from "./client" // Import API client
+import { apiClientAxios as apiClient } from "./client"
+import { AxiosResponse } from "axios"
 import type { User, UserCreate, UserUpdate } from "@/types/user"
 
 export async function getUsers(params?: {
@@ -9,18 +10,20 @@ export async function getUsers(params?: {
   search?: string
 }): Promise<User[]> {
   try {
-    return await apiClient.get<User[]>("/users", params)
+    const response: AxiosResponse<User[]> = await apiClient.get("/users/", { params })
+    return response.data
   } catch (error) {
     if (error instanceof Error && error.message !== "Unauthorized") {
       toast.error("Không thể lấy danh sách người dùng")
     }
-    return [] // Return empty array on error to prevent UI crashes
+    return []
   }
 }
 
 export async function getUserById(userId: number): Promise<User | null> {
   try {
-    return await apiClient.get<User>(`/users/${userId}`)
+    const response: AxiosResponse<User> = await apiClient.get(`/users/${userId}`)
+    return response.data
   } catch (error) {
     if (error instanceof Error && error.message !== "Unauthorized") {
       toast.error("Không thể lấy thông tin người dùng")
@@ -31,7 +34,7 @@ export async function getUserById(userId: number): Promise<User | null> {
 
 export async function createUser(userData: UserCreate): Promise<boolean> {
   try {
-    await apiClient.post<User>("/users", userData)
+    const response: AxiosResponse<User> = await apiClient.post("/users/", userData)
     toast.success("Tạo người dùng mới thành công")
     return true
   } catch (error) {
@@ -44,7 +47,7 @@ export async function createUser(userData: UserCreate): Promise<boolean> {
 
 export async function updateUser(userId: number, userData: UserUpdate): Promise<boolean> {
   try {
-    await apiClient.put<User>(`/users/${userId}`, userData)
+    const response: AxiosResponse<User> = await apiClient.put(`/users/${userId}`, userData)
     toast.success("Cập nhật thông tin người dùng thành công")
     return true
   } catch (error) {

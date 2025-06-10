@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { apiClient } from "@/lib/api/client"
-import { Document } from "@/app/admin/documents/columns"
+import { Document, getDocument, deleteDocument } from "@/lib/api/documents"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Download, Edit, Eye, Trash } from "lucide-react"
@@ -20,8 +19,10 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
     const fetchDocument = async () => {
       try {
         setIsLoading(true)
-        const response = await apiClient.get<Document>(`/documents/${params.id}`)
-        setDocument(response)
+        const doc = await getDocument(parseInt(params.id))
+        if (doc) {
+          setDocument(doc)
+        }
       } catch (error) {
         console.error("Error fetching document:", error)
         toast.error("Không thể tải thông tin tài liệu")
@@ -38,9 +39,11 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
     
     if (confirm("Bạn có chắc chắn muốn xóa tài liệu này?")) {
       try {
-        await apiClient.delete(`/documents/${document.document_id}`)
-        toast.success("Xóa tài liệu thành công")
-        router.push("/admin/documents")
+        const success = await deleteDocument(document.document_id)
+        if (success) {
+          toast.success("Xóa tài liệu thành công")
+          router.push("/admin/documents")
+        }
       } catch (error) {
         console.error("Error deleting document:", error)
         toast.error("Không thể xóa tài liệu")
@@ -123,7 +126,7 @@ export default function DocumentDetailPage({ params }: { params: { id: string } 
                 </div>
                 <div className="px-4 py-3 flex justify-between">
                   <span className="text-sm font-medium">Người đăng</span>
-                  <span className="text-sm text-gray-700">{document.user?.full_name || "N/A"}</span>
+                  <span className="text-sm text-gray-700">{document.user?.username || "N/A"}</span>
                 </div>
                 <div className="px-4 py-3 flex justify-between">
                   <span className="text-sm font-medium">Ngày tạo</span>

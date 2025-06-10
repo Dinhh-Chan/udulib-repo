@@ -1,6 +1,5 @@
 import { toast } from "sonner"
-import { apiClient } from "./client"
-import { apiClientAxios } from "./client"
+import { apiClientAxios as apiClient } from "./client"
 import { AxiosResponse } from "axios"
 
 export interface Tag {
@@ -12,7 +11,7 @@ export interface Tag {
 export async function getTags(): Promise<Tag[]> {
   try {
     console.log("Gọi API lấy danh sách tags")
-    const response: AxiosResponse<Tag[]> = await apiClientAxios.get("/tags")
+    const response: AxiosResponse<Tag[]> = await apiClient.get("/tags/")
     console.log("Kết quả API tags:", response.data)
     return response.data
   } catch (error) {
@@ -24,7 +23,7 @@ export async function getTags(): Promise<Tag[]> {
 
 export async function createTag(tagName: string): Promise<Tag | null> {
   try {
-    const response: AxiosResponse<Tag> = await apiClientAxios.post("/tags", { tag_name: tagName })
+    const response: AxiosResponse<Tag> = await apiClient.post("/tags/", { tag_name: tagName })
     toast.success("Tạo tag thành công")
     return response.data
   } catch (error) {
@@ -36,7 +35,7 @@ export async function createTag(tagName: string): Promise<Tag | null> {
 
 export async function addDocumentTags(documentId: number, tagNames: string[]): Promise<boolean> {
   try {
-    await apiClientAxios.post(`/documents/${documentId}/tags`, { tag_names: tagNames })
+    const response: AxiosResponse = await apiClient.post(`/documents/${documentId}/tags`, { tag_names: tagNames })
     toast.success("Thêm tags thành công")
     return true
   } catch (error) {
