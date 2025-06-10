@@ -27,6 +27,23 @@ async def read_subjects(
     subjects = await crud.get_all(skip=skip, limit=per_page, major_id=major_id, year_id=year_id)
     return subjects
 
+@router.get("/with-details", response_model=List[dict])
+async def read_subjects_with_details(
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    major_id: Optional[int] = None,
+    year_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Lấy danh sách môn học kèm thông tin đầy đủ của ngành học và năm học.
+    """
+    crud = SubjectCRUD(db)
+    skip = (page - 1) * per_page
+    subjects = await crud.get_all_with_details(skip=skip, limit=per_page, major_id=major_id, year_id=year_id)
+    return subjects
+
 @router.get("/count-subject")
 async def count_subjects(
     *,
@@ -80,6 +97,25 @@ async def create_subject(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+@router.get("/{subject_id}/with-details", response_model=dict)
+async def read_subject_with_details(
+    *,
+    db: AsyncSession = Depends(get_db),
+    subject_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Lấy thông tin chi tiết của một môn học kèm thông tin đầy đủ của ngành học và năm học.
+    """
+    crud = SubjectCRUD(db)
+    subject = await crud.get_by_id_with_details(id=subject_id)
+    if not subject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy môn học"
+        )
+    return subject
 
 @router.get("/{subject_id}", response_model=Subject)
 async def read_subject(
