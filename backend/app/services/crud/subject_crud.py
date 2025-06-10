@@ -304,27 +304,31 @@ class SubjectCRUD:
         Đếm số lượng môn học theo từng ngành học.
         Trả về danh sách các ngành học kèm số lượng môn học.
         """
-        query = (
-            select(
-                Major.major_id,
-                Major.major_name,
-                Major.major_code,
-                func.count(Subject.subject_id).label('subject_count')
+        try:
+            query = (
+                select(
+                    Major.major_id,
+                    Major.major_name,
+                    Major.major_code,
+                    func.count(Subject.subject_id).label('subject_count')
+                )
+                .outerjoin(Subject, Major.major_id == Subject.major_id)
+                .group_by(Major.major_id, Major.major_name, Major.major_code)
+                .order_by(Major.major_name)
             )
-            .outerjoin(Subject, Major.major_id == Subject.major_id)
-            .group_by(Major.major_id, Major.major_name, Major.major_code)
-            .order_by(Major.major_name)
-        )
-        
-        result = await self.db.execute(query)
-        subjects_by_major = result.all()
-        
-        return [
-            {
-                "major_id": major.major_id,
-                "major_name": major.major_name,
-                "major_code": major.major_code,
-                "subject_count": major.subject_count
-            }
-            for major in subjects_by_major
-        ] 
+            
+            result = await self.db.execute(query)
+            subjects_by_major = result.all()
+            
+            return [
+                {
+                    "major_id": int(major.major_id),
+                    "major_name": str(major.major_name),
+                    "major_code": str(major.major_code),
+                    "subject_count": int(major.subject_count or 0)
+                }
+                for major in subjects_by_major
+            ]
+        except Exception as e:
+            logger.error(f"Error in count subjects by major: {str(e)}")
+            raise 
