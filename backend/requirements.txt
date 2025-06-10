@@ -16,9 +16,9 @@ redis==4.6.0
 pydantic_settings
 asyncpg
 watchdog
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
+google-auth==2.23.0
+google-auth-oauthlib==1.1.0
+google-auth-httplib2==0.1.1
 python-jose[cryptography]
 httpx
 jose
