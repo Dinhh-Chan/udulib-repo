@@ -224,7 +224,11 @@ async def google_callback(
         params = urlencode({
             "access_token": access_token,
             "username": user.username,
-            "email": user.email
+            "user_id": user.user_id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": "student",
+            "status": "active",
         })
         redirect_url = f"http://localhost:3001/auth/google/callback?{params}"
         return RedirectResponse(url=redirect_url)
