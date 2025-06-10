@@ -226,5 +226,5 @@ async def google_callback(
             "username": user.username,
             "email": user.email
         })
-        redirect_url = f"https://udulib.iuptit.com?{params}"
+        redirect_url = f"http://localhost:3001/?{params}"
         return RedirectResponse(url=redirect_url)
