@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any 
@@ -204,3 +204,17 @@ async def read_subjects_by_academic_year(
         year_id=academic_year_id
     )
     return subjects 
+
+@router.get("/count-by-major", response_model=List[Dict[str, Any]])
+async def count_subjects_by_major(
+    *,
+    db: AsyncSession = Depends(get_db),
+    # current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Lấy tổng số môn học theo từng ngành học.
+    Trả về danh sách các ngành học kèm số lượng môn học.
+    """
+    crud = SubjectCRUD(db)
+    result = await crud.count_subjects_by_major()
+    return result 
