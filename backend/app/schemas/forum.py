@@ -42,8 +42,11 @@ class ForumPost(ForumPostBase, TimeStampBase):
     forum_id: int
     user_id: int
     status: ForumStatus
+    views: int = 0
+    like_count: int = 0
     user: Optional[User] = None
     reply_count: Optional[int] = 0
+    is_liked: Optional[bool] = False  # Để check user hiện tại đã like chưa
     
     class Config:
         from_attributes = True
@@ -70,3 +73,18 @@ class ForumReply(ForumReplyBase, TimeStampBase):
     
     class Config:
         from_attributes = True
+
+class ForumPostLike(BaseModel):
+    like_id: int
+    post_id: int
+    user_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ForumPostStats(BaseModel):
+    views: int
+    like_count: int
+    reply_count: int
+    is_liked: bool = False
