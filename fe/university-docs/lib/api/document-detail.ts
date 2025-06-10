@@ -10,7 +10,7 @@ const getAuthHeaders = (): Record<string, string> => {
 
 // API functions cho Document
 export const fetchDocument = async (id: string): Promise<Document> => {
-  const response = await fetch(`${API_URL}/documents/${id}`, {
+  const response = await fetch(`${API_URL}/documents/public/${id}`, {
     headers: getAuthHeaders()
   });
   

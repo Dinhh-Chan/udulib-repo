@@ -19,6 +19,7 @@ import { getDocumentDetail, updateDocument, deleteDocument, DocumentUpdateData }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { deleteForumPost } from "@/lib/api/forum"
+import { motion, AnimatePresence } from "framer-motion"
 
 // Import các tab components
 import ProfileTab from "@/components/profile/ProfileTab"
@@ -330,32 +331,41 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex-1 min-w-0">
-            {activeTab === "profile" && user && (
-              <ProfileTab 
-                user={user} 
-                onUserUpdate={(updatedUser) => {
-                  setUser(updatedUser)
-                  // Refresh avatar when user updates
-                  getUserAvatar().then(setAvatarUrl).catch(() => console.log("No avatar"))
-                }} 
-              />
-            )}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                {activeTab === "profile" && user && (
+                  <ProfileTab 
+                    user={user} 
+                    onUserUpdate={(updatedUser) => {
+                      setUser(updatedUser)
+                      getUserAvatar().then(setAvatarUrl).catch(() => console.log("No avatar"))
+                    }} 
+                  />
+                )}
 
-            {activeTab === "documents" && authUser?.user_id && (
-              <DocumentsTab userId={authUser.user_id} />
-            )}
+                {activeTab === "documents" && authUser?.user_id && (
+                  <DocumentsTab userId={authUser.user_id} />
+                )}
 
-            {activeTab === "forum" && authUser?.user_id && (
-              <ForumTab userId={authUser.user_id} />
-            )}
+                {activeTab === "forum" && authUser?.user_id && (
+                  <ForumTab userId={authUser.user_id} />
+                )}
 
-            {activeTab === "notifications" && (
-              <NotificationsTab />
-            )}
+                {activeTab === "notifications" && (
+                  <NotificationsTab />
+                )}
 
-            {activeTab === "settings" && (
-              <SettingsTab />
-            )}
+                {activeTab === "settings" && (
+                  <SettingsTab />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>

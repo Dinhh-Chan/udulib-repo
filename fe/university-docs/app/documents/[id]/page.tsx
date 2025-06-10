@@ -25,8 +25,6 @@ import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "
 import React from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { 
-  getDocumentDownloadUrl, 
-  getDocumentPreviewUrl,
   getPublicDocumentPreviewUrl,
   getDocumentFullPreviewUrl,
   downloadPublicDocument,

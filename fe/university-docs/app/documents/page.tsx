@@ -9,6 +9,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import { FilterSidebar } from "./components/FilterSidebar"
 import { DocumentThumbnail } from "@/components/ui/document-thumbnail"
+import Loading from "../loading"
 
 interface Document {
   document_id: number
@@ -150,42 +151,7 @@ export default function DocumentsPage() {
           
           <div className="flex-1">
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <Card key={i} className="animate-pulse border-0 shadow-lg h-80">
-                    {/* Thumbnail skeleton */}
-                    <div className="h-40 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 relative">
-                      {/* Badge skeletons */}
-                      <div className="absolute top-3 left-3">
-                        <div className="h-5 bg-white/50 rounded-full w-24"></div>
-                      </div>
-                      <div className="absolute top-3 right-3 space-y-1">
-                        <div className="h-5 bg-blue-500/50 rounded-full w-12"></div>
-                        <div className="h-5 bg-green-500/50 rounded-full w-16"></div>
-                      </div>
-                    </div>
-                    
-                    {/* Content skeleton */}
-                    <div className="p-4 h-40 space-y-2">
-                      <div className="h-5 bg-muted rounded w-full"></div>
-                      <div className="h-4 bg-muted rounded w-3/4"></div>
-                      <div className="flex gap-1 mb-2">
-                        <div className="h-5 bg-purple-200/50 rounded-full w-16"></div>
-                        <div className="h-5 bg-purple-200/50 rounded-full w-12"></div>
-                      </div>
-                      
-                      {/* Footer skeleton */}
-                      <div className="flex justify-between items-center pt-2 border-t border-muted/50 mt-auto">
-                        <div className="flex gap-3">
-                          <div className="h-3 bg-muted rounded w-8"></div>
-                          <div className="h-3 bg-muted rounded w-8"></div>
-                        </div>
-                        <div className="h-3 bg-muted rounded w-16"></div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <Loading />
             ) : error ? (
               <div className="text-center py-8 text-red-500">
                 {error}

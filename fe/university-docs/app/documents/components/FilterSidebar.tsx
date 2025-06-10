@@ -75,35 +75,31 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
   }, [tempFilters.year_id])
 
   const handleYearChange = (yearId: number, checked: boolean) => {
-    setTempFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...appliedFilters,
       year_id: checked ? yearId : undefined,
       subject_id: undefined // Reset subject when year changes
-    }))
+    }
+    setAppliedFilters(newFilters)
+    onFilter(newFilters)
   }
 
   const handleSubjectChange = (subjectId: number, checked: boolean) => {
-    setTempFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...appliedFilters,
       subject_id: checked ? subjectId : undefined
-    }))
+    }
+    setAppliedFilters(newFilters)
+    onFilter(newFilters)
   }
 
   const handleFileTypeChange = (fileType: string, checked: boolean) => {
-    setTempFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...appliedFilters,
       file_type: checked ? fileType : undefined
-    }))
-  }
-
-  const handleApplyFilters = () => {
-    setAppliedFilters(tempFilters)
-    onFilter({
-      year_id: tempFilters.year_id,
-      file_type: tempFilters.file_type,
-      subject_id: tempFilters.subject_id
-    })
-    setIsFilterOpen(false) // Đóng mobile sheet sau khi apply
+    }
+    setAppliedFilters(newFilters)
+    onFilter(newFilters)
   }
 
   const handleReset = () => {
@@ -112,7 +108,6 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
       file_type: undefined,
       subject_id: undefined,
     }
-    setTempFilters(resetFilters)
     setAppliedFilters(resetFilters)
     onFilter({})
   }
@@ -128,8 +123,8 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
   ]
 
   // Filter subjects based on selected year
-  const filteredSubjects = tempFilters.year_id 
-    ? subjects.filter(subject => subject.year_id === tempFilters.year_id)
+  const filteredSubjects = appliedFilters.year_id 
+    ? subjects.filter(subject => subject.year_id === appliedFilters.year_id)
     : subjects
 
   const FilterContent = () => (
@@ -142,7 +137,7 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
             <div key={year.year_id} className="flex items-center space-x-2">
               <Checkbox 
                 id={`year-${year.year_id}`}
-                checked={tempFilters.year_id === year.year_id}
+                checked={appliedFilters.year_id === year.year_id}
                 onCheckedChange={(checked) => handleYearChange(year.year_id, checked as boolean)}
               />
               <Label htmlFor={`year-${year.year_id}`} className="text-sm font-normal">
@@ -164,7 +159,7 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
               <div key={subject.subject_id} className="flex items-center space-x-2">
                 <Checkbox 
                   id={`subject-${subject.subject_id}`}
-                  checked={tempFilters.subject_id === subject.subject_id}
+                  checked={appliedFilters.subject_id === subject.subject_id}
                   onCheckedChange={(checked) => handleSubjectChange(subject.subject_id, checked as boolean)}
                 />
                 <Label htmlFor={`subject-${subject.subject_id}`} className="text-sm font-normal">
@@ -174,7 +169,7 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
             ))
           ) : (
             <p className="text-sm text-muted-foreground">
-              {tempFilters.year_id ? "Không có môn học nào" : "Chọn năm học để xem môn học"}
+              {appliedFilters.year_id ? "Không có môn học nào" : "Chọn năm học để xem môn học"}
             </p>
           )}
         </div>
@@ -190,7 +185,7 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
             <div key={type.value} className="flex items-center space-x-2">
               <Checkbox 
                 id={`format-${type.value}`}
-                checked={tempFilters.file_type === type.value}
+                checked={appliedFilters.file_type === type.value}
                 onCheckedChange={(checked) => handleFileTypeChange(type.value, checked as boolean)}
               />
               <Label htmlFor={`format-${type.value}`} className="text-sm font-normal">
@@ -201,14 +196,9 @@ export function FilterSidebar({ onFilter }: FilterSidebarProps) {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button className="flex-1" onClick={handleApplyFilters}>
-          Áp dụng bộ lọc
-        </Button>
-        <Button variant="outline" onClick={handleReset}>
-          Đặt lại
-        </Button>
-      </div>
+      <Button variant="outline" onClick={handleReset} className="w-full">
+        Đặt lại
+      </Button>
     </div>
   )
 

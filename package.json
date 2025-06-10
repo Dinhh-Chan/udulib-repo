@@ -4,6 +4,7 @@
 		"@radix-ui/react-select": "^2.2.5",
 		"axios": "^1.9.0",
 		"date-fns": "^4.1.0",
+		"framer-motion": "^12.16.0",
 		"jwt-decode": "^4.0.0",
 		"pdfjs-dist": "^5.3.31",
 		"react-pdf": "^9.2.1",
